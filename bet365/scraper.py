@@ -33,6 +33,29 @@ def is_prematch_future(kickoff_str: str, now: Optional[datetime] = None) -> bool
         return False
 
 
+def is_valid_prematch(m: Dict[str, Any], now: Optional[datetime] = None) -> bool:
+    """
+    Validate that an event is a legitimate pre-match event:
+    1. Must NOT have active in-play scores or clocks.
+    2. If it has a scheduled kickoff time, it MUST be strictly in the future.
+    3. If it has no kickoff time (e.g. tournament outrights), it is preserved.
+    """
+    if m.get("live"):
+        return False
+    if m.get("score") or m.get("clock"):
+        return False
+    k = m.get("kickoff")
+    if k:
+        return is_prematch_future(k, now)
+    return True
+
+
+def _extract_pd_token(pd_str: str, key: str, default: str = "") -> str:
+    """Extract a token value from a Bet365 PD string (e.g. #G40# -> 40)."""
+    m = re.search(rf"#{key}([^^#]+)#", pd_str)
+    return m.group(1) if m else default
+
+
 def clone_session(base_session):
     """
     Create a thread-safe cloned session for concurrent worker threads,
@@ -322,7 +345,7 @@ def scrape_sport(
     sub_category_pds = []
     now_dt = datetime.now()
 
-    # 1. Primary Featured Pods
+    # 1. Primary Featured Pods (with /splashcontentapi/splash fallback)
     try:
         r_feat = session.protected_get(
             f"https://{session.host}/splashcontentapi/getsplashpods",
@@ -337,7 +360,22 @@ def scrape_sport(
             },
             headers=headers,
         )
-        if r_feat.status_code == 200:
+        if not r_feat or r_feat.status_code != 200 or len(r_feat.text) == 0:
+            r_feat = session.protected_get(
+                f"https://{session.host}/splashcontentapi/splash",
+                params={
+                    "lid": "1",
+                    "zid": "9",
+                    "pd": sport.PD,
+                    "cid": "143",
+                    "cgid": "1",
+                    "ctid": "143",
+                    "tzo": "60",
+                },
+                headers=headers,
+            )
+
+        if r_feat and r_feat.status_code == 200 and len(r_feat.text) > 0:
             feat_matches = parse_pods_data(
                 r_feat.text,
                 is_live=False,
@@ -346,7 +384,7 @@ def scrape_sport(
             )
             all_matches_map.update(feat_matches)
 
-            # Discover sub-league / regional categories from Root 0 (e.g. UK, Europe, Americas)
+            # Discover sub-league / regional categories from Root 0
             if deep:
                 roots = get_parsers(r_feat.text)
                 if roots:
@@ -354,13 +392,24 @@ def scrape_sport(
                         sub_pd = pa.get_property("PD")
                         if sub_pd and "#D1002#" in sub_pd and "#J" in sub_pd:
                             sub_category_pds.append(sub_pd)
+                            # For soccer: also include Midweek (F^2002) and 72-hour (F^72)
+                            if sport_num == "1" and "F^2001#" in sub_pd:
+                                sub_category_pds.append(sub_pd.replace("F^2001#", "F^2002#"))
+                                sub_category_pds.append(sub_pd.replace("F^2001#", "F^72#"))
     except Exception:
         pass
 
-    # 2. Regional & Sub-League Drill-Down (soccerupcomingmatches / upcomingmatches)
+    # 2. Regional & Sub-League Drill-Down (dynamic parameters per sport)
     if deep and sub_category_pds:
         endpoint = "soccerupcomingmatches" if sport_num == "1" else "upcomingmatches"
+        seen_pds = set()
         for sub_pd in sub_category_pds:
+            if sub_pd in seen_pds:
+                continue
+            seen_pds.add(sub_pd)
+            cid = _extract_pd_token(sub_pd, "C", "1")
+            cgid = _extract_pd_token(sub_pd, "G", "40" if sport_num == "1" else "83")
+            ctid = _extract_pd_token(sub_pd, "D", "1002")
             try:
                 r_sub = session.protected_get(
                     f"https://{session.host}/matchmarketscontentapi/{endpoint}",
@@ -368,9 +417,9 @@ def scrape_sport(
                         "lid": "1",
                         "zid": "9",
                         "pd": sub_pd,
-                        "cid": "1",
-                        "cgid": "40",
-                        "ctid": "1002",
+                        "cid": cid,
+                        "cgid": cgid,
+                        "ctid": ctid,
                         "tzo": "60",
                     },
                     headers=headers,
@@ -407,7 +456,7 @@ def scrape_sport(
                 },
                 headers=headers,
             )
-            if r_comp.status_code == 200:
+            if r_comp.status_code == 200 and len(r_comp.text) > 0:
                 comp_matches = parse_pods_data(
                     r_comp.text,
                     is_live=False,
@@ -452,8 +501,8 @@ def scrape_sport(
         except Exception:
             pass
 
-    # 5. Live In-Play Matches (only if explicitly enabled and not prematch_only)
-    if include_live and not prematch_only and sport_num:
+    # 5. In-Play Feed (Upcoming Schedule & Live Matches)
+    if (include_live or deep) and sport_num:
         live_pd = f"#IP#B{sport_num}#"
         try:
             r_live = session.protected_get(
@@ -469,27 +518,37 @@ def scrape_sport(
                 },
                 headers=headers,
             )
-            if r_live.status_code == 200:
+            if r_live.status_code == 200 and len(r_live.text) > 0:
                 live_matches = parse_pods_data(
                     r_live.text,
-                    is_live=True,
-                    prematch_only=False,
+                    is_live=False if prematch_only else True,
+                    prematch_only=prematch_only,
                     now=now_dt,
                 )
                 for mid, mdata in live_matches.items():
                     if mid in all_matches_map:
                         all_matches_map[mid]["markets"].update(mdata["markets"])
-                        all_matches_map[mid]["live"] = True
-                        if mdata.get("score"):
-                            all_matches_map[mid]["score"] = mdata["score"]
-                        if mdata.get("clock"):
-                            all_matches_map[mid]["clock"] = mdata["clock"]
+                        if not prematch_only:
+                            all_matches_map[mid]["live"] = True
+                            if mdata.get("score"):
+                                all_matches_map[mid]["score"] = mdata["score"]
+                            if mdata.get("clock"):
+                                all_matches_map[mid]["clock"] = mdata["clock"]
                     else:
                         all_matches_map[mid] = mdata
         except Exception:
             pass
 
-    return {"sport": sport.name, "matches": list(all_matches_map.values())}
+    # Final pre-match filter ensuring strictly valid pre-match fixtures
+    if prematch_only:
+        final_matches = [
+            m for m in all_matches_map.values()
+            if is_valid_prematch(m, now_dt)
+        ]
+    else:
+        final_matches = list(all_matches_map.values())
+
+    return {"sport": sport.name, "matches": final_matches}
 
 
 def scrape_all_parallel(

@@ -20,6 +20,7 @@ from bet365 import Bet365AndroidSession
 from bet365.scraper import (
     clone_session,
     is_prematch_future,
+    is_valid_prematch,
     load_config,
     scrape_all_parallel,
     scrape_sport,
@@ -171,7 +172,7 @@ def main():
             for sp_data in output:
                 valid_matches = [
                     m for m in sp_data.get("matches", [])
-                    if not m.get("live") and is_prematch_future(m.get("kickoff"), now_dt)
+                    if is_valid_prematch(m, now_dt)
                 ]
                 if valid_matches:
                     filtered_output.append({

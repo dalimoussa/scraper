@@ -147,12 +147,17 @@ class Bet365AndroidSession:
             verify=False,
         )
         sports = []
+        seen_pds = set()
         for root in get_parsers(r.text):
-            for cl in root.find_sections("CL", PD=NOT_NULL, NA=NOT_NULL):
-                pd = cl.get_property("PD", "")
-                if pd.endswith("K^5#"):
-                    pd = pd[: -len("K^5#")]
-                sports.append(Sport(cl.get_property("NA"), pd))
+            for node in root.walk():
+                if node.type in ("CL", "EV"):
+                    pd = node.get_property("PD", "")
+                    na = node.get_property("NA", "")
+                    if pd and na and (pd.startswith("#AS#") or pd.startswith("#AC#")):
+                        clean_pd = pd[: -len("K^5#")] if pd.endswith("K^5#") else pd
+                        if clean_pd not in seen_pds:
+                            seen_pds.add(clean_pd)
+                            sports.append(Sport(na, clean_pd))
         return sports
 
     def go_homepage(self):
