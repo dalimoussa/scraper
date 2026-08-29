@@ -1,0 +1,3 @@
+curl_cffi>=0.16.0
+prettytable>=3.10.0
+tls-client
