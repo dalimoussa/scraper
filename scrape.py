@@ -14,9 +14,12 @@ import json
 import sys
 import time
 
+from datetime import datetime
+
 from bet365 import Bet365AndroidSession
 from bet365.scraper import (
     clone_session,
+    is_prematch_future,
     load_config,
     scrape_all_parallel,
     scrape_sport,
@@ -25,7 +28,7 @@ from bet365.scraper import (
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Scrape bet365.fr odds, deep leagues, and in-play matches to JSON"
+        description="Scrape bet365.fr upcoming pre-matches and odds to JSON"
     )
     parser.add_argument(
         "--sport",
@@ -43,13 +46,7 @@ def main():
         "--live",
         action="store_true",
         default=False,
-        help="Scrape ONLY live in-play matches",
-    )
-    parser.add_argument(
-        "--no-live",
-        action="store_true",
-        default=False,
-        help="Exclude live in-play matches (pre-match only)",
+        help="Scrape ONLY live in-play matches (overrides pre-match default)",
     )
     parser.add_argument(
         "--no-deep",
@@ -73,10 +70,11 @@ def main():
     parser.add_argument(
         "--out",
         default=None,
-        help="Output file path (default: print JSON to stdout)",
+        help="Path to save JSON output (atomic update)",
     )
     parser.add_argument(
         "--config",
+        "-c",
         default="config.json",
         help="Config file path (default: config.json)",
     )
@@ -123,20 +121,18 @@ def main():
         sports_to_scrape = [s for s in all_sports if s.name not in ["Offers", "Upcoming"]]
 
     deep_mode = not args.no_deep
-    include_live_mode = not args.no_live
-
-    # If --live flag is passed, only scrape live in-play
-    if args.live:
-        deep_mode = False
-        include_live_mode = True
+    live_mode = args.live
+    prematch_mode = not args.live
 
     cycle = 0
 
     while True:
         cycle += 1
-        now_str = time.strftime("%Y-%m-%d %H:%M:%S")
+        now_dt = datetime.now()
+        now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        mode_label = "live in-play" if live_mode else "upcoming pre-matches"
         print(
-            f"[{now_str}] [Cycle #{cycle}] Scraping {len(sports_to_scrape)} sport(s) (concurrency={args.concurrency}, deep={deep_mode}, live={include_live_mode}) ...",
+            f"[{now_str}] [Cycle #{cycle}] Scraping {len(sports_to_scrape)} sport(s) ({mode_label}, concurrency={args.concurrency}, deep={deep_mode}) ...",
             file=sys.stderr,
         )
 
@@ -148,7 +144,8 @@ def main():
                     session,
                     sp,
                     deep=deep_mode,
-                    include_live=include_live_mode,
+                    include_live=live_mode,
+                    prematch_only=prematch_mode,
                 )
                 output = [data] if data["matches"] else []
             else:
@@ -157,7 +154,8 @@ def main():
                     sports_to_scrape,
                     max_workers=args.concurrency,
                     deep=deep_mode,
-                    include_live=include_live_mode,
+                    include_live=live_mode,
+                    prematch_only=prematch_mode,
                 )
         except Exception as err:
             print(f"[!] Scrape error in cycle #{cycle}: {err}. Re-bootstrapping session ...", file=sys.stderr)
@@ -167,25 +165,39 @@ def main():
                 print(f"[!] Re-bootstrap failed: {re_err}", file=sys.stderr)
             output = []
 
+        # Extra verification filter: purge any match that has already started as of current time
+        if prematch_mode and output:
+            filtered_output = []
+            for sp_data in output:
+                valid_matches = [
+                    m for m in sp_data.get("matches", [])
+                    if not m.get("live") and is_prematch_future(m.get("kickoff"), now_dt)
+                ]
+                if valid_matches:
+                    filtered_output.append({
+                        "sport": sp_data["sport"],
+                        "matches": valid_matches
+                    })
+            output = filtered_output
+
         t1 = time.time()
         total_matches = sum(len(s["matches"]) for s in output)
         print(
-            f"[{now_str}] [Cycle #{cycle}] Done: {total_matches} matches across {len(output)} sports in {t1 - t0:.2f}s",
+            f"[{now_str}] [Cycle #{cycle}] Done: {total_matches} valid {mode_label} across {len(output)} sports in {t1 - t0:.2f}s",
             file=sys.stderr,
         )
 
-        if output:
-            result_json = json.dumps(output, ensure_ascii=False, indent=args.indent)
-            if args.out:
-                # Atomic write via temporary file
-                tmp_out = f"{args.out}.tmp"
-                with open(tmp_out, "w", encoding="utf-8") as fh:
-                    fh.write(result_json)
-                import os
-                os.replace(tmp_out, args.out)
-                print(f"[{now_str}] [Cycle #{cycle}] Synced to {args.out}", file=sys.stderr)
-            else:
-                print(result_json)
+        # Synchronize and atomically write output
+        result_json = json.dumps(output, ensure_ascii=False, indent=args.indent)
+        if args.out:
+            tmp_out = f"{args.out}.tmp"
+            with open(tmp_out, "w", encoding="utf-8") as fh:
+                fh.write(result_json)
+            import os
+            os.replace(tmp_out, args.out)
+            print(f"[{now_str}] [Cycle #{cycle}] Synchronized to {args.out}", file=sys.stderr)
+        else:
+            print(result_json)
 
         # Exit if single-run mode
         if args.interval <= 0:

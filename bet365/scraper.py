@@ -6,6 +6,7 @@ Advanced multi-market, in-play, and parallel scraper for bet365.fr.
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from bet365.message_parser import get_parsers, read_table
@@ -15,6 +16,21 @@ from bet365.utils import format_datetime, parse_odds
 def load_config(path: str = "config.json") -> Dict[str, Any]:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def is_prematch_future(kickoff_str: str, now: Optional[datetime] = None) -> bool:
+    """
+    Check whether a match kickoff time is strictly in the future.
+    Returns False if kickoff is missing, invalid, or already started/past.
+    """
+    if not kickoff_str:
+        return False
+    try:
+        dt = datetime.strptime(kickoff_str, "%d/%m/%Y %H:%M:%S")
+        now_dt = now or datetime.now()
+        return dt > now_dt
+    except Exception:
+        return False
 
 
 def clone_session(base_session):
@@ -57,13 +73,19 @@ def parse_pods_data(
     response_text: str,
     is_live: bool = False,
     default_competition: str = "",
+    prematch_only: bool = True,
+    now: Optional[datetime] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """
     Parse a gen5 response and extract all matches with multi-market odds.
-    Returns a dict of match_id -> match_dict.
+    If prematch_only=True, strictly filters out in-play and already started games.
     """
+    if prematch_only and is_live:
+        return {}
+
     matches_by_id: Dict[str, Dict[str, Any]] = {}
     roots = get_parsers(response_text)
+    now_dt = now or datetime.now()
 
     for root in roots:
         cl_node = next(root.find_sections("CL"), None)
@@ -97,6 +119,11 @@ def parse_pods_data(
             for r_idx in range(num_rows):
                 row_node = first_col[r_idx]
                 row_props = row_node.properties
+
+                # If prematch_only is requested, skip in-play / live matches
+                if prematch_only:
+                    if row_props.get("SS") or row_props.get("SC") or row_props.get("TM") or row_props.get("TU"):
+                        continue
 
                 # Extract outcome odds across columns
                 market_odds: Dict[str, Any] = {}
@@ -138,13 +165,6 @@ def parse_pods_data(
                 if not home and not away and not fixture:
                     continue
 
-                event_id = (
-                    row_node.get_property("FI")
-                    or row_node.get_property("OI")
-                    or row_node.get_property("ID")
-                    or f"{home}_{away}"
-                )
-
                 kickoff_raw = (
                     row_node.get_property("BC")
                     or row_node.get_property("DT")
@@ -152,6 +172,17 @@ def parse_pods_data(
                     or ""
                 )
                 kickoff = format_datetime(kickoff_raw) if kickoff_raw else ""
+
+                # Strictly exclude games whose scheduled kickoff has already arrived or passed
+                if prematch_only and not is_prematch_future(kickoff, now_dt):
+                    continue
+
+                event_id = (
+                    row_node.get_property("FI")
+                    or row_node.get_property("OI")
+                    or row_node.get_property("ID")
+                    or f"{home}_{away}"
+                )
 
                 competition = (
                     row_node.get_property("L3")
@@ -161,7 +192,7 @@ def parse_pods_data(
                     or root_comp
                 )
 
-                # In-Play attributes
+                # In-Play attributes (only populated if not prematch_only)
                 live_score = (
                     row_props.get("SS")
                     or row_props.get("SC")
@@ -193,7 +224,7 @@ def parse_pods_data(
                         "away": away,
                         "markets": {market_name: market_odds},
                     }
-                    if is_live:
+                    if is_live and not prematch_only:
                         match_item["live"] = True
                         if live_score:
                             match_item["score"] = live_score
@@ -205,10 +236,16 @@ def parse_pods_data(
     return matches_by_id
 
 
-def parse_coupon_data(response_text: str) -> Dict[str, Dict[str, Any]]:
+def parse_coupon_data(
+    response_text: str,
+    prematch_only: bool = True,
+    now: Optional[datetime] = None,
+) -> Dict[str, Dict[str, Any]]:
     """Extract matches and odds from oddsoncoupon responses."""
     matches: Dict[str, Dict[str, Any]] = {}
     roots = get_parsers(response_text)
+    now_dt = now or datetime.now()
+
     for root in roots:
         for ma in root.find_sections("MA"):
             cols = [co for co in ma.children if co.type == "CO"]
@@ -237,12 +274,15 @@ def parse_coupon_data(response_text: str) -> Dict[str, Dict[str, Any]]:
                     elif fixture:
                         home = fixture
 
+                    kickoff = format_datetime(pa0.get_property("BC") or "")
+                    if prematch_only and not is_prematch_future(kickoff, now_dt):
+                        continue
+
                     event_id = (
                         pa0.get_property("FI")
                         or pa0.get_property("OI")
                         or f"{home}_{away}"
                     )
-                    kickoff = format_datetime(pa0.get_property("BC") or "")
                     market_name = "Match Result" if len(odds) == 3 else "Match Winner"
                     matches[event_id] = {
                         "id": event_id,
@@ -259,14 +299,15 @@ def scrape_sport(
     session,
     sport,
     deep: bool = True,
-    include_live: bool = True,
+    include_live: bool = False,
+    prematch_only: bool = True,
 ) -> Dict[str, Any]:
     """
-    Scrape all matches and odds for a given sport:
+    Scrape all upcoming pre-matches and odds for a given sport:
     - Primary featured matches
     - Deep sub-leagues & regional competition pods
     - Odds-on upcoming coupons
-    - Live in-play matches (include_live=True)
+    - Automatically purges in-play and past/started games (prematch_only=True)
     """
     headers = {
         "User-Agent": "Mozilla (Linux; Android 12 Phone; CPU M2003J15SC OS 12 like Gecko) Chrome/145.0.7632.159 Gen6 bet365/8.0.69.00",
@@ -279,6 +320,7 @@ def scrape_sport(
     all_matches_map: Dict[str, Dict[str, Any]] = {}
     sport_num = _extract_sport_number(sport.PD) if sport.PD else None
     sub_category_pds = []
+    now_dt = datetime.now()
 
     # 1. Primary Featured Pods
     try:
@@ -296,7 +338,12 @@ def scrape_sport(
             headers=headers,
         )
         if r_feat.status_code == 200:
-            feat_matches = parse_pods_data(r_feat.text, is_live=False)
+            feat_matches = parse_pods_data(
+                r_feat.text,
+                is_live=False,
+                prematch_only=prematch_only,
+                now=now_dt,
+            )
             all_matches_map.update(feat_matches)
 
             # Discover sub-league / regional categories from Root 0 (e.g. UK, Europe, Americas)
@@ -329,7 +376,12 @@ def scrape_sport(
                     headers=headers,
                 )
                 if r_sub.status_code == 200 and len(r_sub.text) > 0:
-                    sub_matches = parse_pods_data(r_sub.text, is_live=False)
+                    sub_matches = parse_pods_data(
+                        r_sub.text,
+                        is_live=False,
+                        prematch_only=prematch_only,
+                        now=now_dt,
+                    )
                     for mid, mdata in sub_matches.items():
                         if mid in all_matches_map:
                             all_matches_map[mid]["markets"].update(mdata["markets"])
@@ -356,7 +408,12 @@ def scrape_sport(
                 headers=headers,
             )
             if r_comp.status_code == 200:
-                comp_matches = parse_pods_data(r_comp.text, is_live=False)
+                comp_matches = parse_pods_data(
+                    r_comp.text,
+                    is_live=False,
+                    prematch_only=prematch_only,
+                    now=now_dt,
+                )
                 for mid, mdata in comp_matches.items():
                     if mid in all_matches_map:
                         all_matches_map[mid]["markets"].update(mdata["markets"])
@@ -382,7 +439,11 @@ def scrape_sport(
                 headers=headers,
             )
             if r_coupon.status_code == 200 and len(r_coupon.text) > 0:
-                coupon_matches = parse_coupon_data(r_coupon.text)
+                coupon_matches = parse_coupon_data(
+                    r_coupon.text,
+                    prematch_only=prematch_only,
+                    now=now_dt,
+                )
                 for mid, mdata in coupon_matches.items():
                     if mid in all_matches_map:
                         all_matches_map[mid]["markets"].update(mdata["markets"])
@@ -391,8 +452,8 @@ def scrape_sport(
         except Exception:
             pass
 
-    # 5. Live In-Play Matches
-    if include_live and sport_num:
+    # 5. Live In-Play Matches (only if explicitly enabled and not prematch_only)
+    if include_live and not prematch_only and sport_num:
         live_pd = f"#IP#B{sport_num}#"
         try:
             r_live = session.protected_get(
@@ -409,7 +470,12 @@ def scrape_sport(
                 headers=headers,
             )
             if r_live.status_code == 200:
-                live_matches = parse_pods_data(r_live.text, is_live=True)
+                live_matches = parse_pods_data(
+                    r_live.text,
+                    is_live=True,
+                    prematch_only=False,
+                    now=now_dt,
+                )
                 for mid, mdata in live_matches.items():
                     if mid in all_matches_map:
                         all_matches_map[mid]["markets"].update(mdata["markets"])
@@ -431,7 +497,8 @@ def scrape_all_parallel(
     sports: List[Any],
     max_workers: int = 5,
     deep: bool = True,
-    include_live: bool = True,
+    include_live: bool = False,
+    prematch_only: bool = True,
 ) -> List[Dict[str, Any]]:
     """
     Scrape multiple sports concurrently in parallel using a ThreadPoolExecutor.
@@ -443,6 +510,7 @@ def scrape_all_parallel(
             sp,
             deep=deep,
             include_live=include_live,
+            prematch_only=prematch_only,
         )
         return data
 
