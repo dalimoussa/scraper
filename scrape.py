@@ -50,6 +50,12 @@ def main():
         help="Scrape ONLY live in-play matches (overrides pre-match default)",
     )
     parser.add_argument(
+        "--deep",
+        action="store_true",
+        default=True,
+        help="Enable deep competition/league drill-down (default: enabled)",
+    )
+    parser.add_argument(
         "--no-deep",
         action="store_true",
         default=False,

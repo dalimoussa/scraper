@@ -43,19 +43,19 @@ Open `config.json` in any text editor (like Notepad or VS Code). Your credential
 Scrapes all sports with maximum speed and saves strictly future pre-matches to `all_matches.json`:
 
 ```bash
-python scrape.py --concurrency 6 --out all_matches.json
+python scrape.py --concurrency 8 --out all_matches.json
 ```
 
-#### 2. Scrape a Single Sport (e.g. Soccer)
+#### 2. Scrape a Single Sport (e.g. Soccer or Tennis)
 ```bash
 python scrape.py --sport Soccer --out soccer.json
 ```
-*(You can replace `Soccer` with `Tennis`, `Basketball`, `Baseball`, `American Football`, etc.)*
+*(You can replace `Soccer` with `Tennis`, `Basketball`, `Baseball`, `EPL`, `US Open`, etc.)*
 
 #### 3. Continuous Automated Sync (Real-Time Mode)
 To keep your data constantly synchronized and up-to-date automatically:
 ```bash
-python scrape.py --concurrency 6 --interval 60 --out all_matches.json
+python scrape.py --concurrency 8 --interval 60 --out all_matches.json
 ```
 * Runs continuously in the background and updates `all_matches.json` every 60 seconds.
 * **Auto-Purge**: As soon as a match's kickoff time arrives, it is automatically removed from the file on the next cycle!
@@ -100,7 +100,7 @@ The scraper outputs clear, standard JSON that looks like this:
 ### What Each Field Means:
 * **`id`**: Unique match ID on Bet365.
 * **`kickoff`**: Scheduled match start date and time (`DD/MM/YYYY HH:MM:SS`). Strictly in the future.
-* **`competition`**: The league or tournament name (e.g. *England Premier League*, *Spanish Primera*, *NBA*, *WTA*).
+* **`competition`**: The league or tournament name (e.g. *England Premier League*, *Spanish Primera*, *NBA*, *US Open*).
 * **`home` & `away`**: The team or player names.
 * **`markets`**: Available betting odds in standard decimal format (e.g. `1` = Home Win, `X` = Draw, `2` = Away Win; or Spreads & Totals for Basketball/Baseball).
 
@@ -110,12 +110,15 @@ The scraper outputs clear, standard JSON that looks like this:
 
 | Option | What it does | Example |
 |---|---|---|
-| `--sport <name>` | Scrapes only one sport | `--sport Soccer` |
-| `--out <filename>` | Saves results to a specific file | `--out all_matches.json` |
-| `--interval <seconds>` | Runs continuously every N seconds | `--interval 60` |
-| `--concurrency <N>` | Number of parallel threads (faster) | `--concurrency 6` |
-| `--live` | Switch to live in-play games only | `--live` |
-| `--indent <N>` | Formats JSON readability (default: 2) | `--indent 2` |
+| `--sport <name>` | Scrapes only one specific sport or league | `--sport Soccer` or `--sport "US Open"` |
+| `--out <filename>` | Saves results to a specific file (atomic safe write) | `--out all_matches.json` |
+| `--interval <seconds>` | Runs continuously, refreshing every N seconds | `--interval 60` |
+| `--concurrency <N>` | Number of parallel worker threads (faster scraping) | `--concurrency 8` |
+| `--deep` | Scrapes full leagues, regional feeds & multi-window schedules (default: enabled) | `--deep` |
+| `--no-deep` | Fast scan of top featured matches only | `--no-deep` |
+| `--live` | Scrapes ONLY live in-play games (overrides pre-match default) | `--live` |
+| `--config <path>` | Custom config file location (default: `config.json`) | `--config config.json` |
+| `--indent <N>` | Formats JSON indentation for readability (default: 2) | `--indent 2` |
 
 ---
 
@@ -123,8 +126,8 @@ The scraper outputs clear, standard JSON that looks like this:
 
 1. **Automatic Removal of Started Matches**:
    * You don't need to manually filter past matches. The scraper compares each match's kickoff against your system's current time and automatically purges any match that has kicked off.
-2. **Recommended Update Interval**:
-   * If scraping **all sports**, an interval of **60 to 90 seconds** is recommended.
-   * If scraping **one sport** (e.g., Soccer only), an interval of **15 to 30 seconds** works smoothly.
+2. **Recommended Settings**:
+   * For **All Sports**: `python scrape.py --concurrency 8 --interval 60 --out all_matches.json`
+   * For **Single Sport (e.g. Soccer)**: `python scrape.py --sport Soccer --interval 20 --out soccer.json`
 3. **Stopping the Script**:
    * If running in continuous mode, press **`Ctrl + C`** in your terminal window to exit cleanly without corrupting the file.
