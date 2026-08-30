@@ -1,77 +1,69 @@
 # Bet365 Sports & Odds Scraper
 
-A fast and reliable automated tool for scraping **upcoming pre-matches**, schedules, and betting odds from **Bet365** into clean, structured JSON files.
-
-Matches that have already started or are in-play are **automatically purged on every sync cycle**, ensuring you only receive 100% accurate, future pre-match fixtures.
+A simple and automated tool that collects **upcoming sports matches, kickoff schedules, and live odds** from Bet365 and saves them directly into a clean, ready-to-use file (`all_matches.json`).
 
 ---
 
-## 🚀 Quick Start (In 3 Simple Steps)
+## ✨ Key Highlights
 
-### Step 1: Install Requirements
-Open your Terminal (or Command Prompt on Windows) and run:
+* **Automatic Cleanup**: As soon as a match starts or finishes, it is automatically removed from the file. You will only ever see **strictly upcoming games**.
+* **Always Up to Date**: Can run continuously in the background and refresh every minute with fresh odds.
+* **Ready for Any Sport**: Covers Soccer, Tennis, Basketball, American Football, Baseball, Rugby, Boxing, and dozens more.
+
+---
+
+## 🚀 How to Run (3 Simple Steps)
+
+### Step 1: Open Your Terminal
+* **On Windows**: Press the `Windows Key`, type `cmd` or `PowerShell`, and press `Enter`.
+* Navigate to this project folder.
+
+---
+
+### Step 2: Install (One Time Only)
+Copy and paste this command, then press `Enter`:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-*(If `pip` is not recognized, use `python -m pip install -r requirements.txt`)*
+*(If your computer says `pip` is not recognized, use `python -m pip install -r requirements.txt`)*
 
 ---
 
-### Step 2: Configure Settings
-Open `config.json` in any text editor (like Notepad or VS Code). Your credentials and settings are pre-configured:
+### Step 3: Start Scraping!
 
-```json
-{
-  "api_url": "https://nodomain.site/get_x_net_android",
-  "api_key": "sakazuki_9814",
-  "host": "www.bet365.fr",
-  "proxy": ""
-}
+#### ▶️ Recommended: Continuous Auto-Update Mode
+This runs automatically, refreshing all upcoming matches and odds every 60 seconds:
+
+```bash
+python scrape.py --interval 60 --out all_matches.json
 ```
 
-* **`host`**: The Bet365 site to scrape (`www.bet365.fr` by default).
-* **`api_url` & `api_key`**: Your Bet365 connection access credentials.
-* **`proxy`**: *(Optional)* If you use a proxy, enter it here (e.g. `http://user:pass@ip:port`). Otherwise, leave empty `""`.
+* **Where is my data?** A file named `all_matches.json` will appear in your folder.
+* **How to stop?** Press **`Ctrl + C`** on your keyboard anytime to stop safely.
 
 ---
 
-### Step 3: Run the Scraper
+## 📋 Copy & Paste Commands for Common Uses
 
-#### 1. Scrape Upcoming Pre-Matches to a File
-Scrapes all sports with maximum speed and saves strictly future pre-matches to `all_matches.json`:
-
-```bash
-python scrape.py --concurrency 8 --out all_matches.json
-```
-
-#### 2. Scrape a Single Sport (e.g. Soccer or Tennis)
-```bash
-python scrape.py --sport Soccer --out soccer.json
-```
-*(You can replace `Soccer` with `Tennis`, `Basketball`, `Baseball`, `EPL`, `US Open`, etc.)*
-
-#### 3. Continuous Automated Sync (Real-Time Mode)
-To keep your data constantly synchronized and up-to-date automatically:
-```bash
-python scrape.py --concurrency 8 --interval 60 --out all_matches.json
-```
-* Runs continuously in the background and updates `all_matches.json` every 60 seconds.
-* **Auto-Purge**: As soon as a match's kickoff time arrives, it is automatically removed from the file on the next cycle!
-* Press `Ctrl + C` at any time to stop.
-
-#### 4. Live In-Play Games (Optional)
-If you specifically want only games that are currently in-play right now:
-```bash
-python scrape.py --live --out live_games.json
-```
+| What you want to do | Command to copy & paste |
+|---|---|
+| **Scrape everything and keep updating every minute** | `python scrape.py --interval 60 --out all_matches.json` |
+| **Fast one-time export (all sports)** | `python scrape.py --out all_matches.json` |
+| **Scrape only Soccer** | `python scrape.py --sport Soccer --out soccer.json` |
+| **Scrape only Tennis** | `python scrape.py --sport Tennis --out tennis.json` |
+| **Scrape only US Open** | `python scrape.py --sport "US Open" --out us_open.json` |
+| **Scrape only English Premier League (EPL)** | `python scrape.py --sport EPL --out epl.json` |
+| **Scrape only currently LIVE / in-play matches** | `python scrape.py --live --out live_matches.json` |
 
 ---
 
-## 📊 Understanding the Output JSON
+## 📁 How to Read the Output File (`all_matches.json`)
 
-The scraper outputs clear, standard JSON that looks like this:
+You can open `all_matches.json` in **Notepad**, **Excel**, **VS Code**, or any web browser. 
+
+Here is an example of what each match looks like:
 
 ```json
 [
@@ -97,37 +89,37 @@ The scraper outputs clear, standard JSON that looks like this:
 ]
 ```
 
-### What Each Field Means:
-* **`id`**: Unique match ID on Bet365.
-* **`kickoff`**: Scheduled match start date and time (`DD/MM/YYYY HH:MM:SS`). Strictly in the future.
-* **`competition`**: The league or tournament name (e.g. *England Premier League*, *Spanish Primera*, *NBA*, *US Open*).
-* **`home` & `away`**: The team or player names.
-* **`markets`**: Available betting odds in standard decimal format (e.g. `1` = Home Win, `X` = Draw, `2` = Away Win; or Spreads & Totals for Basketball/Baseball).
+### Explanation of Fields:
+* **`sport`**: The name of the sport (Soccer, Tennis, Basketball, etc.).
+* **`kickoff`**: The exact date and start time (`Day/Month/Year Hour:Minute:Second`).
+* **`competition`**: The league or tournament (e.g. *England Premier League*, *US Open*, *NBA*).
+* **`home` & `away`**: The two competing teams or players.
+* **`markets`**: The betting odds in standard decimal format:
+  * In Soccer: `1` = Home Win, `X` = Draw, `2` = Away Win.
+  * In Tennis / Basketball: `1` = Player/Team 1, `2` = Player/Team 2, plus spread & total point lines.
 
 ---
 
-## ⚙️ Available Command-Line Options
+## ❓ Frequently Asked Questions (FAQ)
 
-| Option | What it does | Example |
-|---|---|---|
-| `--sport <name>` | Scrapes only one specific sport or league | `--sport Soccer` or `--sport "US Open"` |
-| `--out <filename>` | Saves results to a specific file (atomic safe write) | `--out all_matches.json` |
-| `--interval <seconds>` | Runs continuously, refreshing every N seconds | `--interval 60` |
-| `--concurrency <N>` | Number of parallel worker threads (faster scraping) | `--concurrency 8` |
-| `--deep` | Scrapes full leagues, regional feeds & multi-window schedules (default: enabled) | `--deep` |
-| `--no-deep` | Fast scan of top featured matches only | `--no-deep` |
-| `--live` | Scrapes ONLY live in-play games (overrides pre-match default) | `--live` |
-| `--config <path>` | Custom config file location (default: `config.json`) | `--config config.json` |
-| `--indent <N>` | Formats JSON indentation for readability (default: 2) | `--indent 2` |
+#### 1. Why did the number of matches decrease over time?
+This is intentional! Matches that have **already kicked off or finished are automatically purged** on every update cycle. This guarantees that your file only contains matches you can still bet on.
+
+#### 2. How do I change how often it refreshes?
+In the command, change `--interval 60` to any number of seconds you want:
+* Every 30 seconds: `--interval 30`
+* Every 2 minutes: `--interval 120`
+
+#### 3. How do I make it faster?
+Add `--concurrency 8` to your command:
+```bash
+python scrape.py --concurrency 8 --interval 60 --out all_matches.json
+```
+
+#### 4. What is `config.json`?
+`config.json` stores your connection settings. It is already pre-configured for you, so you do not need to modify it unless your network requires a proxy.
 
 ---
 
-## 💡 Tips & Best Practices
-
-1. **Automatic Removal of Started Matches**:
-   * You don't need to manually filter past matches. The scraper compares each match's kickoff against your system's current time and automatically purges any match that has kicked off.
-2. **Recommended Settings**:
-   * For **All Sports**: `python scrape.py --concurrency 8 --interval 60 --out all_matches.json`
-   * For **Single Sport (e.g. Soccer)**: `python scrape.py --sport Soccer --interval 20 --out soccer.json`
-3. **Stopping the Script**:
-   * If running in continuous mode, press **`Ctrl + C`** in your terminal window to exit cleanly without corrupting the file.
+## 🛑 How to Stop the Scraper
+To stop the scraper when running continuously, simply click inside your terminal window and press **`Ctrl + C`**. The scraper will finish saving cleanly and close.
