@@ -151,7 +151,8 @@ class Bet365AndroidSession:
         for root in get_parsers(r.text):
             for node in root.walk():
                 if node.type in ("CL", "EV"):
-                    pd = node.get_property("PD", "")
+                    raw_pd = node.get_property("PD", "")
+                    pd = urllib.parse.unquote(raw_pd) if raw_pd else ""
                     na = node.get_property("NA", "")
                     if pd and na and (pd.startswith("#AS#") or pd.startswith("#AC#")):
                         clean_pd = pd[: -len("K^5#")] if pd.endswith("K^5#") else pd

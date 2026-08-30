@@ -39,26 +39,6 @@
         }
       },
       {
-        "id": "200173739",
-        "kickoff": "30/08/2026 03:00:00",
-        "competition": "WNBA",
-        "home": "TOR Tempo",
-        "away": "PHX Mercury",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "line": "+9.5",
-              "odds": "1.90"
-            },
-            "Total": {
-              "line": "174.5",
-              "odds": "1.90"
-            },
-            "Money Line": "4.50"
-          }
-        }
-      },
-      {
         "id": "200229256",
         "kickoff": "30/08/2026 20:00:00",
         "competition": "WNBA",
@@ -71,51 +51,219 @@
               "odds": "1.90"
             },
             "Total": {
-              "line": "179.5",
+              "line": "177.5",
               "odds": "1.90"
             },
             "Money Line": "1.74"
+          }
+        }
+      },
+      {
+        "id": "200229249",
+        "kickoff": "30/08/2026 22:00:00",
+        "competition": "WNBA",
+        "home": "LA Sparks",
+        "away": "SEA Storm",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-1.5",
+              "odds": "2.00"
+            },
+            "Total": {
+              "line": "173.5",
+              "odds": "1.90"
+            },
+            "Money Line": "1.90"
+          }
+        }
+      },
+      {
+        "id": "200229253",
+        "kickoff": "31/08/2026 00:00:00",
+        "competition": "WNBA",
+        "home": "GS Valkyries",
+        "away": "POR Fire",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-5.5",
+              "odds": "1.95"
+            },
+            "Total": {
+              "line": "158.5",
+              "odds": "1.95"
+            },
+            "Money Line": "1.48"
+          }
+        }
+      },
+      {
+        "id": "200176680",
+        "kickoff": "31/08/2026 01:30:00",
+        "competition": "WNBA",
+        "home": "CON Sun",
+        "away": "DAL Wings",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+12.5",
+              "odds": "1.95"
+            },
+            "Total": {
+              "line": "165.5",
+              "odds": "1.86"
+            },
+            "Money Line": "6.50"
+          }
+        }
+      },
+      {
+        "id": "200235143",
+        "kickoff": "30/08/2026 16:30:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Sweden",
+        "away": "France",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+12.5",
+              "odds": "1.86"
+            },
+            "Total": {
+              "line": "170.5",
+              "odds": "1.83"
+            },
+            "Money Line": "6.50"
+          }
+        }
+      },
+      {
+        "id": "200235140",
+        "kickoff": "30/08/2026 13:30:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Netherlands",
+        "away": "Croatia",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+16.5",
+              "odds": "1.83"
+            },
+            "Total": {
+              "line": "174.5",
+              "odds": "1.83"
+            },
+            "Money Line": "9.00"
+          }
+        }
+      },
+      {
+        "id": "200235128",
+        "kickoff": "30/08/2026 13:45:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Poland",
+        "away": "Germany",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+8.5",
+              "odds": "1.83"
+            },
+            "Total": {
+              "line": "175.5",
+              "odds": "1.83"
+            },
+            "Money Line": "3.65"
+          }
+        }
+      },
+      {
+        "id": "200235134",
+        "kickoff": "30/08/2026 17:00:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Estonia",
+        "away": "Finland",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+9.5",
+              "odds": "1.83"
+            },
+            "Total": {
+              "line": "169.5",
+              "odds": "1.83"
+            },
+            "Money Line": "4.20"
+          }
+        }
+      },
+      {
+        "id": "200235137",
+        "kickoff": "30/08/2026 17:00:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Latvia",
+        "away": "Israel",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-1.5",
+              "odds": "1.95"
+            },
+            "Total": {
+              "line": "172.5",
+              "odds": "1.83"
+            },
+            "Money Line": "1.83"
+          }
+        }
+      },
+      {
+        "id": "200235131",
+        "kickoff": "30/08/2026 19:00:00",
+        "competition": "B-FIBAWCQM",
+        "home": "Slovenia",
+        "away": "Hungary",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-3.0",
+              "odds": "1.83"
+            },
+            "Total": {
+              "line": "164.5",
+              "odds": "1.83"
+            },
+            "Money Line": "1.58"
           }
         }
       }
     ]
   },
   {
-    "sport": "Boxing",
+    "sport": "Cycling",
     "matches": [
       {
-        "id": "196615577",
-        "kickoff": "29/08/2026 22:15:00",
-        "competition": "Moses Itauma vs Filip Hrgovic",
-        "home": "Moses Itauma vs Filip Hrgovic",
-        "away": "",
+        "id": "200348416",
+        "kickoff": "30/08/2026 11:25:00",
+        "competition": "Vuelta a Espana 2026 - Stage 9",
+        "home": "Vuelta a Espana 2026 - Stage 9",
+        "away": "To Win Stage",
         "markets": {
-          "Moses Itauma vs Filip Hrgovic": {
-            "No row": "1.12"
+          "Vuelta a Espana 2026 - Stage 9": {
+            "No row": "2.50"
           }
         }
       },
       {
-        "id": "196090032",
-        "kickoff": "29/08/2026 22:00:00",
-        "competition": "Chantelle Cameron vs Mikaela Mayer",
-        "home": "Chantelle Cameron vs Mikaela Mayer",
-        "away": "",
+        "id": "198980298",
+        "kickoff": "30/08/2026 11:25:00",
+        "competition": "Vuelta a Espana 2026",
+        "home": "Vuelta a Espana 2026",
+        "away": "To Win Outright",
         "markets": {
-          "Chantelle Cameron vs Mikaela Mayer": {
-            "No row": "2.75"
-          }
-        }
-      },
-      {
-        "id": "196090028",
-        "kickoff": "29/08/2026 21:00:00",
-        "competition": "Caroline Dubois vs Amelia Moore",
-        "home": "Caroline Dubois vs Amelia Moore",
-        "away": "",
-        "markets": {
-          "Caroline Dubois vs Amelia Moore": {
-            "No row": "1.04"
+          "Vuelta a Espana 2026": {
+            "No row": "2.50"
           }
         }
       }
@@ -124,6 +272,160 @@
   {
     "sport": "EPL",
     "matches": [
+      {
+        "id": "199419003",
+        "kickoff": "30/08/2026 17:30:00",
+        "competition": "Italy Serie A",
+        "home": "Napoli",
+        "away": "Como",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "3.00",
+            "2": "3.00"
+          }
+        }
+      },
+      {
+        "id": "199419009",
+        "kickoff": "30/08/2026 19:45:00",
+        "competition": "Italy Serie A",
+        "home": "Cagliari",
+        "away": "Inter Milan",
+        "markets": {
+          "Match Result": {
+            "1": "8.00",
+            "X": "4.75",
+            "2": "1.40"
+          }
+        }
+      },
+      {
+        "id": "199419017",
+        "kickoff": "30/08/2026 19:45:00",
+        "competition": "Italy Serie A",
+        "home": "Lazio",
+        "away": "Genoa",
+        "markets": {
+          "Match Result": {
+            "1": "2.10",
+            "X": "3.00",
+            "2": "4.00"
+          }
+        }
+      },
+      {
+        "id": "199425420",
+        "kickoff": "30/08/2026 16:00:00",
+        "competition": "Spanish Primera",
+        "home": "Real Madrid",
+        "away": "Malaga",
+        "markets": {
+          "Match Result": {
+            "1": "1.09",
+            "X": "10.00",
+            "2": "21.00"
+          }
+        }
+      },
+      {
+        "id": "199425423",
+        "kickoff": "30/08/2026 18:30:00",
+        "competition": "Spanish Primera",
+        "home": "Deportivo A Coruna",
+        "away": "Valencia",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "2.90",
+            "2": "3.10"
+          }
+        }
+      },
+      {
+        "id": "199425427",
+        "kickoff": "30/08/2026 20:30:00",
+        "competition": "Spanish Primera",
+        "home": "Celta Vigo",
+        "away": "Athletic Club",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "3.20",
+            "2": "3.00"
+          }
+        }
+      },
+      {
+        "id": "196564292",
+        "kickoff": "30/08/2026 14:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Chelsea",
+        "away": "Brighton",
+        "markets": {
+          "Match Result": {
+            "1": "1.80",
+            "X": "3.80",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "196564298",
+        "kickoff": "30/08/2026 14:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Leeds",
+        "away": "Brentford",
+        "markets": {
+          "Match Result": {
+            "1": "2.60",
+            "X": "3.30",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "196564305",
+        "kickoff": "30/08/2026 14:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Sunderland",
+        "away": "Fulham",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "3.20",
+            "2": "3.10"
+          }
+        }
+      },
+      {
+        "id": "196564302",
+        "kickoff": "30/08/2026 16:30:00",
+        "competition": "FA Barclaycard",
+        "home": "Man Utd",
+        "away": "Ipswich",
+        "markets": {
+          "Match Result": {
+            "1": "1.38",
+            "X": "5.00",
+            "2": "8.00"
+          }
+        }
+      },
+      {
+        "id": "196564290",
+        "kickoff": "31/08/2026 20:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Aston Villa",
+        "away": "Arsenal",
+        "markets": {
+          "Match Result": {
+            "1": "6.00",
+            "X": "4.33",
+            "2": "1.50"
+          }
+        }
+      },
       {
         "id": "197255935",
         "kickoff": "30/08/2026 14:30:00",
@@ -146,373 +448,9 @@
         "away": "Schalke",
         "markets": {
           "Match Result": {
-            "1": "2.15",
-            "X": "3.70",
-            "2": "3.10"
-          }
-        }
-      },
-      {
-        "id": "199425415",
-        "kickoff": "29/08/2026 20:30:00",
-        "competition": "Spanish Primera",
-        "home": "Sevilla",
-        "away": "Atletico Madrid",
-        "markets": {
-          "Match Result": {
-            "1": "4.20",
-            "X": "3.40",
-            "2": "1.90"
-          }
-        }
-      },
-      {
-        "id": "199425420",
-        "kickoff": "30/08/2026 16:00:00",
-        "competition": "Spanish Primera",
-        "home": "Real Madrid",
-        "away": "Malaga",
-        "markets": {
-          "Match Result": {
-            "1": "1.10",
-            "X": "9.50",
-            "2": "21.00"
-          }
-        }
-      },
-      {
-        "id": "196564292",
-        "kickoff": "30/08/2026 14:00:00",
-        "competition": "FA Barclaycard",
-        "home": "Chelsea",
-        "away": "Brighton",
-        "markets": {
-          "Match Result": {
-            "1": "1.80",
-            "X": "4.00",
-            "2": "4.20"
-          }
-        }
-      },
-      {
-        "id": "196564302",
-        "kickoff": "30/08/2026 16:30:00",
-        "competition": "FA Barclaycard",
-        "home": "Man Utd",
-        "away": "Ipswich",
-        "markets": {
-          "Match Result": {
-            "1": "1.40",
-            "X": "5.00",
-            "2": "7.50"
-          }
-        }
-      },
-      {
-        "id": "199417211",
-        "kickoff": "29/08/2026 19:00:00",
-        "competition": "France Ligue 2",
-        "home": "Guingamp",
-        "away": "Nantes",
-        "markets": {
-          "Match Result": {
-            "1": "2.70",
-            "X": "3.00",
-            "2": "2.45"
-          }
-        }
-      },
-      {
-        "id": "199417214",
-        "kickoff": "31/08/2026 19:45:00",
-        "competition": "France Ligue 2",
-        "home": "Dijon",
-        "away": "St Etienne",
-        "markets": {
-          "Match Result": {
-            "1": "3.90",
-            "X": "3.20",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "199418996",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Juventus",
-        "away": "Parma",
-        "markets": {
-          "Match Result": {
-            "1": "1.22",
-            "X": "6.50",
-            "2": "12.00"
-          }
-        }
-      },
-      {
-        "id": "199419003",
-        "kickoff": "30/08/2026 17:30:00",
-        "competition": "Italy Serie A",
-        "home": "Napoli",
-        "away": "Como",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.00",
-            "2": "3.10"
-          }
-        }
-      },
-      {
-        "id": "199419009",
-        "kickoff": "30/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Cagliari",
-        "away": "Inter Milan",
-        "markets": {
-          "Match Result": {
-            "1": "8.00",
-            "X": "4.50",
-            "2": "1.42"
-          }
-        }
-      },
-      {
-        "id": "199419017",
-        "kickoff": "30/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Lazio",
-        "away": "Genoa",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.10",
-            "2": "4.20"
-          }
-        }
-      },
-      {
-        "id": "199420796",
-        "kickoff": "29/08/2026 21:30:00",
-        "competition": "MLS",
-        "home": "Seattle Sounders",
-        "away": "Chicago Fire",
-        "markets": {
-          "Match Result": {
-            "1": "2.87",
-            "X": "3.70",
-            "2": "2.35"
-          }
-        }
-      },
-      {
-        "id": "199420801",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Atlanta Utd",
-        "away": "Charlotte FC",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.70",
-            "2": "2.60"
-          }
-        }
-      },
-      {
-        "id": "199420808",
-        "kickoff": "30/08/2026 21:30:00",
-        "competition": "MLS",
-        "home": "Columbus Crew",
-        "away": "New England",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.70",
-            "2": "3.40"
-          }
-        }
-      },
-      {
-        "id": "199420812",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "DC United",
-        "away": "LAFC",
-        "markets": {
-          "Match Result": {
-            "1": "3.80",
-            "X": "3.75",
-            "2": "1.90"
-          }
-        }
-      },
-      {
-        "id": "199420817",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Inter Miami",
-        "away": "CF Montreal",
-        "markets": {
-          "Match Result": {
-            "1": "1.44",
-            "X": "5.25",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "199420827",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "NY Red Bulls",
-        "away": "Philadelphia",
-        "markets": {
-          "Match Result": {
-            "1": "3.00",
-            "X": "4.00",
-            "2": "2.15"
-          }
-        }
-      },
-      {
-        "id": "199420834",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Toronto FC",
-        "away": "New York City",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
+            "1": "2.20",
             "X": "3.60",
-            "2": "2.70"
-          }
-        }
-      },
-      {
-        "id": "199420836",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Houston Dynamo",
-        "away": "San Jose",
-        "markets": {
-          "Match Result": {
-            "1": "1.61",
-            "X": "4.33",
-            "2": "5.00"
-          }
-        }
-      },
-      {
-        "id": "199420838",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Minnesota Utd",
-        "away": "Orlando City",
-        "markets": {
-          "Match Result": {
-            "1": "1.80",
-            "X": "3.90",
-            "2": "4.10"
-          }
-        }
-      },
-      {
-        "id": "199420840",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Nashville SC",
-        "away": "FC Cincinnati",
-        "markets": {
-          "Match Result": {
-            "1": "1.80",
-            "X": "3.90",
-            "2": "4.20"
-          }
-        }
-      },
-      {
-        "id": "199420842",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Kansas City",
-        "away": "Vancouver Whitecaps",
-        "markets": {
-          "Match Result": {
-            "1": "6.00",
-            "X": "5.25",
-            "2": "1.42"
-          }
-        }
-      },
-      {
-        "id": "199420844",
-        "kickoff": "30/08/2026 02:30:00",
-        "competition": "MLS",
-        "home": "Colorado Rapids",
-        "away": "Real Salt Lake",
-        "markets": {
-          "Match Result": {
-            "1": "1.90",
-            "X": "3.75",
-            "2": "3.80"
-          }
-        }
-      },
-      {
-        "id": "199417100",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Lyon",
-        "away": "Le Havre",
-        "markets": {
-          "Match Result": {
-            "1": "1.48",
-            "X": "4.50",
-            "2": "6.25"
-          }
-        }
-      },
-      {
-        "id": "199417091",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Auxerre",
-        "away": "Angers",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.40",
-            "2": "3.80"
-          }
-        }
-      },
-      {
-        "id": "199417095",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Brest",
-        "away": "Toulouse",
-        "markets": {
-          "Match Result": {
-            "1": "2.62",
-            "X": "3.40",
-            "2": "2.62"
-          }
-        }
-      },
-      {
-        "id": "199417097",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Lorient",
-        "away": "Troyes",
-        "markets": {
-          "Match Result": {
-            "1": "1.85",
-            "X": "3.40",
-            "2": "4.33"
+            "2": "3.10"
           }
         }
       },
@@ -538,9 +476,9 @@
         "away": "Le Mans",
         "markets": {
           "Match Result": {
-            "1": "1.44",
+            "1": "1.42",
             "X": "5.00",
-            "2": "6.50"
+            "2": "7.00"
           }
         }
       },
@@ -552,9 +490,23 @@
         "away": "Marseille",
         "markets": {
           "Match Result": {
-            "1": "2.45",
+            "1": "2.40",
             "X": "3.70",
-            "2": "2.70"
+            "2": "2.75"
+          }
+        }
+      },
+      {
+        "id": "199417214",
+        "kickoff": "31/08/2026 19:45:00",
+        "competition": "France Ligue 2",
+        "home": "Dijon",
+        "away": "St Etienne",
+        "markets": {
+          "Match Result": {
+            "1": "3.90",
+            "X": "3.20",
+            "2": "1.80"
           }
         }
       }
@@ -564,62 +516,114 @@
     "sport": "NRL",
     "matches": [
       {
-        "id": "199710323",
-        "kickoff": "30/08/2026 05:00:00",
+        "id": "200093410",
+        "kickoff": "03/09/2026 10:50:00",
+        "competition": "LNRL",
+        "home": "Canterbury Bulldogs",
+        "away": "Brisbane Broncos",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093414",
+        "kickoff": "04/09/2026 09:00:00",
+        "competition": "LNRL",
+        "home": "Gold Coast Titans",
+        "away": "Dolphins",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+12.5",
+              "odds": "1.91"
+            },
+            "To Win": "4.20"
+          }
+        }
+      },
+      {
+        "id": "200093418",
+        "kickoff": "04/09/2026 11:00:00",
+        "competition": "LNRL",
+        "home": "South Sydney Rabbitohs",
+        "away": "Sydney Roosters",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+1.5",
+              "odds": "1.87"
+            },
+            "To Win": "1.95"
+          }
+        }
+      },
+      {
+        "id": "200093422",
+        "kickoff": "05/09/2026 06:00:00",
         "competition": "LNRL",
         "home": "New Zealand Warriors",
-        "away": "Newcastle Knights",
+        "away": "Manly Sea Eagles",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093426",
+        "kickoff": "05/09/2026 08:30:00",
+        "competition": "LNRL",
+        "home": "North Queensland Cowboys",
+        "away": "Canberra Raiders",
         "markets": {
           "Game Lines": {
             "Spread": {
               "line": "-6.5",
-              "odds": "1.83"
-            },
-            "Total": {
-              "line": "49.5",
               "odds": "1.91"
             },
-            "To Win": "1.45"
+            "To Win": "1.47"
           }
         }
       },
       {
-        "id": "199710327",
-        "kickoff": "30/08/2026 07:05:00",
+        "id": "200093430",
+        "kickoff": "05/09/2026 10:35:00",
         "competition": "LNRL",
-        "home": "Parramatta Eels",
-        "away": "Cronulla Sharks",
+        "home": "Cronulla Sharks",
+        "away": "Melbourne Storm",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "+6.5",
-              "odds": "1.91"
+              "line": "-6.5",
+              "odds": "2.00"
             },
-            "Total": {
-              "line": "54.5",
-              "odds": "1.91"
-            },
-            "To Win": "2.75"
+            "To Win": "1.50"
           }
         }
       },
       {
-        "id": "199888006",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Bradford Bulls",
+        "id": "200093434",
+        "kickoff": "06/09/2026 05:00:00",
+        "competition": "LNRL",
+        "home": "St George/Illawarra Dragons",
+        "away": "Parramatta Eels",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "-18.5",
-              "odds": "1.90"
+              "line": "+1.5",
+              "odds": "1.87"
             },
-            "Total": {
-              "line": "52.5",
-              "odds": "1.83"
-            },
-            "To Win": "1.10"
+            "To Win": "1.95"
           }
         }
       }
@@ -629,62 +633,114 @@
     "sport": "NRLW",
     "matches": [
       {
-        "id": "199710323",
-        "kickoff": "30/08/2026 05:00:00",
+        "id": "200093410",
+        "kickoff": "03/09/2026 10:50:00",
+        "competition": "LNRL",
+        "home": "Canterbury Bulldogs",
+        "away": "Brisbane Broncos",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093414",
+        "kickoff": "04/09/2026 09:00:00",
+        "competition": "LNRL",
+        "home": "Gold Coast Titans",
+        "away": "Dolphins",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+12.5",
+              "odds": "1.91"
+            },
+            "To Win": "4.20"
+          }
+        }
+      },
+      {
+        "id": "200093418",
+        "kickoff": "04/09/2026 11:00:00",
+        "competition": "LNRL",
+        "home": "South Sydney Rabbitohs",
+        "away": "Sydney Roosters",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+1.5",
+              "odds": "1.87"
+            },
+            "To Win": "1.95"
+          }
+        }
+      },
+      {
+        "id": "200093422",
+        "kickoff": "05/09/2026 06:00:00",
         "competition": "LNRL",
         "home": "New Zealand Warriors",
-        "away": "Newcastle Knights",
+        "away": "Manly Sea Eagles",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093426",
+        "kickoff": "05/09/2026 08:30:00",
+        "competition": "LNRL",
+        "home": "North Queensland Cowboys",
+        "away": "Canberra Raiders",
         "markets": {
           "Game Lines": {
             "Spread": {
               "line": "-6.5",
-              "odds": "1.83"
-            },
-            "Total": {
-              "line": "49.5",
               "odds": "1.91"
             },
-            "To Win": "1.45"
+            "To Win": "1.47"
           }
         }
       },
       {
-        "id": "199710327",
-        "kickoff": "30/08/2026 07:05:00",
+        "id": "200093430",
+        "kickoff": "05/09/2026 10:35:00",
         "competition": "LNRL",
-        "home": "Parramatta Eels",
-        "away": "Cronulla Sharks",
+        "home": "Cronulla Sharks",
+        "away": "Melbourne Storm",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "+6.5",
-              "odds": "1.91"
+              "line": "-6.5",
+              "odds": "2.00"
             },
-            "Total": {
-              "line": "54.5",
-              "odds": "1.91"
-            },
-            "To Win": "2.75"
+            "To Win": "1.50"
           }
         }
       },
       {
-        "id": "199888006",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Bradford Bulls",
+        "id": "200093434",
+        "kickoff": "06/09/2026 05:00:00",
+        "competition": "LNRL",
+        "home": "St George/Illawarra Dragons",
+        "away": "Parramatta Eels",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "-18.5",
-              "odds": "1.90"
+              "line": "+1.5",
+              "odds": "1.87"
             },
-            "Total": {
-              "line": "52.5",
-              "odds": "1.83"
-            },
-            "To Win": "1.10"
+            "To Win": "1.95"
           }
         }
       }
@@ -694,111 +750,114 @@
     "sport": "Rugby League",
     "matches": [
       {
-        "id": "199710323",
-        "kickoff": "30/08/2026 05:00:00",
+        "id": "200093410",
+        "kickoff": "03/09/2026 10:50:00",
+        "competition": "LNRL",
+        "home": "Canterbury Bulldogs",
+        "away": "Brisbane Broncos",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093414",
+        "kickoff": "04/09/2026 09:00:00",
+        "competition": "LNRL",
+        "home": "Gold Coast Titans",
+        "away": "Dolphins",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+12.5",
+              "odds": "1.91"
+            },
+            "To Win": "4.20"
+          }
+        }
+      },
+      {
+        "id": "200093418",
+        "kickoff": "04/09/2026 11:00:00",
+        "competition": "LNRL",
+        "home": "South Sydney Rabbitohs",
+        "away": "Sydney Roosters",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "+1.5",
+              "odds": "1.87"
+            },
+            "To Win": "1.95"
+          }
+        }
+      },
+      {
+        "id": "200093422",
+        "kickoff": "05/09/2026 06:00:00",
         "competition": "LNRL",
         "home": "New Zealand Warriors",
-        "away": "Newcastle Knights",
+        "away": "Manly Sea Eagles",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "line": "-10.5",
+              "odds": "1.91"
+            },
+            "To Win": "1.31"
+          }
+        }
+      },
+      {
+        "id": "200093426",
+        "kickoff": "05/09/2026 08:30:00",
+        "competition": "LNRL",
+        "home": "North Queensland Cowboys",
+        "away": "Canberra Raiders",
         "markets": {
           "Game Lines": {
             "Spread": {
               "line": "-6.5",
-              "odds": "1.83"
-            },
-            "Total": {
-              "line": "49.5",
               "odds": "1.91"
             },
-            "To Win": "1.45"
+            "To Win": "1.47"
           }
         }
       },
       {
-        "id": "199710327",
-        "kickoff": "30/08/2026 07:05:00",
+        "id": "200093430",
+        "kickoff": "05/09/2026 10:35:00",
         "competition": "LNRL",
-        "home": "Parramatta Eels",
-        "away": "Cronulla Sharks",
+        "home": "Cronulla Sharks",
+        "away": "Melbourne Storm",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "+6.5",
-              "odds": "1.91"
+              "line": "-6.5",
+              "odds": "2.00"
             },
-            "Total": {
-              "line": "54.5",
-              "odds": "1.91"
-            },
-            "To Win": "2.75"
+            "To Win": "1.50"
           }
         }
       },
       {
-        "id": "199888006",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Bradford Bulls",
+        "id": "200093434",
+        "kickoff": "06/09/2026 05:00:00",
+        "competition": "LNRL",
+        "home": "St George/Illawarra Dragons",
+        "away": "Parramatta Eels",
         "markets": {
           "Game Lines": {
             "Spread": {
-              "line": "-18.5",
-              "odds": "1.90"
-            },
-            "Total": {
-              "line": "52.5",
-              "odds": "1.83"
-            },
-            "To Win": "1.10"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "Rugby Union",
-    "matches": [
-      {
-        "id": "191003212",
-        "kickoff": "05/02/2027 20:10:00",
-        "competition": "Six Nations 2027",
-        "home": "To Win Outright",
-        "away": "",
-        "markets": {
-          "Six Nations 2027": {
-            "No row": "2.37"
-          }
-        }
-      },
-      {
-        "id": "196078149",
-        "kickoff": "07/11/2026 12:00:00",
-        "competition": "Nations Championship 2026",
-        "home": "To Win Outright",
-        "away": "",
-        "markets": {
-          "Nations Championship 2026": {
-            "No row": "2.00"
-          }
-        }
-      },
-      {
-        "id": "199775797",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "RU-SUMINTM",
-        "home": "Argentina",
-        "away": "Australia",
-        "markets": {
-          "Game Lines": {
-            "Handicap": {
               "line": "+1.5",
-              "odds": "1.90"
+              "odds": "1.87"
             },
-            "Total": {
-              "line": "57.5",
-              "odds": "1.90"
-            },
-            "To Win": "2.20"
+            "To Win": "1.95"
           }
         }
       }
@@ -808,53 +867,53 @@
     "sport": "Soccer",
     "matches": [
       {
-        "id": "197255935",
-        "kickoff": "30/08/2026 14:30:00",
-        "competition": "GERM-BL-I",
-        "home": "SC Freiburg",
-        "away": "Werder Bremen",
+        "id": "199419003",
+        "kickoff": "30/08/2026 17:30:00",
+        "competition": "Italy Serie A",
+        "home": "Napoli",
+        "away": "Como",
         "markets": {
           "Match Result": {
-            "1": "1.90",
-            "X": "3.60",
-            "2": "4.00"
-          },
-          "Germany Bundesliga I": {
-            "No row": "4.00"
-          }
-        }
-      },
-      {
-        "id": "197255920",
-        "kickoff": "30/08/2026 16:30:00",
-        "competition": "GERM-BL-I",
-        "home": "Augsburg",
-        "away": "Schalke",
-        "markets": {
-          "Match Result": {
-            "1": "2.15",
-            "X": "3.70",
+            "1": "2.45",
+            "X": "3.00",
             "2": "3.10"
           },
-          "Germany Bundesliga I": {
+          "Italy Serie A": {
             "No row": "3.10"
           }
         }
       },
       {
-        "id": "199425415",
-        "kickoff": "29/08/2026 20:30:00",
-        "competition": "Spanish Primera",
-        "home": "Sevilla",
-        "away": "Atletico Madrid",
+        "id": "199419009",
+        "kickoff": "30/08/2026 19:45:00",
+        "competition": "Italy Serie A",
+        "home": "Cagliari",
+        "away": "Inter Milan",
         "markets": {
           "Match Result": {
-            "1": "4.20",
-            "X": "3.40",
-            "2": "1.90"
+            "1": "7.50",
+            "X": "4.50",
+            "2": "1.42"
           },
-          "Spain La Liga": {
-            "No row": "1.90"
+          "Italy Serie A": {
+            "No row": "1.42"
+          }
+        }
+      },
+      {
+        "id": "199419017",
+        "kickoff": "30/08/2026 19:45:00",
+        "competition": "Italy Serie A",
+        "home": "Lazio",
+        "away": "Genoa",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "3.00",
+            "2": "3.75"
+          },
+          "Italy Serie A": {
+            "No row": "3.75"
           }
         }
       },
@@ -866,12 +925,46 @@
         "away": "Malaga",
         "markets": {
           "Match Result": {
-            "1": "1.10",
-            "X": "9.50",
+            "1": "1.09",
+            "X": "10.00",
             "2": "21.00"
           },
           "Spain La Liga": {
             "No row": "21.00"
+          }
+        }
+      },
+      {
+        "id": "199425423",
+        "kickoff": "30/08/2026 18:30:00",
+        "competition": "Spanish Primera",
+        "home": "Deportivo A Coruna",
+        "away": "Valencia",
+        "markets": {
+          "Match Result": {
+            "1": "2.50",
+            "X": "3.00",
+            "2": "3.25"
+          },
+          "Spain La Liga": {
+            "No row": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199425427",
+        "kickoff": "30/08/2026 20:30:00",
+        "competition": "Spanish Primera",
+        "home": "Celta Vigo",
+        "away": "Athletic Club",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "3.10",
+            "2": "2.90"
+          },
+          "Spain La Liga": {
+            "No row": "2.75"
           }
         }
       },
@@ -883,12 +976,46 @@
         "away": "Brighton",
         "markets": {
           "Match Result": {
-            "1": "1.80",
-            "X": "4.00",
-            "2": "4.20"
+            "1": "1.90",
+            "X": "3.75",
+            "2": "3.75"
           },
           "England Premier League": {
-            "No row": "4.20"
+            "No row": "4.10"
+          }
+        }
+      },
+      {
+        "id": "196564298",
+        "kickoff": "30/08/2026 14:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Leeds",
+        "away": "Brentford",
+        "markets": {
+          "Match Result": {
+            "1": "2.60",
+            "X": "3.30",
+            "2": "2.70"
+          },
+          "England Premier League": {
+            "No row": "2.70"
+          }
+        }
+      },
+      {
+        "id": "196564305",
+        "kickoff": "30/08/2026 14:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Sunderland",
+        "away": "Fulham",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "3.20",
+            "2": "3.00"
+          },
+          "England Premier League": {
+            "No row": "3.10"
           }
         }
       },
@@ -910,322 +1037,53 @@
         }
       },
       {
-        "id": "199417211",
-        "kickoff": "29/08/2026 19:00:00",
-        "competition": "France Ligue 2",
-        "home": "Guingamp",
-        "away": "Nantes",
-        "markets": {
-          "Match Result": {
-            "1": "2.70",
-            "X": "3.00",
-            "2": "2.45"
-          }
-        }
-      },
-      {
-        "id": "199417214",
-        "kickoff": "31/08/2026 19:45:00",
-        "competition": "France Ligue 2",
-        "home": "Dijon",
-        "away": "St Etienne",
-        "markets": {
-          "Match Result": {
-            "1": "3.90",
-            "X": "3.20",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "199418996",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Juventus",
-        "away": "Parma",
-        "markets": {
-          "Match Result": {
-            "1": "1.22",
-            "X": "6.50",
-            "2": "12.00"
-          },
-          "Italy Serie A": {
-            "No row": "12.00"
-          }
-        }
-      },
-      {
-        "id": "199419003",
-        "kickoff": "30/08/2026 17:30:00",
-        "competition": "Italy Serie A",
-        "home": "Napoli",
-        "away": "Como",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.00",
-            "2": "3.10"
-          },
-          "Italy Serie A": {
-            "No row": "3.10"
-          }
-        }
-      },
-      {
-        "id": "199419009",
-        "kickoff": "30/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Cagliari",
-        "away": "Inter Milan",
-        "markets": {
-          "Match Result": {
-            "1": "8.00",
-            "X": "4.50",
-            "2": "1.42"
-          },
-          "Italy Serie A": {
-            "No row": "1.42"
-          }
-        }
-      },
-      {
-        "id": "199419017",
-        "kickoff": "30/08/2026 19:45:00",
-        "competition": "Italy Serie A",
-        "home": "Lazio",
-        "away": "Genoa",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.10",
-            "2": "4.20"
-          },
-          "Italy Serie A": {
-            "No row": "4.20"
-          }
-        }
-      },
-      {
-        "id": "199420796",
-        "kickoff": "29/08/2026 21:30:00",
-        "competition": "MLS",
-        "home": "Seattle Sounders",
-        "away": "Chicago Fire",
-        "markets": {
-          "Match Result": {
-            "1": "2.87",
-            "X": "3.70",
-            "2": "2.35"
-          }
-        }
-      },
-      {
-        "id": "199420801",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Atlanta Utd",
-        "away": "Charlotte FC",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.70",
-            "2": "2.60"
-          }
-        }
-      },
-      {
-        "id": "199420808",
-        "kickoff": "30/08/2026 21:30:00",
-        "competition": "MLS",
-        "home": "Columbus Crew",
-        "away": "New England",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.70",
-            "2": "3.40"
-          }
-        }
-      },
-      {
-        "id": "199420812",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "DC United",
-        "away": "LAFC",
-        "markets": {
-          "Match Result": {
-            "1": "3.80",
-            "X": "3.75",
-            "2": "1.90"
-          }
-        }
-      },
-      {
-        "id": "199420817",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Inter Miami",
-        "away": "CF Montreal",
-        "markets": {
-          "Match Result": {
-            "1": "1.44",
-            "X": "5.25",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "199420827",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "NY Red Bulls",
-        "away": "Philadelphia",
-        "markets": {
-          "Match Result": {
-            "1": "3.00",
-            "X": "4.00",
-            "2": "2.15"
-          }
-        }
-      },
-      {
-        "id": "199420834",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "MLS",
-        "home": "Toronto FC",
-        "away": "New York City",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.60",
-            "2": "2.70"
-          }
-        }
-      },
-      {
-        "id": "199420836",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Houston Dynamo",
-        "away": "San Jose",
-        "markets": {
-          "Match Result": {
-            "1": "1.61",
-            "X": "4.33",
-            "2": "5.00"
-          }
-        }
-      },
-      {
-        "id": "199420838",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Minnesota Utd",
-        "away": "Orlando City",
-        "markets": {
-          "Match Result": {
-            "1": "1.80",
-            "X": "3.90",
-            "2": "4.10"
-          }
-        }
-      },
-      {
-        "id": "199420840",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Nashville SC",
-        "away": "FC Cincinnati",
-        "markets": {
-          "Match Result": {
-            "1": "1.80",
-            "X": "3.90",
-            "2": "4.20"
-          }
-        }
-      },
-      {
-        "id": "199420842",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "MLS",
-        "home": "Kansas City",
-        "away": "Vancouver Whitecaps",
+        "id": "196564290",
+        "kickoff": "31/08/2026 20:00:00",
+        "competition": "FA Barclaycard",
+        "home": "Aston Villa",
+        "away": "Arsenal",
         "markets": {
           "Match Result": {
             "1": "6.00",
-            "X": "5.25",
-            "2": "1.42"
+            "X": "4.33",
+            "2": "1.50"
+          },
+          "England Premier League": {
+            "No row": "1.50"
           }
         }
       },
       {
-        "id": "199420844",
-        "kickoff": "30/08/2026 02:30:00",
-        "competition": "MLS",
-        "home": "Colorado Rapids",
-        "away": "Real Salt Lake",
+        "id": "197255935",
+        "kickoff": "30/08/2026 14:30:00",
+        "competition": "GERM-BL-I",
+        "home": "SC Freiburg",
+        "away": "Werder Bremen",
         "markets": {
           "Match Result": {
             "1": "1.90",
-            "X": "3.75",
-            "2": "3.80"
+            "X": "3.60",
+            "2": "4.00"
+          },
+          "Germany Bundesliga I": {
+            "No row": "4.10"
           }
         }
       },
       {
-        "id": "199417100",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Lyon",
-        "away": "Le Havre",
+        "id": "197255920",
+        "kickoff": "30/08/2026 16:30:00",
+        "competition": "GERM-BL-I",
+        "home": "Augsburg",
+        "away": "Schalke",
         "markets": {
           "Match Result": {
-            "1": "1.48",
-            "X": "4.50",
-            "2": "6.25"
-          }
-        }
-      },
-      {
-        "id": "199417091",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Auxerre",
-        "away": "Angers",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.40",
-            "2": "3.80"
-          }
-        }
-      },
-      {
-        "id": "199417095",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Brest",
-        "away": "Toulouse",
-        "markets": {
-          "Match Result": {
-            "1": "2.62",
-            "X": "3.40",
-            "2": "2.62"
-          }
-        }
-      },
-      {
-        "id": "199417097",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "France Le Champ",
-        "home": "Lorient",
-        "away": "Troyes",
-        "markets": {
-          "Match Result": {
-            "1": "1.85",
-            "X": "3.40",
-            "2": "4.33"
+            "1": "2.20",
+            "X": "3.60",
+            "2": "3.10"
+          },
+          "Germany Bundesliga I": {
+            "No row": "3.00"
           }
         }
       },
@@ -1265,45 +1123,23 @@
         "away": "Marseille",
         "markets": {
           "Match Result": {
-            "1": "2.45",
-            "X": "3.70",
-            "2": "2.70"
+            "1": "2.40",
+            "X": "3.60",
+            "2": "2.75"
           }
         }
       },
       {
-        "id": "196564298",
-        "kickoff": "30/08/2026 14:00:00",
-        "competition": "England Premier League",
-        "home": "Leeds",
-        "away": "Brentford",
+        "id": "199417214",
+        "kickoff": "31/08/2026 19:45:00",
+        "competition": "France Ligue 2",
+        "home": "Dijon",
+        "away": "St Etienne",
         "markets": {
-          "England Premier League": {
-            "No row": "2.70"
-          }
-        }
-      },
-      {
-        "id": "196564305",
-        "kickoff": "30/08/2026 14:00:00",
-        "competition": "England Premier League",
-        "home": "Sunderland",
-        "away": "Fulham",
-        "markets": {
-          "England Premier League": {
-            "No row": "3.10"
-          }
-        }
-      },
-      {
-        "id": "196564290",
-        "kickoff": "31/08/2026 20:00:00",
-        "competition": "England Premier League",
-        "home": "Aston Villa",
-        "away": "Arsenal",
-        "markets": {
-          "England Premier League": {
-            "No row": "1.53"
+          "Match Result": {
+            "1": "3.90",
+            "X": "3.20",
+            "2": "1.80"
           }
         }
       },
@@ -1315,7 +1151,7 @@
         "away": "Rangers",
         "markets": {
           "Scotland Premiership": {
-            "No row": "1.83"
+            "No row": "1.85"
           }
         }
       },
@@ -1327,7 +1163,7 @@
         "away": "Hibernian",
         "markets": {
           "Scotland Premiership": {
-            "No row": "2.25"
+            "No row": "2.30"
           }
         }
       },
@@ -1339,31 +1175,7 @@
         "away": "Motherwell",
         "markets": {
           "Scotland Premiership": {
-            "No row": "2.75"
-          }
-        }
-      },
-      {
-        "id": "199425423",
-        "kickoff": "30/08/2026 18:30:00",
-        "competition": "Spain La Liga",
-        "home": "Deportivo A Coruna",
-        "away": "Valencia",
-        "markets": {
-          "Spain La Liga": {
-            "No row": "3.10"
-          }
-        }
-      },
-      {
-        "id": "199425427",
-        "kickoff": "30/08/2026 20:30:00",
-        "competition": "Spain La Liga",
-        "home": "Celta Vigo",
-        "away": "Athletic Club",
-        "markets": {
-          "Spain La Liga": {
-            "No row": "3.10"
+            "No row": "2.62"
           }
         }
       },
@@ -1387,7 +1199,7 @@
         "away": "Rayo Vallecano",
         "markets": {
           "Spain La Liga": {
-            "No row": "13.00"
+            "No row": "15.00"
           }
         }
       },
@@ -1416,222 +1228,6 @@
         }
       },
       {
-        "id": "198723921",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "Italy Serie B",
-        "home": "Ascoli",
-        "away": "Carrarese",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "4.10"
-          }
-        }
-      },
-      {
-        "id": "198723926",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "Italy Serie B",
-        "home": "Avellino",
-        "away": "Vicenza",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "3.00"
-          }
-        }
-      },
-      {
-        "id": "198723929",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "Italy Serie B",
-        "home": "Padova",
-        "away": "Verona",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "2.50"
-          }
-        }
-      },
-      {
-        "id": "198723934",
-        "kickoff": "30/08/2026 18:00:00",
-        "competition": "Italy Serie B",
-        "home": "Arezzo",
-        "away": "Palermo",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "2.10"
-          }
-        }
-      },
-      {
-        "id": "198723938",
-        "kickoff": "30/08/2026 18:00:00",
-        "competition": "Italy Serie B",
-        "home": "Mantova",
-        "away": "Empoli",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "3.50"
-          }
-        }
-      },
-      {
-        "id": "198723942",
-        "kickoff": "30/08/2026 20:00:00",
-        "competition": "Italy Serie B",
-        "home": "Benevento",
-        "away": "Sudtirol",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "3.60"
-          }
-        }
-      },
-      {
-        "id": "198723945",
-        "kickoff": "30/08/2026 20:00:00",
-        "competition": "Italy Serie B",
-        "home": "Pisa",
-        "away": "Catanzaro",
-        "markets": {
-          "Italy Serie B": {
-            "No row": "4.50"
-          }
-        }
-      },
-      {
-        "id": "199425469",
-        "kickoff": "29/08/2026 20:30:00",
-        "competition": "Spain Segunda",
-        "home": "Girona",
-        "away": "Las Palmas",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "4.75"
-          }
-        }
-      },
-      {
-        "id": "199425471",
-        "kickoff": "30/08/2026 16:00:00",
-        "competition": "Spain Segunda",
-        "home": "FC Andorra",
-        "away": "Eibar",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "3.60"
-          }
-        }
-      },
-      {
-        "id": "199425474",
-        "kickoff": "30/08/2026 18:00:00",
-        "competition": "Spain Segunda",
-        "home": "Cadiz",
-        "away": "Valladolid",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "2.90"
-          }
-        }
-      },
-      {
-        "id": "199425479",
-        "kickoff": "30/08/2026 18:00:00",
-        "competition": "Spain Segunda",
-        "home": "Mallorca",
-        "away": "AD Ceuta",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "8.00"
-          }
-        }
-      },
-      {
-        "id": "199425482",
-        "kickoff": "30/08/2026 20:30:00",
-        "competition": "Spain Segunda",
-        "home": "Cordoba",
-        "away": "Granada",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "4.33"
-          }
-        }
-      },
-      {
-        "id": "199425485",
-        "kickoff": "31/08/2026 18:00:00",
-        "competition": "Spain Segunda",
-        "home": "Burgos",
-        "away": "Real Sociedad B",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "5.25"
-          }
-        }
-      },
-      {
-        "id": "199425488",
-        "kickoff": "31/08/2026 20:30:00",
-        "competition": "Spain Segunda",
-        "home": "Celta Fortuna",
-        "away": "CD Castellon",
-        "markets": {
-          "Spain Segunda": {
-            "No row": "1.80"
-          }
-        }
-      },
-      {
-        "id": "198654647",
-        "kickoff": "29/08/2026 19:30:00",
-        "competition": "Germany Bundesliga II",
-        "home": "Nurnberg",
-        "away": "Arminia Bielefeld",
-        "markets": {
-          "Germany Bundesliga II": {
-            "No row": "3.00"
-          }
-        }
-      },
-      {
-        "id": "198654653",
-        "kickoff": "30/08/2026 12:30:00",
-        "competition": "Germany Bundesliga II",
-        "home": "Darmstadt",
-        "away": "Hannover 96",
-        "markets": {
-          "Germany Bundesliga II": {
-            "No row": "2.05"
-          }
-        }
-      },
-      {
-        "id": "198654663",
-        "kickoff": "30/08/2026 12:30:00",
-        "competition": "Germany Bundesliga II",
-        "home": "Magdeburg",
-        "away": "Holstein Kiel",
-        "markets": {
-          "Germany Bundesliga II": {
-            "No row": "3.10"
-          }
-        }
-      },
-      {
-        "id": "198654668",
-        "kickoff": "30/08/2026 12:30:00",
-        "competition": "Germany Bundesliga II",
-        "home": "St Pauli",
-        "away": "Kaiserslautern",
-        "markets": {
-          "Germany Bundesliga II": {
-            "No row": "3.90"
-          }
-        }
-      },
-      {
         "id": "198645485",
         "kickoff": "30/08/2026 16:00:00",
         "competition": "Austria Bundesliga",
@@ -1639,7 +1235,7 @@
         "away": "SV Ried",
         "markets": {
           "Austria Bundesliga": {
-            "No row": "2.45"
+            "No row": "2.40"
           }
         }
       },
@@ -1651,7 +1247,7 @@
         "away": "SK Sturm Graz",
         "markets": {
           "Austria Bundesliga": {
-            "No row": "3.10"
+            "No row": "3.20"
           }
         }
       },
@@ -1663,7 +1259,19 @@
         "away": "FK Austria Vienna",
         "markets": {
           "Austria Bundesliga": {
-            "No row": "6.50"
+            "No row": "7.50"
+          }
+        }
+      },
+      {
+        "id": "200389420",
+        "kickoff": "30/08/2026 15:00:00",
+        "competition": "Azerbaijan Premier League",
+        "home": "FK Kapaz",
+        "away": "PFK Turan Tovuz",
+        "markets": {
+          "Azerbaijan Premier League": {
+            "No row": "1.70"
           }
         }
       },
@@ -1675,30 +1283,6 @@
         "away": "Neftchi Baku",
         "markets": {
           "Azerbaijan Premier League": {
-            "No row": "2.55"
-          }
-        }
-      },
-      {
-        "id": "199410578",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "Belgium First Division A",
-        "home": "Cercle Brugge",
-        "away": "Lommel",
-        "markets": {
-          "Belgium First Division A": {
-            "No row": "5.00"
-          }
-        }
-      },
-      {
-        "id": "199410586",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "Belgium First Division A",
-        "home": "OH Leuven",
-        "away": "Standard Liege",
-        "markets": {
-          "Belgium First Division A": {
             "No row": "2.62"
           }
         }
@@ -1711,7 +1295,7 @@
         "away": "Club Brugge",
         "markets": {
           "Belgium First Division A": {
-            "No row": "1.70"
+            "No row": "1.65"
           }
         }
       },
@@ -1723,7 +1307,7 @@
         "away": "Sint-Truidense",
         "markets": {
           "Belgium First Division A": {
-            "No row": "2.70"
+            "No row": "2.75"
           }
         }
       },
@@ -1735,7 +1319,7 @@
         "away": "Anderlecht",
         "markets": {
           "Belgium First Division A": {
-            "No row": "4.75"
+            "No row": "4.50"
           }
         }
       },
@@ -1747,19 +1331,7 @@
         "away": "Zulte-Waregem",
         "markets": {
           "Belgium First Division A": {
-            "No row": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200236724",
-        "kickoff": "29/08/2026 19:45:00",
-        "competition": "Bosnia & Herzegovina Premier Liga",
-        "home": "FK Sarajevo",
-        "away": "Zrinjski Mostar",
-        "markets": {
-          "Bosnia & Herzegovina Premier Liga": {
-            "No row": "2.45"
+            "No row": "2.15"
           }
         }
       },
@@ -1771,7 +1343,7 @@
         "away": "Borac Banja Luka",
         "markets": {
           "Bosnia & Herzegovina Premier Liga": {
-            "No row": "1.65"
+            "No row": "1.33"
           }
         }
       },
@@ -1783,7 +1355,7 @@
         "away": "Levski Sofia",
         "markets": {
           "Bulgaria First League": {
-            "No row": "1.72"
+            "No row": "1.70"
           }
         }
       },
@@ -1807,7 +1379,7 @@
         "away": "Cherno More Varna",
         "markets": {
           "Bulgaria First League": {
-            "No row": "6.50"
+            "No row": "7.00"
           }
         }
       },
@@ -1836,30 +1408,6 @@
         }
       },
       {
-        "id": "199422180",
-        "kickoff": "29/08/2026 19:00:00",
-        "competition": "Saudi Arabia Pro League",
-        "home": "Al Fateh SC",
-        "away": "Al Ittihad Jeddah",
-        "markets": {
-          "Saudi Arabia Pro League": {
-            "No row": "1.90"
-          }
-        }
-      },
-      {
-        "id": "199422178",
-        "kickoff": "29/08/2026 19:00:00",
-        "competition": "Saudi Arabia Pro League",
-        "home": "Al Ittifaq Dammam",
-        "away": "Al Draih",
-        "markets": {
-          "Saudi Arabia Pro League": {
-            "No row": "2.00"
-          }
-        }
-      },
-      {
         "id": "199422182",
         "kickoff": "30/08/2026 17:05:00",
         "competition": "Saudi Arabia Pro League",
@@ -1879,7 +1427,7 @@
         "away": "Al Faisaly Harmah",
         "markets": {
           "Saudi Arabia Pro League": {
-            "No row": "12.00"
+            "No row": "11.00"
           }
         }
       },
@@ -1891,7 +1439,7 @@
         "away": "Pohang Steelers",
         "markets": {
           "South Korea K League 1": {
-            "No row": "4.00"
+            "No row": "3.70"
           }
         }
       },
@@ -1903,7 +1451,7 @@
         "away": "FC Seoul",
         "markets": {
           "South Korea K League 1": {
-            "No row": "1.50"
+            "No row": "1.45"
           }
         }
       },
@@ -1915,7 +1463,7 @@
         "away": "Jeonbuk Motors",
         "markets": {
           "South Korea K League 1": {
-            "No row": "2.35"
+            "No row": "2.25"
           }
         }
       },
@@ -1927,7 +1475,7 @@
         "away": "Daejeon Hana Citizen",
         "markets": {
           "South Korea K League 1": {
-            "No row": "2.05"
+            "No row": "1.95"
           }
         }
       },
@@ -1939,7 +1487,7 @@
         "away": "Sharjah SCC",
         "markets": {
           "UAE Pro League": {
-            "No row": "1.50"
+            "No row": "1.55"
           }
         }
       },
@@ -1956,928 +1504,185 @@
         }
       },
       {
-        "id": "200260170",
-        "kickoff": "01/09/2026 00:00:00",
-        "competition": "Leagues Cup",
-        "home": "Club America",
-        "away": "Monterrey",
-        "markets": {
-          "Leagues Cup": {
-            "No row": "3.40"
-          }
-        }
-      },
-      {
-        "id": "200260168",
-        "kickoff": "01/09/2026 00:00:00",
-        "competition": "Leagues Cup",
-        "home": "Toluca",
-        "away": "Leon",
-        "markets": {
-          "Leagues Cup": {
-            "No row": "3.25"
-          }
-        }
-      },
-      {
-        "id": "199401151",
-        "kickoff": "29/08/2026 21:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Rosario Central",
-        "away": "Gimnasia LP",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "5.75"
-          }
-        }
-      },
-      {
-        "id": "199401126",
-        "kickoff": "29/08/2026 23:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Huracan",
-        "away": "Estudiantes Rio Cuarto",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "7.50"
-          }
-        }
-      },
-      {
-        "id": "199401157",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Atlético Tucumán",
-        "away": "Belgrano",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "3.25"
-          }
-        }
-      },
-      {
-        "id": "199401160",
-        "kickoff": "30/08/2026 01:30:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Talleres Cordoba",
-        "away": "Central Cordoba SdE",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "5.50"
-          }
-        }
-      },
-      {
-        "id": "199401164",
-        "kickoff": "30/08/2026 19:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Banfield",
-        "away": "River Plate",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "1.83"
-          }
-        }
-      },
-      {
-        "id": "199401166",
-        "kickoff": "30/08/2026 21:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Argentinos Jrs",
-        "away": "Aldosivi",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "10.00"
-          }
-        }
-      },
-      {
-        "id": "199401169",
-        "kickoff": "30/08/2026 23:15:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Independiente",
-        "away": "Gimnasia Mendoza",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "6.50"
-          }
-        }
-      },
-      {
-        "id": "199401172",
-        "kickoff": "31/08/2026 01:30:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Independiente Rivadavia",
-        "away": "Racing Club",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "3.75"
-          }
-        }
-      },
-      {
-        "id": "199401175",
-        "kickoff": "31/08/2026 23:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Defensa y Justicia",
-        "away": "Platense",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "3.50"
-          }
-        }
-      },
-      {
-        "id": "199401180",
-        "kickoff": "31/08/2026 23:00:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Estudiantes LP",
-        "away": "Newell's",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "5.75"
-          }
-        }
-      },
-      {
-        "id": "199401185",
-        "kickoff": "01/09/2026 01:15:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Instituto AC Cordoba",
-        "away": "San Lorenzo",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "4.75"
-          }
-        }
-      },
-      {
-        "id": "199401189",
-        "kickoff": "01/09/2026 01:15:00",
-        "competition": "Argentina Liga Profesional",
-        "home": "Tigre",
-        "away": "Barracas Central",
-        "markets": {
-          "Argentina Liga Profesional": {
-            "No row": "5.25"
-          }
-        }
-      },
-      {
-        "id": "199411676",
-        "kickoff": "29/08/2026 22:30:00",
-        "competition": "Brazil Serie A",
-        "home": "Atletico Mineiro",
-        "away": "Vitoria",
-        "markets": {
-          "Brazil Serie A": {
-            "No row": "4.75"
-          }
-        }
-      },
-      {
-        "id": "199411703",
-        "kickoff": "30/08/2026 00:00:00",
-        "competition": "Brazil Serie A",
-        "home": "Sao Paulo",
-        "away": "Bragantino",
-        "markets": {
-          "Brazil Serie A": {
-            "No row": "3.40"
-          }
-        }
-      },
-      {
-        "id": "199411705",
-        "kickoff": "30/08/2026 01:20:00",
-        "competition": "Brazil Serie A",
-        "home": "Vasco da Gama",
-        "away": "Cruzeiro",
-        "markets": {
-          "Brazil Serie A": {
-            "No row": "3.80"
-          }
-        }
-      },
-      {
-        "id": "199411671",
+        "id": "200342539",
         "kickoff": "30/08/2026 15:00:00",
-        "competition": "Brazil Serie A",
-        "home": "Athletico Paranaense",
-        "away": "Fluminense",
+        "competition": "Botswana Premier League",
+        "home": "Botswana Police XI SC",
+        "away": "Morupule Wanderers FC",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "3.40"
+          "Botswana Premier League": {
+            "No row": "2.62"
           }
         }
       },
       {
-        "id": "199411680",
-        "kickoff": "30/08/2026 20:00:00",
-        "competition": "Brazil Serie A",
-        "home": "Corinthians",
-        "away": "Santos",
+        "id": "200389433",
+        "kickoff": "30/08/2026 09:45:00",
+        "competition": "Cambodia League Women",
+        "home": "Nagaworld FC (W)",
+        "away": "Boeung Ket (W)",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "4.50"
+          "Cambodia League Women": {
+            "No row": "1.40"
           }
         }
       },
       {
-        "id": "199411684",
-        "kickoff": "30/08/2026 20:00:00",
-        "competition": "Brazil Serie A",
-        "home": "Flamengo",
-        "away": "Botafogo",
+        "id": "200220747",
+        "kickoff": "30/08/2026 12:00:00",
+        "competition": "China Division 1",
+        "home": "Dalian K'un City",
+        "away": "Nantong Zhiyun",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "7.50"
+          "China Division 1": {
+            "No row": "1.95"
           }
         }
       },
       {
-        "id": "199411688",
-        "kickoff": "30/08/2026 22:30:00",
-        "competition": "Brazil Serie A",
-        "home": "Gremio",
-        "away": "Chapecoense",
+        "id": "200220757",
+        "kickoff": "30/08/2026 12:00:00",
+        "competition": "China Division 1",
+        "home": "Ningbo Professional FC",
+        "away": "Meizhou Hakka",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "6.50"
+          "China Division 1": {
+            "No row": "3.90"
           }
         }
       },
       {
-        "id": "199411692",
-        "kickoff": "30/08/2026 22:30:00",
-        "competition": "Brazil Serie A",
-        "home": "Mirassol",
-        "away": "Palmeiras",
+        "id": "200220751",
+        "kickoff": "30/08/2026 12:30:00",
+        "competition": "China Division 1",
+        "home": "Guangdong GZ-Power",
+        "away": "Changchun Yatai",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "2.05"
+          "China Division 1": {
+            "No row": "6.25"
           }
         }
       },
       {
-        "id": "199411678",
-        "kickoff": "30/08/2026 23:30:00",
-        "competition": "Brazil Serie A",
-        "home": "Bahia",
-        "away": "Internacional",
+        "id": "200222517",
+        "kickoff": "30/08/2026 09:00:00",
+        "competition": "Hong Kong Premier League",
+        "home": "Tai Po",
+        "away": "Eastern Football Team",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "4.33"
+          "Hong Kong Premier League": {
+            "No row": "2.80"
           }
         }
       },
       {
-        "id": "199411695",
-        "kickoff": "01/09/2026 00:00:00",
-        "competition": "Brazil Serie A",
-        "home": "Remo",
-        "away": "Coritiba",
+        "id": "200222507",
+        "kickoff": "30/08/2026 11:30:00",
+        "competition": "Hong Kong Premier League",
+        "home": "HK Rangers FC",
+        "away": "Eastern District",
         "markets": {
-          "Brazil Serie A": {
-            "No row": "3.70"
+          "Hong Kong Premier League": {
+            "No row": "1.90"
           }
         }
       },
       {
-        "id": "199412068",
-        "kickoff": "29/08/2026 22:00:00",
-        "competition": "Canada Premier League",
-        "home": "Cavalry FC",
-        "away": "Vancouver FC",
+        "id": "200399901",
+        "kickoff": "30/08/2026 10:30:00",
+        "competition": "India Calcutta Football League",
+        "home": "Calcutta Customs",
+        "away": "East Bengal Club II",
         "markets": {
-          "Canada Premier League": {
-            "No row": "5.75"
+          "India Calcutta Football League": {
+            "No row": "1.85"
           }
         }
       },
       {
-        "id": "199412070",
-        "kickoff": "30/08/2026 23:00:00",
-        "competition": "Canada Premier League",
-        "home": "Pacific FC",
-        "away": "HFX Wanderers FC",
+        "id": "200399904",
+        "kickoff": "30/08/2026 10:30:00",
+        "competition": "India Calcutta Football League",
+        "home": "Peerless SC",
+        "away": "Police AC",
         "markets": {
-          "Canada Premier League": {
-            "No row": "2.15"
-          }
-        }
-      },
-      {
-        "id": "199412079",
-        "kickoff": "29/08/2026 22:30:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Deportes Limache",
-        "away": "Everton de Vina",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "2.87"
-          }
-        }
-      },
-      {
-        "id": "199412082",
-        "kickoff": "30/08/2026 01:00:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Nublense",
-        "away": "Deportes Concepcion",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "3.70"
-          }
-        }
-      },
-      {
-        "id": "199412085",
-        "kickoff": "30/08/2026 20:00:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Universidad de Concepcion",
-        "away": "Universidad de Chile",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "1.66"
-          }
-        }
-      },
-      {
-        "id": "199412090",
-        "kickoff": "30/08/2026 22:30:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Colo Colo",
-        "away": "Audax Italiano",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "5.75"
-          }
-        }
-      },
-      {
-        "id": "199412093",
-        "kickoff": "31/08/2026 01:00:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Coquimbo Unido",
-        "away": "Huachipato",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "5.50"
-          }
-        }
-      },
-      {
-        "id": "199412102",
-        "kickoff": "31/08/2026 23:15:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Union La Calera",
-        "away": "La Serena",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "3.20"
-          }
-        }
-      },
-      {
-        "id": "199412104",
-        "kickoff": "01/09/2026 01:45:00",
-        "competition": "Chile Liga de Primera",
-        "home": "Universidad Catolica",
-        "away": "O'Higgins",
-        "markets": {
-          "Chile Liga de Primera": {
-            "No row": "4.00"
+          "India Calcutta Football League": {
+            "No row": "3.10"
           }
         }
       }
     ]
   },
   {
-    "sport": "Tennis",
+    "sport": "Supercars",
     "matches": [
       {
-        "id": "200361303",
-        "kickoff": "29/08/2026 21:00:00",
-        "competition": "",
-        "home": "Arthur Fery",
-        "away": "Ignacio Buse",
+        "id": "199740083",
+        "kickoff": "30/08/2026 08:00:00",
+        "competition": "AUS-NPL-QUEENSL",
+        "home": "Lions FC",
+        "away": "Peninsula Power",
         "markets": {
-          "Match Winner": {
-            "1": "1.80",
-            "2": "2.00"
-          },
-          "ATP Winston-Salem - Final": {
-            "No row": "2.00"
+          "Match Result": {
+            "1": "1.70",
+            "X": "4.00",
+            "2": "3.90"
           }
         }
       },
       {
-        "id": "200366519",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "",
-        "home": "Diane Parry",
-        "away": "Elise Mertens",
+        "id": "200222670",
+        "kickoff": "30/08/2026 08:00:00",
+        "competition": "AUS-NSW-NPL-WOM",
+        "home": "Western Sydney Wanderers NPL (W)",
+        "away": "Sydney Olympic FC (W)",
         "markets": {
-          "Match Winner": {
-            "1": "2.50",
-            "2": "1.53"
+          "Match Result": {
+            "1": "2.15",
+            "X": "3.75",
+            "2": "2.55"
           }
         }
       },
       {
-        "id": "200288950",
-        "kickoff": "01/09/2026 00:00:10",
-        "competition": "",
-        "home": "Ben Shelton",
-        "away": "Tallon Griekspoor",
+        "id": "200254395",
+        "kickoff": "30/08/2026 08:00:00",
+        "competition": "AUS-NSW-NPL-WOM",
+        "home": "Sydney University (W)",
+        "away": "Manly Utd (W)",
         "markets": {
-          "Match Winner": {
-            "1": "1.12",
-            "2": "6.00"
+          "Match Result": {
+            "1": "2.25",
+            "X": "3.60",
+            "2": "2.55"
           }
         }
       },
       {
-        "id": "200288750",
-        "kickoff": "01/09/2026 01:30:00",
-        "competition": "",
-        "home": "Martin Damm",
-        "away": "Frances Tiafoe",
+        "id": "200254397",
+        "kickoff": "30/08/2026 08:00:00",
+        "competition": "AUS-NSW-NPL-WOM",
+        "home": "Western City Rangers (W)",
+        "away": "Bulls FC Academy (W)",
         "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
+          "Match Result": {
+            "1": "8.00",
+            "X": "7.00",
+            "2": "1.22"
           }
         }
       },
       {
-        "id": "200288530",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Adolfo Daniel Vallejo",
-        "away": "Gael Monfils",
+        "id": "200292388",
+        "kickoff": "30/08/2026 08:00:00",
+        "competition": "Japan Wom L2",
+        "home": "Diosa Izumo (W)",
+        "away": "FC Osaka Speranza (W)",
         "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200349744",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jurij Rodionov",
-        "away": "Giovanni Mpetshi Perricard",
-        "markets": {
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "200288537",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Juncheng Shang",
-        "away": "Marco Trungelliti",
-        "markets": {
-          "Match Winner": {
-            "1": "1.44",
-            "2": "2.75"
-          }
-        }
-      },
-      {
-        "id": "200288354",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Juan Manuel Cerundolo",
-        "away": "Casper Ruud",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200349740",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jesper De Jong",
-        "away": "Francesco Passaro",
-        "markets": {
-          "Match Winner": {
-            "1": "1.66",
-            "2": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200288356",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jan Choinski",
-        "away": "Botic Van De Zandschulp",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200290960",
-        "kickoff": "01/09/2026 00:00:10",
-        "competition": "",
-        "home": "Iga Swiatek",
-        "away": "Xiyu Wang",
-        "markets": {
-          "Match Winner": {
-            "1": "1.08",
-            "2": "8.00"
-          }
-        }
-      },
-      {
-        "id": "200290974",
-        "kickoff": "01/09/2026 02:00:00",
-        "competition": "",
-        "home": "Naomi Osaka",
-        "away": "Anastasia Zakharova",
-        "markets": {
-          "Match Winner": {
-            "1": "1.10",
-            "2": "7.00"
-          }
-        }
-      },
-      {
-        "id": "200290142",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Maya Joint",
-        "away": "Liudmila Samsonova",
-        "markets": {
-          "Match Winner": {
-            "1": "3.20",
-            "2": "1.36"
-          }
-        }
-      },
-      {
-        "id": "200290972",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Yulia Putintseva",
-        "away": "Belinda Bencic",
-        "markets": {
-          "Match Winner": {
-            "1": "4.50",
-            "2": "1.20"
-          }
-        }
-      },
-      {
-        "id": "200290139",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Viktorija Golubic",
-        "away": "Diane Parry",
-        "markets": {
-          "Match Winner": {
-            "1": "2.10",
-            "2": "1.72"
-          }
-        }
-      },
-      {
-        "id": "200290425",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Mirra Andreeva",
-        "away": "Janice Tjen",
-        "markets": {
-          "Match Winner": {
-            "1": "1.12",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "200290961",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Nadia Podoroska",
-        "away": "Simona Waltert",
-        "markets": {
-          "Match Winner": {
-            "1": "2.50",
-            "2": "1.53"
-          }
-        }
-      },
-      {
-        "id": "200290426",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Nikola Bartunkova",
-        "away": "Mayar Sherif",
-        "markets": {
-          "Match Winner": {
-            "1": "1.20",
-            "2": "4.50"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "US Open",
-    "matches": [
-      {
-        "id": "200361303",
-        "kickoff": "29/08/2026 21:00:00",
-        "competition": "",
-        "home": "Arthur Fery",
-        "away": "Ignacio Buse",
-        "markets": {
-          "Match Winner": {
-            "1": "1.80",
-            "2": "2.00"
-          }
-        }
-      },
-      {
-        "id": "200366519",
-        "kickoff": "30/08/2026 00:30:00",
-        "competition": "",
-        "home": "Diane Parry",
-        "away": "Elise Mertens",
-        "markets": {
-          "Match Winner": {
-            "1": "2.50",
-            "2": "1.53"
-          }
-        }
-      },
-      {
-        "id": "200288950",
-        "kickoff": "01/09/2026 00:00:10",
-        "competition": "",
-        "home": "Ben Shelton",
-        "away": "Tallon Griekspoor",
-        "markets": {
-          "Match Winner": {
-            "1": "1.12",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "200288750",
-        "kickoff": "01/09/2026 01:30:00",
-        "competition": "",
-        "home": "Martin Damm",
-        "away": "Frances Tiafoe",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200288530",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Adolfo Daniel Vallejo",
-        "away": "Gael Monfils",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200349744",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jurij Rodionov",
-        "away": "Giovanni Mpetshi Perricard",
-        "markets": {
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "200288537",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Juncheng Shang",
-        "away": "Marco Trungelliti",
-        "markets": {
-          "Match Winner": {
-            "1": "1.44",
-            "2": "2.75"
-          }
-        }
-      },
-      {
-        "id": "200288354",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Juan Manuel Cerundolo",
-        "away": "Casper Ruud",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200349740",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jesper De Jong",
-        "away": "Francesco Passaro",
-        "markets": {
-          "Match Winner": {
-            "1": "1.66",
-            "2": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200288356",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Jan Choinski",
-        "away": "Botic Van De Zandschulp",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200290960",
-        "kickoff": "01/09/2026 00:00:10",
-        "competition": "",
-        "home": "Iga Swiatek",
-        "away": "Xiyu Wang",
-        "markets": {
-          "Match Winner": {
-            "1": "1.08",
-            "2": "8.00"
-          }
-        }
-      },
-      {
-        "id": "200290974",
-        "kickoff": "01/09/2026 02:00:00",
-        "competition": "",
-        "home": "Naomi Osaka",
-        "away": "Anastasia Zakharova",
-        "markets": {
-          "Match Winner": {
-            "1": "1.10",
-            "2": "7.00"
-          }
-        }
-      },
-      {
-        "id": "200290142",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Maya Joint",
-        "away": "Liudmila Samsonova",
-        "markets": {
-          "Match Winner": {
-            "1": "3.20",
-            "2": "1.36"
-          }
-        }
-      },
-      {
-        "id": "200290972",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Yulia Putintseva",
-        "away": "Belinda Bencic",
-        "markets": {
-          "Match Winner": {
-            "1": "4.50",
-            "2": "1.20"
-          }
-        }
-      },
-      {
-        "id": "200290139",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Viktorija Golubic",
-        "away": "Diane Parry",
-        "markets": {
-          "Match Winner": {
-            "1": "2.10",
-            "2": "1.72"
-          }
-        }
-      },
-      {
-        "id": "200290425",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Mirra Andreeva",
-        "away": "Janice Tjen",
-        "markets": {
-          "Match Winner": {
-            "1": "1.12",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "200290961",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Nadia Podoroska",
-        "away": "Simona Waltert",
-        "markets": {
-          "Match Winner": {
-            "1": "2.50",
-            "2": "1.53"
-          }
-        }
-      },
-      {
-        "id": "200290426",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Nikola Bartunkova",
-        "away": "Mayar Sherif",
-        "markets": {
-          "Match Winner": {
-            "1": "1.20",
-            "2": "4.50"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "Wallabies",
-    "matches": [
-      {
-        "id": "191003212",
-        "kickoff": "05/02/2027 20:10:00",
-        "competition": "Six Nations 2027",
-        "home": "To Win Outright",
-        "away": "",
-        "markets": {
-          "Six Nations 2027": {
-            "No row": "2.37"
-          }
-        }
-      },
-      {
-        "id": "196078149",
-        "kickoff": "07/11/2026 12:00:00",
-        "competition": "Nations Championship 2026",
-        "home": "To Win Outright",
-        "away": "",
-        "markets": {
-          "Nations Championship 2026": {
-            "No row": "2.00"
-          }
-        }
-      },
-      {
-        "id": "199775797",
-        "kickoff": "29/08/2026 20:00:00",
-        "competition": "RU-SUMINTM",
-        "home": "Argentina",
-        "away": "Australia",
-        "markets": {
-          "Game Lines": {
-            "Handicap": {
-              "line": "+1.5",
-              "odds": "1.90"
-            },
-            "Total": {
-              "line": "57.5",
-              "odds": "1.90"
-            },
-            "To Win": "2.20"
+          "Match Result": {
+            "1": "2.80",
+            "X": "3.00",
+            "2": "2.40"
           }
         }
       }

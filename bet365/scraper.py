@@ -345,24 +345,41 @@ def scrape_sport(
     sub_category_pds = []
     now_dt = datetime.now()
 
-    # 1. Primary Featured Pods (with /splashcontentapi/splash fallback)
-    try:
-        r_feat = session.protected_get(
-            f"https://{session.host}/splashcontentapi/getsplashpods",
-            params={
-                "lid": "1",
-                "zid": "9",
-                "pd": sport.PD,
-                "cid": "143",
-                "cgid": "1",
-                "ctid": "143",
-                "tzo": "60",
-            },
-            headers=headers,
-        )
-        if not r_feat or r_feat.status_code != 200 or len(r_feat.text) == 0:
+    # 1. Primary Feeds (handles AC match market feeds and AS splash pods)
+    if sport.PD.startswith("#AC#"):
+        endpoint = "upcomingmatches" if "Q1" in sport.PD else "markets"
+        cid = _extract_pd_token(sport.PD, "C", "1")
+        cgid = _extract_pd_token(sport.PD, "G", "40" if sport_num == "1" else "83")
+        ctid = _extract_pd_token(sport.PD, "D", "1002")
+        try:
             r_feat = session.protected_get(
-                f"https://{session.host}/splashcontentapi/splash",
+                f"https://{session.host}/matchmarketscontentapi/{endpoint}",
+                params={
+                    "lid": "1",
+                    "zid": "9",
+                    "pd": sport.PD,
+                    "cid": cid,
+                    "cgid": cgid,
+                    "ctid": ctid,
+                    "tzo": "60",
+                },
+                headers=headers,
+            )
+            if r_feat.status_code == 200 and len(r_feat.text) > 0:
+                feat_matches = parse_pods_data(
+                    r_feat.text,
+                    is_live=False,
+                    prematch_only=prematch_only,
+                    now=now_dt,
+                )
+                all_matches_map.update(feat_matches)
+        except Exception:
+            pass
+    else:
+        # Standard AS splash pods
+        try:
+            r_feat = session.protected_get(
+                f"https://{session.host}/splashcontentapi/getsplashpods",
                 params={
                     "lid": "1",
                     "zid": "9",
@@ -374,30 +391,51 @@ def scrape_sport(
                 },
                 headers=headers,
             )
+            if not r_feat or r_feat.status_code != 200 or len(r_feat.text) == 0:
+                r_feat = session.protected_get(
+                    f"https://{session.host}/splashcontentapi/splash",
+                    params={
+                        "lid": "1",
+                        "zid": "9",
+                        "pd": sport.PD,
+                        "cid": "143",
+                        "cgid": "1",
+                        "ctid": "143",
+                        "tzo": "60",
+                    },
+                    headers=headers,
+                )
 
-        if r_feat and r_feat.status_code == 200 and len(r_feat.text) > 0:
-            feat_matches = parse_pods_data(
-                r_feat.text,
-                is_live=False,
-                prematch_only=prematch_only,
-                now=now_dt,
-            )
-            all_matches_map.update(feat_matches)
+            if r_feat and r_feat.status_code == 200 and len(r_feat.text) > 0:
+                feat_matches = parse_pods_data(
+                    r_feat.text,
+                    is_live=False,
+                    prematch_only=prematch_only,
+                    now=now_dt,
+                )
+                all_matches_map.update(feat_matches)
 
-            # Discover sub-league / regional categories from Root 0
-            if deep:
-                roots = get_parsers(r_feat.text)
-                if roots:
-                    for pa in roots[0].find_sections("PA"):
-                        sub_pd = pa.get_property("PD")
-                        if sub_pd and "#D1002#" in sub_pd and "#J" in sub_pd:
-                            sub_category_pds.append(sub_pd)
-                            # For soccer: also include Midweek (F^2002) and 72-hour (F^72)
-                            if sport_num == "1" and "F^2001#" in sub_pd:
-                                sub_category_pds.append(sub_pd.replace("F^2001#", "F^2002#"))
-                                sub_category_pds.append(sub_pd.replace("F^2001#", "F^72#"))
-    except Exception:
-        pass
+                # Discover sub-league / regional categories from Root 0
+                if deep:
+                    roots = get_parsers(r_feat.text)
+                    if roots:
+                        for pa in roots[0].find_sections("PA"):
+                            raw_sub_pd = pa.get_property("PD")
+                            sub_pd = urllib.parse.unquote(raw_sub_pd) if raw_sub_pd else ""
+                            if sub_pd and "#D1002#" in sub_pd and "#J" in sub_pd:
+                                sub_category_pds.append(sub_pd)
+                                if sport_num == "1":
+                                    for f_code in ["2001", "2002"]:
+                                        sub_category_pds.append(
+                                            re.sub(r"F\^[0-9]+#", f"F^{f_code}#", sub_pd)
+                                        )
+                                else:
+                                    for f_code in ["24", "72"]:
+                                        sub_category_pds.append(
+                                            re.sub(r"F\^[0-9]+#", f"F^{f_code}#", sub_pd)
+                                        )
+        except Exception:
+            pass
 
     # 2. Regional & Sub-League Drill-Down (dynamic parameters per sport)
     if deep and sub_category_pds:
