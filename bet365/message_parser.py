@@ -244,12 +244,8 @@ def parse_message(msg_type: str, records: List[str]) -> Node:
                     _attach(num_stack.get(level - 1, root), h)
                     num_stack[level] = h
                 else:
-                    h.parent = root
                     num_stack[0] = h
-                    if root.children:
-                        root.children[0] = h
-                    else:
-                        root.children.append(h)
+                    _attach(root, h)
             else:
                 h = None
 

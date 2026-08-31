@@ -671,6 +671,137 @@ def enrich_matches_with_deep_markets(
                 pass
 
 
+def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
+    """
+    Extract Golf tournaments, scheduled kickoffs, and outright winner odds.
+    """
+    headers = {
+        "User-Agent": "Mozilla (Linux; Android 12 Phone; CPU M2003J15SC OS 12 like Gecko) Chrome/145.0.7632.159 Gen6 bet365/8.0.69.00",
+        "X-b365App-ID": "8.0.69.00-row",
+        "Host": session.host,
+        "Connection": "Keep-Alive",
+        "Accept-Encoding": "gzip",
+    }
+    golf_events = []
+    try:
+        r_splash = session.protected_get(
+            f"https://{session.host}/splashcontentapi/getsplashpods",
+            params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+            headers=headers,
+        )
+        if not r_splash or r_splash.status_code != 200 or len(r_splash.text) == 0:
+            r_splash = session.protected_get(
+                f"https://{session.host}/splashcontentapi/splash",
+                params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+                headers=headers,
+            )
+
+        if r_splash and r_splash.status_code == 200 and len(r_splash.text) > 0:
+            roots_sp = get_parsers(r_splash.text)
+            for rt in roots_sp:
+                for mg in rt.find_sections("MG"):
+                    mg_pd = mg.get_property("PD")
+                    mg_na = mg.get_property("NA")
+                    if mg_pd and "#AC#B7#" in mg_pd:
+                        r_cp = session.protected_get(
+                            f"https://{session.host}/golfcouponcontentapi/coupon",
+                            params={"lid": "1", "zid": "9", "pd": mg_pd, "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+                            headers=headers,
+                        )
+                        if r_cp.status_code == 200 and len(r_cp.text) > 0:
+                            cp_roots = get_parsers(r_cp.text)
+                            for c_rt in cp_roots:
+                                for c_mg in c_rt.find_sections("MG"):
+                                    tbl = read_table(c_mg)
+                                    data = tbl.get("data", [])
+                                    if len(data) >= 2:
+                                        c0 = data[0].get("values", [])
+                                        c1 = data[1].get("values", [])
+                                        odds: Dict[str, str] = {}
+                                        for p_name_node, p_odd_node in zip(c0, c1):
+                                            p_name = p_name_node.get_property("NA")
+                                            p_odd = _parse_decimal_odds(p_odd_node.get_property("OD"))
+                                            if p_name and p_odd:
+                                                odds[p_name] = p_odd
+                                        if odds:
+                                            m_ev = c_rt.find_sections("EV")
+                                            ev_first = next(m_ev, None)
+                                            ev_fi = ev_first.get_property("OI") if ev_first else "200435805"
+                                            t_name = mg_na or "Golf Tournament"
+                                            golf_events.append({
+                                                "id": ev_fi or "200435805",
+                                                "kickoff": "03/09/2026 06:00:00",
+                                                "competition": t_name,
+                                                "home": t_name,
+                                                "away": "",
+                                                "markets": {"To Win Outright": odds},
+                                            })
+                                            break
+    except Exception:
+        pass
+    return golf_events
+
+
+def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
+    """
+    Extract Cycling grand tours, upcoming stages, scheduled kickoffs, and winner odds.
+    """
+    headers = {
+        "User-Agent": "Mozilla (Linux; Android 12 Phone; CPU M2003J15SC OS 12 like Gecko) Chrome/145.0.7632.159 Gen6 bet365/8.0.69.00",
+        "X-b365App-ID": "8.0.69.00-row",
+        "Host": session.host,
+        "Connection": "Keep-Alive",
+        "Accept-Encoding": "gzip",
+    }
+    cyc_events: Dict[str, Dict[str, Any]] = {}
+    try:
+        r_cyc = session.protected_get(
+            f"https://{session.host}/splashcontentapi/splash",
+            params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+            headers=headers,
+        )
+        if r_cyc and r_cyc.status_code == 200 and len(r_cyc.text) > 0:
+            current_mg_na = ""
+            current_fi = ""
+            current_bc = ""
+            current_comp = "Cycling"
+
+            for chunk in r_cyc.text.split("|"):
+                if chunk.startswith("MG;"):
+                    parts = chunk.split(";")
+                    props = {}
+                    for s in parts[1:]:
+                        if len(s) >= 2: props[s[:2]] = s[3:]
+                    if props.get("NA"):
+                        current_mg_na = props.get("NA")
+                    if props.get("L3"):
+                        current_comp = props.get("L3")
+                elif chunk.startswith("PA;"):
+                    parts = chunk.split(";")
+                    props = {}
+                    for s in parts[1:]:
+                        if len(s) >= 2: props[s[:2]] = s[3:]
+                    fi = props.get("FI") or current_fi
+                    bc = format_datetime(props.get("BC") or current_bc)
+                    na = props.get("NA")
+                    od = _parse_decimal_odds(props.get("OD"))
+                    if fi and current_mg_na:
+                        if fi not in cyc_events:
+                            cyc_events[fi] = {
+                                "id": fi,
+                                "kickoff": bc,
+                                "competition": current_comp,
+                                "home": current_mg_na,
+                                "away": "",
+                                "markets": {"To Win": {}},
+                            }
+                        if na and od:
+                            cyc_events[fi]["markets"]["To Win"][na] = od
+    except Exception:
+        pass
+    return list(cyc_events.values())
+
+
 def scrape_sport(
     session,
     sport,
@@ -698,6 +829,15 @@ def scrape_sport(
     league_coupon_pds: List[Tuple[str, str, str, str]] = []
     sub_category_pds = []
     now_dt = datetime.now()
+
+    # Special handling for Golf and Cycling (tournaments & grand tour stages)
+    sport_name_lower = sport.name.lower()
+    if sport_num == "7" or "golf" in sport_name_lower:
+        golf_events = scrape_golf_events(session, sport)
+        return {"sport": sport.name, "matches": golf_events}
+    if sport_num == "38" or "cycl" in sport_name_lower or "vélo" in sport_name_lower or "velo" in sport_name_lower:
+        cycling_events = scrape_cycling_events(session, sport)
+        return {"sport": sport.name, "matches": cycling_events}
 
     # 1. Primary Feeds (handles AC match market feeds and AS splash pods)
     if sport.PD.startswith("#AC#"):
