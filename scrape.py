@@ -34,7 +34,12 @@ def main():
     parser.add_argument(
         "--sport",
         default=None,
-        help="Target sport name (default: all sports, e.g. 'Soccer', 'Tennis', 'Basketball')",
+        help="Target sport name (e.g. 'Soccer', 'Tennis', 'Basketball')",
+    )
+    parser.add_argument(
+        "--sports",
+        default=None,
+        help="Comma-separated target sports list (e.g. 'Soccer,Tennis,Basketball,Cycling,Golf')",
     )
     parser.add_argument(
         "--concurrency",
@@ -112,17 +117,31 @@ def main():
     print("[*] Fetching available sports ...", file=sys.stderr)
     all_sports = session.extract_available_sports()
 
-    # Filter by sport if requested
+    # Filter by sport(s) if requested via CLI or config
+    requested_sports = []
     if args.sport:
-        target = [s for s in all_sports if s.name.lower() == args.sport.lower()]
-        if not target:
+        requested_sports = [args.sport.strip().lower()]
+    elif args.sports:
+        requested_sports = [s.strip().lower() for s in args.sports.split(",") if s.strip()]
+    elif config.get("sports"):
+        cfg_sports = config["sports"]
+        if isinstance(cfg_sports, list):
+            requested_sports = [s.strip().lower() for s in cfg_sports if s.strip()]
+        elif isinstance(cfg_sports, str):
+            requested_sports = [s.strip().lower() for s in cfg_sports.split(",") if s.strip()]
+
+    if requested_sports:
+        sports_to_scrape = [
+            s for s in all_sports
+            if any(req in s.name.lower() or s.name.lower() in req for req in requested_sports)
+        ]
+        if not sports_to_scrape:
             available = [s.name for s in all_sports]
             print(
-                f"[!] Sport '{args.sport}' not found. Available: {available}",
+                f"[!] None of the requested sports {requested_sports} found. Available: {available}",
                 file=sys.stderr,
             )
             sys.exit(1)
-        sports_to_scrape = target
     else:
         # Filter out static banner pods
         sports_to_scrape = [s for s in all_sports if s.name not in ["Offers", "Upcoming"]]

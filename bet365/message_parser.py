@@ -320,15 +320,23 @@ def read_table(market_group: Node, extra_properties: List[str] | None = None) ->
         extra = {p: source.get_property(p) for p in extra_properties if source.get_property(p)}
         result["data"].append({"name": name or "No row", "values": rows, "extra": extra})
 
+    # Bet365 gen5 upcoming match pods (e.g. SY=fk) store column headers on MG (N2, N3, EX)
+    mg_headers = ["", market_group.get_property("N2") or "", market_group.get_property("N3") or "", market_group.get_property("EX") or ""]
+
+    col_idx = 0
     for ma in market_group.children:
         if ma.type != "MA":
             continue
         columns = [c for c in ma.children if c.type == "CO"]
         if columns:
             for co in columns:
-                add_column(co, co.get_property("NA") or ma.get_property("NA"))
+                fb = mg_headers[col_idx] if col_idx < len(mg_headers) else ""
+                add_column(co, co.get_property("NA") or ma.get_property("NA") or fb)
+                col_idx += 1
         else:
-            add_column(ma, ma.get_property("NA"))
+            fb = mg_headers[col_idx] if col_idx < len(mg_headers) else ""
+            add_column(ma, ma.get_property("NA") or fb)
+            col_idx += 1
     return result
 
 
