@@ -572,8 +572,8 @@ def parse_deep_tennis_markets(roots: List[Any], home_player: str, away_player: s
     markets: Dict[str, Any] = {}
     for rt in roots:
         for mg in rt.find_sections("MG"):
-            na = mg.get_property("NA") or ""
-            if na == "First Set Score":
+            na = (mg.get_property("NA") or "").lower()
+            if any(kw in na for kw in ["first set score", "1st set score", "1er set - score", "1er set score", "1er set - score exact", "set 1 - score", "1. satz"]):
                 tbl = read_table(mg)
                 set_dict: Dict[str, str] = {}
                 score_col = None
@@ -594,7 +594,7 @@ def parse_deep_tennis_markets(roots: List[Any], home_player: str, away_player: s
                                         set_dict[f"{cname} {sc}"] = od
                 if set_dict:
                     markets["1st Set Correct Score"] = set_dict
-            elif na in ["Set Betting", "Correct Set Score"]:
+            elif any(kw in na for kw in ["set betting", "correct set score", "paris sur le set", "score exact du set", "satzwetten"]):
                 sb_dict: Dict[str, str] = {}
                 for pa in mg.find_sections("PA"):
                     ans = pa.get_property("NA")
