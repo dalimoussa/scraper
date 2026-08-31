@@ -647,7 +647,21 @@ def enrich_matches_with_deep_markets(
                 },
                 headers=headers,
             )
-            if r.status_code == 200 and len(r.text) > 0:
+            if (not r or r.status_code != 200 or len(r.text) == 0) and cid != "1":
+                r = session.protected_get(
+                    f"https://{session.host}/matchbettingcontentapi/coupon",
+                    params={
+                        "lid": "1",
+                        "zid": "9",
+                        "pd": clean_pd,
+                        "cid": "1",
+                        "cgid": "1",
+                        "ctid": "8",
+                        "tzo": "60",
+                    },
+                    headers=headers,
+                )
+            if r and r.status_code == 200 and len(r.text) > 0:
                 roots = get_parsers(r.text)
                 if is_tennis:
                     return m["id"], parse_deep_tennis_markets(roots, m.get("home", ""), m.get("away", ""))
@@ -1180,16 +1194,12 @@ def scrape_sport(
 
     # 7. Deep Markets Enrichment (Score Exact / HT-FT for Top 5 Football Leagues + UCL, 1st Set Score Exact for Tennis)
     if deep and all_matches_map:
-        top_leagues_kw = [
-            "premier", "barclay", "primera", "la liga", "serie a", "bundesliga", "germ-bl",
-            "ligue 1", "le champ", "champions", "ucl", "uefa"
-        ]
-        if sport_num == "1":
+        if sport_num == "1" or "soccer" in sport.name.lower() or "football" in sport.name.lower():
             target_soccer_matches = [
                 m for m in all_matches_map.values()
-                if any(kw in (m.get("competition") or "").lower() for kw in top_leagues_kw) and m.get("_pd")
+                if m.get("_pd")
             ]
-            enrich_matches_with_deep_markets(session, target_soccer_matches, is_tennis=False, max_workers=6)
+            enrich_matches_with_deep_markets(session, target_soccer_matches, is_tennis=False, max_workers=8)
         elif sport_num == "13" or "tennis" in sport.name.lower() or "us open" in sport.name.lower():
             target_tennis_matches = [
                 m for m in all_matches_map.values()
