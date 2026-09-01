@@ -674,11 +674,12 @@ def enrich_matches_with_deep_markets(
     session,
     matches: List[Dict[str, Any]],
     is_tennis: bool = False,
-    max_workers: int = 4,
+    max_workers: int = 8,
 ) -> None:
     """
-    Concurrently fetch /matchbettingcontentapi/coupon (or /matchmarketscontentapi/coupon)
-    for matches and merge deep markets.
+    Concurrently fetch /matchbettingcontentapi/coupon for matches and merge deep markets:
+    - Tennis: 1st Set Correct Score (14 lines), Set Betting
+    - Soccer: Both Teams to Score, Correct Score, Half Time/Full Time (skipping HT Correct Score)
     """
     if not matches:
         return
@@ -700,73 +701,30 @@ def enrich_matches_with_deep_markets(
         m_c = re.search(r"#C(\d+)#", raw_pd)
         cid = m_c.group(1) if m_c else ("21165057" if is_tennis else "1")
 
-        clean_pd_v1 = re.sub(r"I\d+#", "", raw_pd)
-        clean_pd_v2 = raw_pd  # version brute
+        pds_to_try = [raw_pd]
+        clean_pd = re.sub(r"I\d+#", "", raw_pd)
+        if clean_pd != raw_pd:
+            pds_to_try.append(clean_pd)
 
-        # Specific param sets and endpoints for tennis vs soccer
-        if is_tennis:
-            param_sets = [
-                {"cgid": "1", "ctid": "8", "pd": clean_pd_v1},
-                {"cgid": "0", "ctid": "0", "pd": clean_pd_v2},
-                {"cgid": "3", "ctid": "8", "pd": clean_pd_v2},
-            ]
-            endpoints = [
-                "/matchbettingcontentapi/coupon",
-                "/matchmarketscontentapi/coupon",
-            ]
-        else:
-            param_sets = [
-                {"cgid": "1", "ctid": "8", "pd": clean_pd_v1},
-                {"cgid": "0", "ctid": "0", "pd": clean_pd_v2},
-                {"cgid": "3", "ctid": "8", "pd": clean_pd_v2},
-                {"cgid": "5", "ctid": "8", "pd": clean_pd_v1},
-            ]
-            fi = m.get("id")
-            if fi and "#I" not in raw_pd and str(fi).isdigit():
-                match_pd = f"{raw_pd.rstrip('#')}#I{fi}#"
-                param_sets.append({"cgid": "1", "ctid": "8", "pd": match_pd})
-                param_sets.append({"cgid": "0", "ctid": "0", "pd": match_pd})
-            endpoints = [
-                "/matchbettingcontentapi/coupon",
-                "/matchmarketscontentapi/coupon",
-                "/matchmarketscontentapi/markets",
-            ]
+        cids_to_try = [cid] if cid == "1" else [cid, "1"]
 
-        found_deep: Dict[str, Any] = {}
-        for ep in endpoints:
-            for ps in param_sets:
+        for pd_candidate in pds_to_try:
+            for test_cid in cids_to_try:
                 try:
-                    time.sleep(0.05)
                     r = t_session.protected_get(
-                        f"https://{t_session.host}{ep}",
+                        f"https://{t_session.host}/matchbettingcontentapi/coupon",
                         params={
                             "lid": "1",
                             "zid": "9",
-                            "pd": ps["pd"],
-                            "cid": cid,
-                            "cgid": ps["cgid"],
-                            "ctid": ps["ctid"],
+                            "pd": pd_candidate,
+                            "cid": test_cid,
+                            "cgid": "1",
+                            "ctid": "8",
                             "tzo": "60",
                         },
                         headers=headers,
                     )
-                    # If empty and cid wasn't 1, try fallback cid=1
-                    if (not r or r.status_code != 200 or len(r.text) <= 50) and cid != "1":
-                        r = t_session.protected_get(
-                            f"https://{t_session.host}{ep}",
-                            params={
-                                "lid": "1",
-                                "zid": "9",
-                                "pd": ps["pd"],
-                                "cid": "1",
-                                "cgid": ps["cgid"],
-                                "ctid": ps["ctid"],
-                                "tzo": "60",
-                            },
-                            headers=headers,
-                        )
-
-                    if r and r.status_code == 200 and len(r.text) > 50:
+                    if r and r.status_code == 200 and len(r.text) > 50 and not r.text.startswith("<!DOCTYPE"):
                         roots = get_parsers(r.text)
                         if is_tennis:
                             deep = parse_deep_tennis_markets(roots, m.get("home", ""), m.get("away", ""))
@@ -786,7 +744,6 @@ def enrich_matches_with_deep_markets(
                     if m["id"] == mid:
                         m["markets"].update(deep_markets)
                         break
-            # Ignore exceptions implicitly
 
 
 def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
@@ -1091,13 +1048,19 @@ def scrape_sport(
     # 2. League Competition Coupons (fetches full weekly fixtures across days)
     if deep and league_coupon_pds:
         seen_cp_pds = set()
-        for cp_pd, lc, ld, lp in league_coupon_pds:
-            if cp_pd in seen_cp_pds:
-                continue
-            seen_cp_pds.add(cp_pd)
+        unique_cp_items = []
+        for item in league_coupon_pds:
+            cp_pd = item[0]
+            if cp_pd not in seen_cp_pds:
+                seen_cp_pds.add(cp_pd)
+                unique_cp_items.append(item)
+
+        def _fetch_league_cp(item):
+            cp_pd, lc, ld, lp = item
+            t_session = clone_session(session)
             try:
-                r_cp = session.protected_get(
-                    f"https://{session.host}/matchmarketscontentapi/markets",
+                r_cp = t_session.protected_get(
+                    f"https://{t_session.host}/matchmarketscontentapi/markets",
                     params={
                         "lid": "1",
                         "zid": "9",
@@ -1110,36 +1073,44 @@ def scrape_sport(
                     headers=headers,
                 )
                 if r_cp.status_code == 200 and len(r_cp.text) > 0:
-                    cp_matches = parse_pods_data(
+                    return parse_pods_data(
                         r_cp.text,
                         is_live=False,
                         prematch_only=prematch_only,
                         now=now_dt,
                     )
-                    for mid, mdata in cp_matches.items():
-                        if mid in all_matches_map:
-                            all_matches_map[mid]["markets"].update(mdata["markets"])
-                            if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
-                                all_matches_map[mid]["_pd"] = mdata["_pd"]
-                        else:
-                            all_matches_map[mid] = mdata
             except Exception:
                 pass
+            return {}
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            for cp_matches in pool.map(_fetch_league_cp, unique_cp_items):
+                for mid, mdata in cp_matches.items():
+                    if mid in all_matches_map:
+                        all_matches_map[mid]["markets"].update(mdata["markets"])
+                        if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
+                            all_matches_map[mid]["_pd"] = mdata["_pd"]
+                    else:
+                        all_matches_map[mid] = mdata
 
     # 3. Regional & Sub-League Drill-Down (dynamic parameters per sport)
     if deep and sub_category_pds:
         endpoint = "soccerupcomingmatches" if sport_num == "1" else "upcomingmatches"
-        seen_pds = set()
+        seen_sub_pds = set()
+        unique_sub_pds = []
         for sub_pd in sub_category_pds:
-            if sub_pd in seen_pds:
-                continue
-            seen_pds.add(sub_pd)
+            if sub_pd not in seen_sub_pds:
+                seen_sub_pds.add(sub_pd)
+                unique_sub_pds.append(sub_pd)
+
+        def _fetch_sub_cat(sub_pd):
+            t_session = clone_session(session)
             cid = _extract_pd_token(sub_pd, "C", "1")
             cgid = _extract_pd_token(sub_pd, "G", "40" if sport_num == "1" else "83")
             ctid = _extract_pd_token(sub_pd, "D", "1002")
             try:
-                r_sub = session.protected_get(
-                    f"https://{session.host}/matchmarketscontentapi/{endpoint}",
+                r_sub = t_session.protected_get(
+                    f"https://{t_session.host}/matchmarketscontentapi/{endpoint}",
                     params={
                         "lid": "1",
                         "zid": "9",
@@ -1152,64 +1123,25 @@ def scrape_sport(
                     headers=headers,
                 )
                 if r_sub.status_code == 200 and len(r_sub.text) > 0:
-                    sub_matches = parse_pods_data(
+                    return parse_pods_data(
                         r_sub.text,
                         is_live=False,
                         prematch_only=prematch_only,
                         now=now_dt,
                     )
-                    for mid, mdata in sub_matches.items():
-                        if mid in all_matches_map:
-                            all_matches_map[mid]["markets"].update(mdata["markets"])
-                            if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
-                                all_matches_map[mid]["_pd"] = mdata["_pd"]
-                        else:
-                            all_matches_map[mid] = mdata
-
-                    # Discover nested competition coupons from sub-category response (e.g. European leagues)
-                    sub_roots = get_parsers(r_sub.text)
-                    if sub_roots:
-                        for mg in sub_roots[0].find_sections("MG"):
-                            mg_pd = mg.get_property("PD")
-                            if mg_pd:
-                                m_le = re.search(r"#E(\d+)#", mg_pd)
-                                if m_le:
-                                    le_id = m_le.group(1)
-                                    nested_cp_pd = f"#AC#B1#C1#D1002#E{le_id}#G40#H^1#"
-                                    if nested_cp_pd not in seen_cp_pds:
-                                        seen_cp_pds.add(nested_cp_pd)
-                                        try:
-                                            r_nested = session.protected_get(
-                                                f"https://{session.host}/matchmarketscontentapi/markets",
-                                                params={
-                                                    "lid": "1",
-                                                    "zid": "9",
-                                                    "pd": nested_cp_pd,
-                                                    "cid": "1",
-                                                    "cgid": "40",
-                                                    "ctid": "1002",
-                                                    "tzo": "60",
-                                                },
-                                                headers=headers,
-                                            )
-                                            if r_nested.status_code == 200 and len(r_nested.text) > 0:
-                                                nested_matches = parse_pods_data(
-                                                    r_nested.text,
-                                                    is_live=False,
-                                                    prematch_only=prematch_only,
-                                                    now=now_dt,
-                                                )
-                                                for mid, mdata in nested_matches.items():
-                                                    if mid in all_matches_map:
-                                                        all_matches_map[mid]["markets"].update(mdata["markets"])
-                                                        if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
-                                                            all_matches_map[mid]["_pd"] = mdata["_pd"]
-                                                    else:
-                                                        all_matches_map[mid] = mdata
-                                        except Exception:
-                                            pass
             except Exception:
                 pass
+            return {}
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            for sub_matches in pool.map(_fetch_sub_cat, unique_sub_pds):
+                for mid, mdata in sub_matches.items():
+                    if mid in all_matches_map:
+                        all_matches_map[mid]["markets"].update(mdata["markets"])
+                        if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
+                            all_matches_map[mid]["_pd"] = mdata["_pd"]
+                    else:
+                        all_matches_map[mid] = mdata
 
     # 4. Deep Competitions Drill-down (K^5#)
     if deep and sport.PD:
@@ -1245,15 +1177,15 @@ def scrape_sport(
         except Exception:
             pass
 
-    # 5. Odds-on Upcoming Coupons
-    if deep and sport_num:
+    # 5. Odds-on Upcoming Coupons (Soccer only to prevent phantom cross-sport matches)
+    if deep and sport_num == "1":
         try:
             r_coupon = session.protected_get(
                 f"https://{session.host}/oddsoncouponcontentapi/coupon",
                 params={
                     "lid": "1",
                     "zid": "9",
-                    "pd": f"#AO#B{sport_num}#",
+                    "pd": "#AO#B1#",
                     "cid": "143",
                     "cgid": "1",
                     "ctid": "143",
@@ -1277,9 +1209,9 @@ def scrape_sport(
         except Exception:
             pass
 
-    # 6. In-Play Feed (Upcoming Schedule & Live Matches)
-    if (include_live or deep) and sport_num:
-        live_pd = f"#IP#B{sport_num}#"
+    # 6. In-Play Feed (Upcoming Schedule & Live Matches - Soccer only)
+    if include_live and sport_num == "1":
+        live_pd = "#IP#B1#"
         try:
             r_live = session.protected_get(
                 f"https://{session.host}/splashcontentapi/getsplashpods",
@@ -1297,8 +1229,8 @@ def scrape_sport(
             if r_live.status_code == 200 and len(r_live.text) > 0:
                 live_matches = parse_pods_data(
                     r_live.text,
-                    is_live=False if prematch_only else True,
-                    prematch_only=prematch_only,
+                    is_live=True,
+                    prematch_only=False,
                     now=now_dt,
                 )
                 for mid, mdata in live_matches.items():
@@ -1306,12 +1238,11 @@ def scrape_sport(
                         all_matches_map[mid]["markets"].update(mdata["markets"])
                         if mdata.get("_pd") and not all_matches_map[mid].get("_pd"):
                             all_matches_map[mid]["_pd"] = mdata["_pd"]
-                        if not prematch_only:
-                            all_matches_map[mid]["live"] = True
-                            if mdata.get("score"):
-                                all_matches_map[mid]["score"] = mdata["score"]
-                            if mdata.get("clock"):
-                                all_matches_map[mid]["clock"] = mdata["clock"]
+                        all_matches_map[mid]["live"] = True
+                        if mdata.get("score"):
+                            all_matches_map[mid]["score"] = mdata["score"]
+                        if mdata.get("clock"):
+                            all_matches_map[mid]["clock"] = mdata["clock"]
                     else:
                         all_matches_map[mid] = mdata
         except Exception:
