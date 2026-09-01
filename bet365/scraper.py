@@ -484,13 +484,13 @@ def parse_coupon_data(
 
 def parse_deep_soccer_markets(roots: List[Any], home_team: str, away_team: str) -> Dict[str, Any]:
     """
-    Extract Correct Score (Score exact), Half Time Correct Score, Both Teams to Score from match betting coupon.
+    Extract Correct Score (Score exact), Both Teams to Score, and Half Time/Full Time (Mi-temps / Fin de match).
     """
     markets: Dict[str, Any] = {}
     for rt in roots:
         for mg in rt.find_sections("MG"):
-            na = mg.get_property("NA") or ""
-            if na == "Correct Score":
+            na = (mg.get_property("NA") or "").lower()
+            if na == "correct score" or "score exact" in na:
                 tbl = read_table(mg)
                 cs_dict: Dict[str, str] = {}
                 cols = tbl.get("data", [])
@@ -517,34 +517,7 @@ def parse_deep_soccer_markets(roots: List[Any], home_team: str, away_team: str) 
                                 cs_dict[sc] = od
                 if cs_dict:
                     markets["Correct Score"] = cs_dict
-            elif na == "Half Time Correct Score":
-                tbl = read_table(mg)
-                ht_dict: Dict[str, str] = {}
-                cols = tbl.get("data", [])
-                if len(cols) >= 4:
-                    home_col, draw_col, away_col = cols[1], cols[2], cols[3]
-                    for p in home_col.get("values", []):
-                        sc = p.get_property("NA")
-                        od = _parse_decimal_odds(p.get_property("OD"))
-                        if sc and od:
-                            ht_dict[sc] = od
-                    for p in draw_col.get("values", []):
-                        sc = p.get_property("NA")
-                        od = _parse_decimal_odds(p.get_property("OD"))
-                        if sc and od:
-                            ht_dict[sc] = od
-                    for p in away_col.get("values", []):
-                        sc = p.get_property("NA")
-                        od = _parse_decimal_odds(p.get_property("OD"))
-                        if sc and od:
-                            if "-" in sc:
-                                s1, s2 = sc.split("-", 1)
-                                ht_dict[f"{s2.strip()}-{s1.strip()}"] = od
-                            else:
-                                ht_dict[sc] = od
-                if ht_dict:
-                    markets["Half Time Correct Score"] = ht_dict
-            elif na == "Both Teams to Score":
+            elif any(kw in na for kw in ["both teams to score", "les deux equipes marquent", "les 2 equipes marquent", "beide teams treffen"]):
                 btts_dict: Dict[str, str] = {}
                 for pa in mg.find_sections("PA"):
                     ans = pa.get_property("NA")
@@ -553,8 +526,16 @@ def parse_deep_soccer_markets(roots: List[Any], home_team: str, away_team: str) 
                         btts_dict[ans] = od
                 if btts_dict:
                     markets["Both Teams to Score"] = btts_dict
-            elif na == "Half Time/Full Time":
+            elif any(kw in na for kw in ["half time/full time", "half time / full time", "mi-temps / fin de match", "mi-temps/fin de match", "ht/ft", "halbzeit/endstand"]):
                 htft_dict: Dict[str, str] = {}
+                tbl = read_table(mg)
+                if tbl.get("data"):
+                    for col in tbl.get("data", []):
+                        for p in col.get("values", []):
+                            ans = p.get_property("NA")
+                            od = _parse_decimal_odds(p.get_property("OD"))
+                            if ans and od:
+                                htft_dict[ans] = od
                 for pa in mg.find_sections("PA"):
                     ans = pa.get_property("NA")
                     od = _parse_decimal_odds(pa.get_property("OD"))
@@ -631,7 +612,7 @@ def enrich_matches_with_deep_markets(
         if not raw_pd:
             return m["id"], {}
         m_c = re.search(r"#C(\d+)#", raw_pd)
-        cid = m_c.group(1) if m_c else "1"
+        cid = m_c.group(1) if m_c else ("21165057" if is_tennis else "1")
         clean_pd = re.sub(r"I\d+#", "", raw_pd)
         try:
             r = session.protected_get(
@@ -738,15 +719,12 @@ def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
                                             if p_name and p_odd:
                                                 odds[p_name] = p_odd
                                         if odds:
-                                            m_ev = c_rt.find_sections("EV")
-                                            ev_first = next(m_ev, None)
-                                            ev_fi = ev_first.get_property("OI") if ev_first else "200435805"
-                                            t_name = mg_na or "Golf Tournament"
+                                            fi = c_mg.get_property("ID") or mg_pd
                                             golf_events.append({
-                                                "id": ev_fi or "200435805",
-                                                "kickoff": "03/09/2026 06:00:00",
-                                                "competition": t_name,
-                                                "home": t_name,
+                                                "id": fi,
+                                                "kickoff": "",
+                                                "competition": "Golf",
+                                                "home": mg_na or "Golf Tournament",
                                                 "away": "",
                                                 "markets": {"To Win Outright": odds},
                                             })
@@ -758,7 +736,8 @@ def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
 
 def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
     """
-    Extract Cycling grand tours, upcoming stages, scheduled kickoffs, and winner odds.
+    Extract Cycling grand tours, upcoming stages, scheduled kickoffs, and full peloton of riders
+    via /othersportsmatchmarketscontentapi/coupon.
     """
     headers = {
         "User-Agent": "Mozilla (Linux; Android 12 Phone; CPU M2003J15SC OS 12 like Gecko) Chrome/145.0.7632.159 Gen6 bet365/8.0.69.00",
@@ -775,42 +754,92 @@ def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
             headers=headers,
         )
         if r_cyc and r_cyc.status_code == 200 and len(r_cyc.text) > 0:
-            current_mg_na = ""
-            current_fi = ""
-            current_bc = ""
-            current_comp = "Cycling"
+            roots = get_parsers(r_cyc.text)
+            pds_to_fetch = []
+            for root in roots:
+                for pa in root.find_sections("PA"):
+                    pd = pa.get_property("PD")
+                    na = pa.get_property("NA")
+                    if pd and "#AC#B38#" in pd:
+                        pds_to_fetch.append((pd, na))
 
-            for chunk in r_cyc.text.split("|"):
-                if chunk.startswith("MG;"):
-                    parts = chunk.split(";")
-                    props = {}
-                    for s in parts[1:]:
-                        if len(s) >= 2: props[s[:2]] = s[3:]
-                    if props.get("NA"):
-                        current_mg_na = props.get("NA")
-                    if props.get("L3"):
-                        current_comp = props.get("L3")
-                elif chunk.startswith("PA;"):
-                    parts = chunk.split(";")
-                    props = {}
-                    for s in parts[1:]:
-                        if len(s) >= 2: props[s[:2]] = s[3:]
-                    fi = props.get("FI") or current_fi
-                    bc = format_datetime(props.get("BC") or current_bc)
-                    na = props.get("NA")
-                    od = _parse_decimal_odds(props.get("OD"))
-                    if fi and current_mg_na:
-                        if fi not in cyc_events:
-                            cyc_events[fi] = {
-                                "id": fi,
-                                "kickoff": bc,
-                                "competition": current_comp,
-                                "home": current_mg_na,
-                                "away": "",
-                                "markets": {"To Win": {}},
-                            }
-                        if na and od:
-                            cyc_events[fi]["markets"]["To Win"][na] = od
+            # Concurrently fetch full coupon for each stage/event to get all riders
+            def _fetch_cyc(item):
+                pd, default_na = item
+                try:
+                    r_cp = session.protected_get(
+                        f"https://{session.host}/othersportsmatchmarketscontentapi/coupon",
+                        params={"lid": "1", "zid": "9", "pd": pd, "cid": "1", "cgid": "0", "ctid": "0", "tzo": "60"},
+                        headers=headers,
+                    )
+                    if r_cp.status_code == 200 and len(r_cp.text) > 0:
+                        c_roots = get_parsers(r_cp.text)
+                        for c_rt in c_roots:
+                            for ev in c_rt.find_sections("EV"):
+                                fi = ev.get_property("FI") or ev.get_property("ID")
+                                bc = format_datetime(ev.get_property("BC"))
+                                l3 = ev.get_property("L3") or "Cycling"
+                                ev_na = default_na or ev.get_property("NA") or "Stage"
+                                riders = {}
+                                for pa in c_rt.find_sections("PA"):
+                                    r_na = pa.get_property("NA")
+                                    r_od = _parse_decimal_odds(pa.get_property("OD"))
+                                    if r_na and r_od:
+                                        riders[r_na] = r_od
+                                if fi and riders:
+                                    return {
+                                        "id": fi,
+                                        "kickoff": bc,
+                                        "competition": l3,
+                                        "home": f"Vuelta a Espana 2026 - {ev_na}" if not ev_na.startswith("Vuelta") else ev_na,
+                                        "away": "",
+                                        "markets": {"To Win": riders},
+                                    }
+                except Exception:
+                    pass
+                return None
+
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                results = pool.map(_fetch_cyc, pds_to_fetch)
+                for res in results:
+                    if res and res["id"] not in cyc_events:
+                        cyc_events[res["id"]] = res
+
+            # Fallback to splash cards if coupon was empty
+            if not cyc_events:
+                current_mg_na = ""
+                current_fi = ""
+                current_bc = ""
+                current_comp = "Cycling"
+                for chunk in r_cyc.text.split("|"):
+                    if chunk.startswith("MG;"):
+                        parts = chunk.split(";")
+                        props = {}
+                        for s in parts[1:]:
+                            if len(s) >= 2: props[s[:2]] = s[3:]
+                        if props.get("NA"): current_mg_na = props.get("NA")
+                        if props.get("L3"): current_comp = props.get("L3")
+                    elif chunk.startswith("PA;"):
+                        parts = chunk.split(";")
+                        props = {}
+                        for s in parts[1:]:
+                            if len(s) >= 2: props[s[:2]] = s[3:]
+                        fi = props.get("FI") or current_fi
+                        bc = format_datetime(props.get("BC") or current_bc)
+                        na = props.get("NA")
+                        od = _parse_decimal_odds(props.get("OD"))
+                        if fi and current_mg_na:
+                            if fi not in cyc_events:
+                                cyc_events[fi] = {
+                                    "id": fi,
+                                    "kickoff": bc,
+                                    "competition": current_comp,
+                                    "home": current_mg_na,
+                                    "away": "",
+                                    "markets": {"To Win": {}},
+                                }
+                            if na and od:
+                                cyc_events[fi]["markets"]["To Win"][na] = od
     except Exception:
         pass
     return list(cyc_events.values())
