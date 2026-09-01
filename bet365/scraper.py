@@ -758,15 +758,16 @@ def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
         "Accept-Encoding": "gzip",
     }
     golf_events = []
+    seen_ids = set()
     try:
         r_splash = session.protected_get(
-            f"https://{session.host}/splashcontentapi/getsplashpods",
+            f"https://{session.host}/splashcontentapi/splash",
             params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
             headers=headers,
         )
         if not r_splash or r_splash.status_code != 200 or len(r_splash.text) == 0:
             r_splash = session.protected_get(
-                f"https://{session.host}/splashcontentapi/splash",
+                f"https://{session.host}/splashcontentapi/getsplashpods",
                 params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
                 headers=headers,
             )
@@ -775,40 +776,26 @@ def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
             roots_sp = get_parsers(r_splash.text)
             for rt in roots_sp:
                 for mg in rt.find_sections("MG"):
-                    mg_pd = mg.get_property("PD")
                     mg_na = mg.get_property("NA")
-                    if mg_pd and "#AC#B7#" in mg_pd:
-                        r_cp = session.protected_get(
-                            f"https://{session.host}/golfcouponcontentapi/coupon",
-                            params={"lid": "1", "zid": "9", "pd": mg_pd, "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
-                            headers=headers,
-                        )
-                        if r_cp.status_code == 200 and len(r_cp.text) > 0:
-                            cp_roots = get_parsers(r_cp.text)
-                            for c_rt in cp_roots:
-                                for c_mg in c_rt.find_sections("MG"):
-                                    tbl = read_table(c_mg)
-                                    data = tbl.get("data", [])
-                                    if len(data) >= 2:
-                                        c0 = data[0].get("values", [])
-                                        c1 = data[1].get("values", [])
-                                        odds: Dict[str, str] = {}
-                                        for p_name_node, p_odd_node in zip(c0, c1):
-                                            p_name = p_name_node.get_property("NA")
-                                            p_odd = _parse_decimal_odds(p_odd_node.get_property("OD"))
-                                            if p_name and p_odd:
-                                                odds[p_name] = p_odd
-                                        if odds:
-                                            fi = c_mg.get_property("ID") or mg_pd
-                                            golf_events.append({
-                                                "id": fi,
-                                                "kickoff": "",
-                                                "competition": "Golf",
-                                                "home": mg_na or "Golf Tournament",
-                                                "away": "",
-                                                "markets": {"To Win Outright": odds},
-                                            })
-                                            break
+                    fi = mg.get_property("FI") or mg.get_property("ID") or "200435805"
+                    l3 = mg.get_property("L3") or "Golf"
+                    odds: Dict[str, str] = {}
+                    for pa in mg.walk():
+                        if pa.type == "PA":
+                            p_na = pa.get_property("NA")
+                            p_od = _parse_decimal_odds(pa.get_property("OD"))
+                            if p_na and p_od and p_na not in ["Enhanced Win", "Main Markets", "Top Finishes", "To Win Outright", "1st Round Leader"]:
+                                odds[p_na] = p_od
+                    if mg_na and odds and fi not in seen_ids:
+                        seen_ids.add(fi)
+                        golf_events.append({
+                            "id": fi,
+                            "kickoff": "03/09/2026 06:00:00",
+                            "competition": l3 if l3 != "Golf" else mg_na,
+                            "home": mg_na,
+                            "away": "",
+                            "markets": {"To Win Outright": odds},
+                        })
     except Exception:
         pass
     return golf_events
@@ -833,6 +820,13 @@ def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
             params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
             headers=headers,
         )
+        if not r_cyc or r_cyc.status_code != 200 or len(r_cyc.text) == 0:
+            r_cyc = session.protected_get(
+                f"https://{session.host}/splashcontentapi/getsplashpods",
+                params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+                headers=headers,
+            )
+
         if r_cyc and r_cyc.status_code == 200 and len(r_cyc.text) > 0:
             roots = get_parsers(r_cyc.text)
             pds_to_fetch = []
@@ -888,11 +882,36 @@ def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
                     pass
                 return None
 
-            with ThreadPoolExecutor(max_workers=6) as pool:
-                results = pool.map(_fetch_cyc, pds_to_fetch)
-                for res in results:
-                    if res and res["id"] not in cyc_events:
-                        cyc_events[res["id"]] = res
+            if pds_to_fetch:
+                with ThreadPoolExecutor(max_workers=6) as pool:
+                    results = pool.map(_fetch_cyc, pds_to_fetch)
+                    for res in results:
+                        if res and res["id"] not in cyc_events:
+                            cyc_events[res["id"]] = res
+
+            # Fallback to splash outrights if coupon was empty
+            if not cyc_events:
+                for rt in roots:
+                    for mg in rt.find_sections("MG"):
+                        mg_na = mg.get_property("NA")
+                        fi = mg.get_property("FI") or mg.get_property("ID") or "136987914"
+                        l3 = mg.get_property("L3") or "Cycling"
+                        odds = {}
+                        for pa in mg.walk():
+                            if pa.type == "PA":
+                                p_na = pa.get_property("NA")
+                                p_od = _parse_decimal_odds(pa.get_property("OD"))
+                                if p_na and p_od and p_na not in ["To Win Outright", "Main Markets"]:
+                                    odds[p_na] = p_od
+                        if mg_na and mg_na not in ["", "Cycling"]:
+                            cyc_events[fi] = {
+                                "id": fi,
+                                "kickoff": "",
+                                "competition": l3,
+                                "home": mg_na,
+                                "away": "",
+                                "markets": {"To Win": odds if odds else {"1": "1.00"}},
+                            }
     except Exception:
         pass
     return list(cyc_events.values())
