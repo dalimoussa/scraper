@@ -263,6 +263,17 @@ def parse_pods_data(
                     or row_props.get("PD")
                     or ""
                 )
+                if not match_pd and data:
+                    for c in data:
+                        if r_idx < len(c.get("values", [])):
+                            cpd = c["values"][r_idx].get_property("PD")
+                            if cpd and "#AC#" in cpd:
+                                match_pd = cpd
+                                break
+                if not match_pd and event_id and str(event_id).isdigit():
+                    mg_pd = mg.get_property("PD") or ""
+                    if mg_pd and "#AC#" in mg_pd:
+                        match_pd = f"{mg_pd}#I{event_id}#"
 
                 competition = (
                     row_node.get_property("L3")
@@ -540,12 +551,29 @@ def parse_deep_soccer_markets(roots: List[Any], home_team: str, away_team: str) 
                             btts_dict[ans] = od
                 if btts_dict:
                     markets["Both Teams to Score"] = btts_dict
-            elif (
-                ("half time" in na_lower or "half-time" in na_lower or "ht" in na_lower) and ("full time" in na_lower or "full-time" in na_lower or "ft" in na_lower)
-                or ("mi-temps" in na_lower and ("fin" in na_lower or "final" in na_lower or "match" in na_lower or "terme" in na_lower))
-                or "ht/ft" in na_lower
-                or ("halbzeit" in na_lower and "end" in na_lower)
-            ):
+            elif any(
+                kw in na_lower
+                for kw in [
+                    "half time/full time",
+                    "half-time/full-time",
+                    "half time / full time",
+                    "half-time / full-time",
+                    "mi-temps/fin de match",
+                    "mi-temps / fin de match",
+                    "mi-temps/fin-de-match",
+                    "mi temps fin match",
+                    "mi-temps/résultat final",
+                    "mi-temps / résultat final",
+                    "résultat mi-temps / fin de match",
+                    "résultat à la mi-temps / fin du match",
+                    "ht/ft",
+                    "ht-ft",
+                    "ht / ft",
+                    "ht ft",
+                    "halbzeit/endstand",
+                    "halbzeit / endstand",
+                ]
+            ) and not any(k in na_lower for k in ["correct score", "score exact", "goals", "buts", "tore"]):
                 htft_dict: Dict[str, str] = {}
                 tbl = read_table(mg)
                 cols = tbl.get("data", [])
@@ -646,7 +674,7 @@ def enrich_matches_with_deep_markets(
     session,
     matches: List[Dict[str, Any]],
     is_tennis: bool = False,
-    max_workers: int = 6,
+    max_workers: int = 4,
 ) -> None:
     """
     Concurrently fetch /matchbettingcontentapi/coupon (or /matchmarketscontentapi/coupon)
@@ -668,6 +696,7 @@ def enrich_matches_with_deep_markets(
         if not raw_pd:
             return m["id"], {}
 
+        t_session = clone_session(session)
         m_c = re.search(r"#C(\d+)#", raw_pd)
         cid = m_c.group(1) if m_c else ("21165057" if is_tennis else "1")
 
@@ -688,16 +717,28 @@ def enrich_matches_with_deep_markets(
         else:
             param_sets = [
                 {"cgid": "1", "ctid": "8", "pd": clean_pd_v1},
+                {"cgid": "0", "ctid": "0", "pd": clean_pd_v2},
+                {"cgid": "3", "ctid": "8", "pd": clean_pd_v2},
+                {"cgid": "5", "ctid": "8", "pd": clean_pd_v1},
             ]
+            fi = m.get("id")
+            if fi and "#I" not in raw_pd and str(fi).isdigit():
+                match_pd = f"{raw_pd.rstrip('#')}#I{fi}#"
+                param_sets.append({"cgid": "1", "ctid": "8", "pd": match_pd})
+                param_sets.append({"cgid": "0", "ctid": "0", "pd": match_pd})
             endpoints = [
                 "/matchbettingcontentapi/coupon",
+                "/matchmarketscontentapi/coupon",
+                "/matchmarketscontentapi/markets",
             ]
 
+        found_deep: Dict[str, Any] = {}
         for ep in endpoints:
             for ps in param_sets:
                 try:
-                    r = session.protected_get(
-                        f"https://{session.host}{ep}",
+                    time.sleep(0.05)
+                    r = t_session.protected_get(
+                        f"https://{t_session.host}{ep}",
                         params={
                             "lid": "1",
                             "zid": "9",
@@ -711,8 +752,8 @@ def enrich_matches_with_deep_markets(
                     )
                     # If empty and cid wasn't 1, try fallback cid=1
                     if (not r or r.status_code != 200 or len(r.text) <= 50) and cid != "1":
-                        r = session.protected_get(
-                            f"https://{session.host}{ep}",
+                        r = t_session.protected_get(
+                            f"https://{t_session.host}{ep}",
                             params={
                                 "lid": "1",
                                 "zid": "9",
