@@ -708,32 +708,52 @@ def enrich_matches_with_deep_markets(
 
         cids_to_try = [cid] if cid == "1" else [cid, "1"]
 
-        for pd_candidate in pds_to_try:
-            for test_cid in cids_to_try:
-                try:
-                    r = t_session.protected_get(
-                        f"https://{t_session.host}/matchbettingcontentapi/coupon",
-                        params={
-                            "lid": "1",
-                            "zid": "9",
-                            "pd": pd_candidate,
-                            "cid": test_cid,
-                            "cgid": "1",
-                            "ctid": "8",
-                            "tzo": "60",
-                        },
-                        headers=headers,
-                    )
-                    if r and r.status_code == 200 and len(r.text) > 50 and not r.text.startswith("<!DOCTYPE"):
-                        roots = get_parsers(r.text)
-                        if is_tennis:
-                            deep = parse_deep_tennis_markets(roots, m.get("home", ""), m.get("away", ""))
-                        else:
-                            deep = parse_deep_soccer_markets(roots, m.get("home", ""), m.get("away", ""))
-                        if deep:
-                            return m["id"], deep
-                except Exception:
-                    continue
+        lids_to_try = (
+            [("30", "0"), ("1", "9")]
+            if is_tennis
+            else [("1", "9"), ("30", "0")]
+        )
+
+        for lid, zid in lids_to_try:
+            for pd_candidate in pds_to_try:
+                for test_cid in cids_to_try:
+                    try:
+                        r = t_session.protected_get(
+                            f"https://{t_session.host}/matchbettingcontentapi/coupon",
+                            params={
+                                "lid": lid,
+                                "zid": zid,
+                                "pd": pd_candidate,
+                                "cid": test_cid,
+                                "cgid": "1",
+                                "ctid": "8",
+                                "tzo": "60",
+                            },
+                            headers=headers,
+                        )
+                        if (
+                            r
+                            and r.status_code == 200
+                            and len(r.text) > 50
+                            and not r.text.startswith("<!DOCTYPE")
+                        ):
+                            roots = get_parsers(r.text)
+                            if is_tennis:
+                                deep = parse_deep_tennis_markets(
+                                    roots,
+                                    m.get("home", ""),
+                                    m.get("away", ""),
+                                )
+                            else:
+                                deep = parse_deep_soccer_markets(
+                                    roots,
+                                    m.get("home", ""),
+                                    m.get("away", ""),
+                                )
+                            if deep:
+                                return m["id"], deep
+                    except Exception:
+                        continue
         return m["id"], {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
