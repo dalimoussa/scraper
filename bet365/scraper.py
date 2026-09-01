@@ -815,103 +815,124 @@ def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
     }
     cyc_events: Dict[str, Dict[str, Any]] = {}
     try:
+        # Fetch splash using French locale lid=30, zid=0 (with fallback to 1/9)
         r_cyc = session.protected_get(
             f"https://{session.host}/splashcontentapi/splash",
-            params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+            params={"lid": "30", "zid": "0", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
             headers=headers,
         )
         if not r_cyc or r_cyc.status_code != 200 or len(r_cyc.text) == 0:
             r_cyc = session.protected_get(
-                f"https://{session.host}/splashcontentapi/getsplashpods",
+                f"https://{session.host}/splashcontentapi/splash",
                 params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B38#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
                 headers=headers,
             )
 
         if r_cyc and r_cyc.status_code == 200 and len(r_cyc.text) > 0:
-            roots = get_parsers(r_cyc.text)
             pds_to_fetch = []
-            for root in roots:
-                for pa in root.find_sections("PA"):
-                    pd = pa.get_property("PD")
+            current_tour = "Cyclisme"
+            for chunk in r_cyc.text.split("|"):
+                if chunk.startswith("MG;"):
+                    parts = chunk.split(";")
+                    props = {}
+                    for s in parts[1:]:
+                        if len(s) >= 2:
+                            props[s[:2]] = s[3:]
+                    if props.get("NA"):
+                        current_tour = props.get("NA")
+                elif chunk.startswith("PA;"):
+                    parts = chunk.split(";")
+                    props = {}
+                    for s in parts[1:]:
+                        if len(s) >= 2:
+                            props[s[:2]] = s[3:]
+                    pd = props.get("PD")
+                    na = props.get("NA") or ""
                     if pd and "#AC#B38#" in pd:
-                        pds_to_fetch.append((pd, pa.get_property("NA") or ""))
-                for mg in root.find_sections("MG"):
-                    pd = mg.get_property("PD")
-                    if pd and "#AC#B38#" in pd:
-                        pds_to_fetch.append((pd, mg.get_property("NA") or ""))
+                        event_title = (
+                            f"{current_tour} - {na}"
+                            if na not in current_tour
+                            else current_tour
+                        )
+                        pds_to_fetch.append((pd, event_title, current_tour))
 
-            # Concurrently fetch full coupon for each stage/event to get all riders
             def _fetch_cyc(item):
-                pd, default_na = item
+                pd, title, comp = item
+                cid = _extract_pd_token(pd, "C", "1")
+                t_session = clone_session(session)
                 try:
-                    r_cp = session.protected_get(
-                        f"https://{session.host}/othersportsmatchmarketscontentapi/coupon",
-                        params={"lid": "1", "zid": "9", "pd": pd, "cid": "1", "cgid": "0", "ctid": "0", "tzo": "60"},
+                    r_cp = t_session.protected_get(
+                        f"https://{t_session.host}/othersportsmatchmarketscontentapi/coupon",
+                        params={
+                            "lid": "30",
+                            "zid": "0",
+                            "pd": pd,
+                            "cid": cid,
+                            "cgid": "0",
+                            "ctid": "0",
+                            "tzo": "60",
+                        },
                         headers=headers,
                     )
                     if r_cp.status_code == 200 and len(r_cp.text) > 0:
-                        c_roots = get_parsers(r_cp.text)
-                        for c_rt in c_roots:
-                            event_nodes = list(c_rt.find_sections("EV"))
-                            if not event_nodes:
-                                event_nodes = [c_rt]
-                            for ev in event_nodes:
-                                fi = ev.get_property("FI") or ev.get_property("ID") or pd
-                                bc = format_datetime(ev.get_property("BC") or "")
-                                l3 = ev.get_property("L3") or "Cycling"
-                                ev_na = default_na or ev.get_property("NA") or "Stage"
-
-                                riders = {}
-                                for node in ev.walk():
-                                    if node.type == "PA":
-                                        r_na = node.get_property("NA")
-                                        r_od = _parse_decimal_odds(node.get_property("OD"))
-                                        if r_na and r_od:
-                                            riders[r_na] = r_od
-
-                                if fi and riders:
-                                    return {
-                                        "id": fi,
-                                        "kickoff": bc,
-                                        "competition": l3,
-                                        "home": ev_na if not ev_na.startswith("Vuelta") else ev_na,
-                                        "away": "",
-                                        "markets": {"To Win": riders},
-                                    }
+                        fi = ""
+                        kickoff = ""
+                        riders = {}
+                        for chunk in r_cp.text.split("|"):
+                            if chunk.startswith("EV;"):
+                                parts = chunk.split(";")
+                                props = {
+                                    s[:2]: s[3:]
+                                    for s in parts[1:]
+                                    if len(s) >= 2
+                                }
+                                fi = (
+                                    props.get("FI")
+                                    or props.get("OI")
+                                    or fi
+                                )
+                            elif chunk.startswith("MA;"):
+                                parts = chunk.split(";")
+                                props = {
+                                    s[:2]: s[3:]
+                                    for s in parts[1:]
+                                    if len(s) >= 2
+                                }
+                                ex = props.get("EX", "")
+                                m_dt = re.search(r"(\d{14})", ex)
+                                if m_dt:
+                                    kickoff = format_datetime(
+                                        m_dt.group(1)
+                                    )
+                            elif chunk.startswith("PA;"):
+                                parts = chunk.split(";")
+                                props = {
+                                    s[:2]: s[3:]
+                                    for s in parts[1:]
+                                    if len(s) >= 2
+                                }
+                                r_na = props.get("NA")
+                                r_od = _parse_decimal_odds(props.get("OD"))
+                                if r_na and r_od:
+                                    riders[r_na] = r_od
+                        if riders:
+                            return {
+                                "id": fi or str(hash(title)),
+                                "kickoff": kickoff,
+                                "competition": comp,
+                                "home": title,
+                                "away": "",
+                                "markets": {"To Win": riders},
+                            }
                 except Exception:
                     pass
                 return None
 
             if pds_to_fetch:
                 with ThreadPoolExecutor(max_workers=6) as pool:
-                    results = pool.map(_fetch_cyc, pds_to_fetch)
-                    for res in results:
-                        if res and res["id"] not in cyc_events:
-                            cyc_events[res["id"]] = res
-
-            # Fallback to splash outrights if coupon was empty
-            if not cyc_events:
-                for rt in roots:
-                    for mg in rt.find_sections("MG"):
-                        mg_na = mg.get_property("NA")
-                        fi = mg.get_property("FI") or mg.get_property("ID") or "136987914"
-                        l3 = mg.get_property("L3") or "Cycling"
-                        odds = {}
-                        for pa in mg.walk():
-                            if pa.type == "PA":
-                                p_na = pa.get_property("NA")
-                                p_od = _parse_decimal_odds(pa.get_property("OD"))
-                                if p_na and p_od and p_na not in ["To Win Outright", "Main Markets"]:
-                                    odds[p_na] = p_od
-                        if mg_na and mg_na not in ["", "Cycling"]:
-                            cyc_events[fi] = {
-                                "id": fi,
-                                "kickoff": "",
-                                "competition": l3,
-                                "home": mg_na,
-                                "away": "",
-                                "markets": {"To Win": odds if odds else {"1": "1.00"}},
-                            }
+                    for ev in pool.map(_fetch_cyc, pds_to_fetch):
+                        if ev and ev["id"] not in cyc_events:
+                            cyc_events[ev["id"]] = ev
     except Exception:
         pass
     return list(cyc_events.values())
