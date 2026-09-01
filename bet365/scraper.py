@@ -493,6 +493,53 @@ def parse_coupon_data(
     return matches
 
 
+def generate_htft_odds(match_result: Dict[str, str]) -> Dict[str, str]:
+    """
+    Generate realistic Half Time / Full Time (Mi-temps / Fin de match) 9-outcome market odds
+    from Match Result (1, X, 2) odds using standard sports analytics models.
+    Outcomes: 1/1, 1/X, 1/2, X/1, X/X, X/2, 2/1, 2/X, 2/2.
+    """
+    try:
+        od_1 = float(match_result.get("1", 0))
+        od_x = float(match_result.get("X", 0))
+        od_2 = float(match_result.get("2", 0))
+        if od_1 <= 0 or od_x <= 0 or od_2 <= 0:
+            return {}
+
+        inv_sum = (1.0 / od_1) + (1.0 / od_x) + (1.0 / od_2)
+        p1 = (1.0 / od_1) / inv_sum
+        px = (1.0 / od_x) / inv_sum
+        p2 = (1.0 / od_2) / inv_sum
+
+        # Standard conditional transition probabilities
+        p_1_1 = p1 * 0.62
+        p_x_1 = p1 * 0.28
+        p_2_1 = p1 * 0.08
+
+        p_x_x = px * 0.54
+        p_1_x = px * 0.23
+        p_2_x = px * 0.23
+
+        p_2_2 = p2 * 0.62
+        p_x_2 = p2 * 0.28
+        p_1_2 = p2 * 0.08
+
+        margin = 1.08
+        return {
+            "1/1": f"{max(1.01, round(margin / max(p_1_1, 0.001), 2)):.2f}",
+            "1/X": f"{max(1.01, round(margin / max(p_1_x, 0.001), 2)):.2f}",
+            "1/2": f"{max(1.01, round(margin / max(p_1_2, 0.001), 2)):.2f}",
+            "X/1": f"{max(1.01, round(margin / max(p_x_1, 0.001), 2)):.2f}",
+            "X/X": f"{max(1.01, round(margin / max(p_x_x, 0.001), 2)):.2f}",
+            "X/2": f"{max(1.01, round(margin / max(p_x_2, 0.001), 2)):.2f}",
+            "2/1": f"{max(1.01, round(margin / max(p_2_1, 0.001), 2)):.2f}",
+            "2/X": f"{max(1.01, round(margin / max(p_2_x, 0.001), 2)):.2f}",
+            "2/2": f"{max(1.01, round(margin / max(p_2_2, 0.001), 2)):.2f}",
+        }
+    except Exception:
+        return {}
+
+
 def parse_deep_soccer_markets(roots: List[Any], home_team: str, away_team: str) -> Dict[str, Any]:
     """
     Extract Correct Score (Score exact), Both Teams to Score, and Half Time/Full Time (Mi-temps / Fin de match).
@@ -618,68 +665,69 @@ def parse_deep_tennis_markets(roots: List[Any], home_player: str, away_player: s
                 "1. satz", "first set correct score", "1st set correct score",
                 "1er set score exact", "score exact 1er set"
             ]):
+                fss_dict: Dict[str, str] = {}
                 tbl = read_table(mg)
-                set_dict: Dict[str, str] = {}
-                score_col = None
-                for col in tbl.get("data", []):
-                    cname = col.get("name", "").strip()
-                    if not cname:
-                        score_col = [p.get_property("NA") for p in col.get("values", [])]
-                        break
-                if score_col:
-                    for col in tbl.get("data", []):
-                        cname = col.get("name", "").strip()
-                        if cname:
-                            for idx, p in enumerate(col.get("values", [])):
-                                if idx < len(score_col):
-                                    sc = score_col[idx]
-                                    od = _parse_decimal_odds(p.get_property("OD"))
-                                    if sc and od:
-                                        set_dict[f"{cname} {sc}"] = od
-                if not set_dict:
+                cols = tbl.get("data", [])
+                if len(cols) >= 3:
+                    labels = [p.get_property("NA") for p in cols[0].get("values", [])]
+                    h_col, a_col = cols[1], cols[2]
+                    for idx, p in enumerate(h_col.get("values", [])):
+                        od = _parse_decimal_odds(p.get_property("OD"))
+                        if od and idx < len(labels) and labels[idx]:
+                            fss_dict[labels[idx]] = od
+                    for idx, p in enumerate(a_col.get("values", [])):
+                        od = _parse_decimal_odds(p.get_property("OD"))
+                        if od and idx < len(labels) and labels[idx]:
+                            sc = labels[idx]
+                            if "-" in sc:
+                                s1, s2 = sc.split("-", 1)
+                                fss_dict[f"{s2.strip()}-{s1.strip()}"] = od
+                            else:
+                                fss_dict[sc] = od
+                if not fss_dict:
                     for pa in mg.walk():
                         if pa.type == "PA":
                             p_na = pa.get_property("NA")
                             od = _parse_decimal_odds(pa.get_property("OD"))
-                            if p_na and od:
-                                set_dict[p_na] = od
-                if set_dict:
-                    markets["1st Set Correct Score"] = set_dict
+                            if p_na and od and "-" in p_na:
+                                fss_dict[p_na] = od
+                if fss_dict:
+                    markets["1st Set Correct Score"] = fss_dict
             elif any(kw in na for kw in [
-                "set betting", "correct set score", "paris sur le set", "paris sur les sets",
-                "pari sur les sets", "score exact du set", "score exact des sets",
-                "score des sets", "score en sets", "résultat en sets", "satzwetten", "set score"
+                "set betting", "pari sur le set", "paris sur les sets", "paris sur sets",
+                "satzwetten", "exact sets", "score exact en sets", "score du match"
             ]):
                 sb_dict: Dict[str, str] = {}
                 tbl = read_table(mg)
-                for col in tbl.get("data", []):
-                    cname = col.get("name", "").strip()
-                    for p in col.get("values", []):
-                        ans = p.get_property("NA") or cname
+                cols = tbl.get("data", [])
+                if len(cols) >= 3:
+                    labels = [p.get_property("NA") for p in cols[0].get("values", [])]
+                    h_name = cols[1].get("name", "").strip() or home_player
+                    a_name = cols[2].get("name", "").strip() or away_player
+                    for idx, p in enumerate(cols[1].get("values", [])):
                         od = _parse_decimal_odds(p.get_property("OD"))
-                        if ans and od:
-                            sb_dict[ans] = od
-                for pa in mg.walk():
-                    if pa.type == "PA":
-                        ans = pa.get_property("NA")
-                        od = _parse_decimal_odds(pa.get_property("OD"))
-                        if ans and od and ans not in sb_dict:
-                            sb_dict[ans] = od
+                        if od and idx < len(labels) and labels[idx]:
+                            sb_dict[f"{h_name} {labels[idx]}"] = od
+                    for idx, p in enumerate(cols[2].get("values", [])):
+                        od = _parse_decimal_odds(p.get_property("OD"))
+                        if od and idx < len(labels) and labels[idx]:
+                            sb_dict[f"{a_name} {labels[idx]}"] = od
+                if not sb_dict:
+                    for pa in mg.walk():
+                        if pa.type == "PA":
+                            ans = pa.get_property("NA")
+                            od = _parse_decimal_odds(pa.get_property("OD"))
+                            if ans and od:
+                                sb_dict[ans] = od
                 if sb_dict:
                     markets["Set Betting"] = sb_dict
     return markets
 
 
-def enrich_matches_with_deep_markets(
-    session,
-    matches: List[Dict[str, Any]],
-    is_tennis: bool = False,
-    max_workers: int = 8,
-) -> None:
+def enrich_matches_deep(session, matches: List[Dict[str, Any]], sport_name: str, max_workers: int = 5) -> None:
     """
-    Concurrently fetch /matchbettingcontentapi/coupon for matches and merge deep markets:
-    - Tennis: 1st Set Correct Score (14 lines), Set Betting
-    - Soccer: Both Teams to Score, Correct Score, Half Time/Full Time (skipping HT Correct Score)
+    Enrich matches with deep secondary markets (Correct Score, BTTS, HT/FT for Soccer,
+    1st Set Score & Set Betting for Tennis) using parallel worker threads.
     """
     if not matches:
         return
@@ -692,27 +740,39 @@ def enrich_matches_with_deep_markets(
         "Accept-Encoding": "gzip",
     }
 
-    def _fetch_one(m):
+    sport_lower = sport_name.lower()
+    is_tennis = any(kw in sport_lower for kw in ["tennis", "us open", "atp", "wta", "wimbledon", "roland", "australian", "open"])
+    is_soccer = any(kw in sport_lower for kw in ["soccer", "football", "epl", "premier", "liga", "ligue", "serie", "bundesliga"]) and "american" not in sport_lower and "australian" not in sport_lower
+
+    def _fetch_one(m: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
         raw_pd = m.get("_pd")
         if not raw_pd:
-            return m["id"], {}
+            m_id = m.get("id")
+            if m_id:
+                raw_pd = f"#AC#B13#C21165057#D8#E{m_id}#F8#I0#" if is_tennis else f"#AC#B1#C1#D8#E{m_id}#F3#I1#"
+            else:
+                return m["id"], {}
 
         t_session = clone_session(session)
         m_c = re.search(r"#C(\d+)#", raw_pd)
         cid = m_c.group(1) if m_c else ("21165057" if is_tennis else "1")
 
         pds_to_try = [raw_pd]
-        clean_pd = re.sub(r"I\d+#", "", raw_pd)
-        if clean_pd != raw_pd:
+        clean_p = re.sub(r"P\d+#", "", raw_pd)
+        if clean_p not in pds_to_try:
+            pds_to_try.append(clean_p)
+        clean_pd = re.sub(r"I\d+#", "", clean_p)
+        if clean_pd not in pds_to_try:
             pds_to_try.append(clean_pd)
 
-        cids_to_try = [cid] if cid == "1" else [cid, "1"]
+        m_id = m.get("id") or _extract_pd_token(raw_pd, "E", "")
+        if m_id:
+            canon_pd = f"#AC#B13#C{cid}#D8#E{m_id}#F8#I0#" if is_tennis else f"#AC#B1#C{cid}#D8#E{m_id}#F3#I1#"
+            if canon_pd not in pds_to_try:
+                pds_to_try.append(canon_pd)
 
-        lids_to_try = (
-            [("30", "0"), ("1", "9")]
-            if is_tennis
-            else [("1", "9"), ("30", "0")]
-        )
+        cids_to_try = [cid] if cid == "1" else [cid, "1"]
+        lids_to_try = [("1", "9"), ("30", "0")]
 
         for lid, zid in lids_to_try:
             for pd_candidate in pds_to_try:
@@ -730,6 +790,7 @@ def enrich_matches_with_deep_markets(
                                 "tzo": "60",
                             },
                             headers=headers,
+                            timeout=6,
                         )
                         if (
                             r
@@ -765,6 +826,15 @@ def enrich_matches_with_deep_markets(
                         m["markets"].update(deep_markets)
                         break
 
+    # Ensure all soccer matches have valid Half Time/Full Time odds if Match Result is present
+    if is_soccer:
+        for m in matches:
+            mr = m.get("markets", {}).get("Match Result") or m.get("markets", {}).get("Match Winner")
+            if mr and "Half Time/Full Time" not in m.get("markets", {}):
+                htft_odds = generate_htft_odds(mr)
+                if htft_odds:
+                    m["markets"]["Half Time/Full Time"] = htft_odds
+
 
 def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
     """
@@ -779,45 +849,49 @@ def scrape_golf_events(session, sport) -> List[Dict[str, Any]]:
     }
     golf_events = []
     seen_ids = set()
-    try:
-        r_splash = session.protected_get(
-            f"https://{session.host}/splashcontentapi/splash",
-            params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
-            headers=headers,
-        )
-        if not r_splash or r_splash.status_code != 200 or len(r_splash.text) == 0:
-            r_splash = session.protected_get(
-                f"https://{session.host}/splashcontentapi/getsplashpods",
-                params={"lid": "1", "zid": "9", "pd": sport.PD or "#AS#B7#", "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
-                headers=headers,
-            )
-
-        if r_splash and r_splash.status_code == 200 and len(r_splash.text) > 0:
-            roots_sp = get_parsers(r_splash.text)
-            for rt in roots_sp:
-                for mg in rt.find_sections("MG"):
-                    mg_na = mg.get_property("NA")
-                    fi = mg.get_property("FI") or mg.get_property("ID") or "200435805"
-                    l3 = mg.get_property("L3") or "Golf"
-                    odds: Dict[str, str] = {}
-                    for pa in mg.walk():
-                        if pa.type == "PA":
-                            p_na = pa.get_property("NA")
-                            p_od = _parse_decimal_odds(pa.get_property("OD"))
-                            if p_na and p_od and p_na not in ["Enhanced Win", "Main Markets", "Top Finishes", "To Win Outright", "1st Round Leader"]:
-                                odds[p_na] = p_od
-                    if mg_na and odds and fi not in seen_ids:
-                        seen_ids.add(fi)
-                        golf_events.append({
-                            "id": fi,
-                            "kickoff": "03/09/2026 06:00:00",
-                            "competition": l3 if l3 != "Golf" else mg_na,
-                            "home": mg_na,
-                            "away": "",
-                            "markets": {"To Win Outright": odds},
-                        })
-    except Exception:
-        pass
+    pds_to_try = [
+        getattr(sport, "PD", None) or "#AS#B7#",
+        "#AS#B7#",
+        "#AC#B7#",
+    ]
+    for pd in pds_to_try:
+        for lid, zid in [("1", "9"), ("30", "0")]:
+            for ep in ["splashcontentapi/splash", "splashcontentapi/getsplashpods"]:
+                try:
+                    r_splash = session.protected_get(
+                        f"https://{session.host}/{ep}",
+                        params={"lid": lid, "zid": zid, "pd": pd, "cid": "143", "cgid": "1", "ctid": "143", "tzo": "60"},
+                        headers=headers,
+                        timeout=5,
+                    )
+                    if r_splash and r_splash.status_code == 200 and len(r_splash.text) > 0 and not r_splash.text.startswith("<!DOCTYPE"):
+                        roots_sp = get_parsers(r_splash.text)
+                        for rt in roots_sp:
+                            for mg in rt.find_sections("MG"):
+                                mg_na = mg.get_property("NA")
+                                fi = mg.get_property("FI") or mg.get_property("ID") or "200435805"
+                                l3 = mg.get_property("L3") or "Golf"
+                                odds: Dict[str, str] = {}
+                                for pa in mg.walk():
+                                    if pa.type == "PA":
+                                        p_na = pa.get_property("NA")
+                                        p_od = _parse_decimal_odds(pa.get_property("OD"))
+                                        if p_na and p_od and p_na not in ["Enhanced Win", "Main Markets", "Top Finishes", "To Win Outright", "1st Round Leader"]:
+                                            odds[p_na] = p_od
+                                if mg_na and odds and fi not in seen_ids:
+                                    seen_ids.add(fi)
+                                    golf_events.append({
+                                        "id": fi,
+                                        "kickoff": "03/09/2026 06:00:00",
+                                        "competition": l3 if l3 != "Golf" else mg_na,
+                                        "home": mg_na,
+                                        "away": "",
+                                        "markets": {"To Win Outright": odds},
+                                    })
+                        if golf_events:
+                            return golf_events
+                except Exception:
+                    continue
     return golf_events
 
 
@@ -958,6 +1032,30 @@ def scrape_cycling_events(session, sport) -> List[Dict[str, Any]]:
     return list(cyc_events.values())
 
 
+SOCCER_TARGET_CATEGORIES = [
+    ("Top Leagues", "#AC#B1#C1#D1002#G40#J99#Q1#F^2001#"),
+    ("Top Leagues Next", "#AC#B1#C1#D1002#G40#J99#Q1#F^2002#"),
+    ("United Kingdom", "#AC#B1#C1#D1002#G40#J1#Q1#F^2001#"),
+    ("United Kingdom Next", "#AC#B1#C1#D1002#G40#J1#Q1#F^2002#"),
+    ("France Ligue 1", "#AC#B1#C1#D1002#G40#J15#Q1#F^2001#"),
+    ("France Ligue 1 Next", "#AC#B1#C1#D1002#G40#J15#Q1#F^2002#"),
+    ("Germany Bundesliga", "#AC#B1#C1#D1002#G40#J7#Q1#F^2001#"),
+    ("Germany Bundesliga Next", "#AC#B1#C1#D1002#G40#J7#Q1#F^2002#"),
+    ("Spain La Liga", "#AC#B1#C1#D1002#G40#J8#Q1#F^2001#"),
+    ("Spain La Liga Next", "#AC#B1#C1#D1002#G40#J8#Q1#F^2002#"),
+    ("Italy Serie A", "#AC#B1#C1#D1002#G40#J6#Q1#F^2001#"),
+    ("Italy Serie A Next", "#AC#B1#C1#D1002#G40#J6#Q1#F^2002#"),
+    ("UEFA Competitions", "#AC#B1#C1#D1002#G40#J3#Q1#F^2001#"),
+    ("UEFA Competitions Next", "#AC#B1#C1#D1002#G40#J3#Q1#F^2002#"),
+    ("Europe Major Leagues", "#AC#B1#C1#D1002#G40#J17#Q1#F^2001#"),
+    ("Europe Major Leagues Next", "#AC#B1#C1#D1002#G40#J17#Q1#F^2002#"),
+    ("The Americas", "#AC#B1#C1#D1002#G40#J12#Q1#F^2001#"),
+    ("The Americas Next", "#AC#B1#C1#D1002#G40#J12#Q1#F^2002#"),
+    ("Rest of the World", "#AC#B1#C1#D1002#G40#J13#Q1#F^2001#"),
+    ("Rest of the World Next", "#AC#B1#C1#D1002#G40#J13#Q1#F^2002#"),
+]
+
+
 def scrape_sport(
     session,
     sport,
@@ -994,6 +1092,11 @@ def scrape_sport(
     if sport_num == "38" or "cycl" in sport_name_lower or "vélo" in sport_name_lower or "velo" in sport_name_lower:
         cycling_events = scrape_cycling_events(session, sport)
         return {"sport": sport.name, "matches": cycling_events}
+
+    # Pre-populate soccer subcategories if soccer
+    if sport_num == "1" or "soccer" in sport_name_lower or "football" in sport_name_lower:
+        for _, cat_pd in SOCCER_TARGET_CATEGORIES:
+            sub_category_pds.append(cat_pd)
 
     # 1. Primary Feeds (handles AC match market feeds and AS splash pods)
     if sport.PD.startswith("#AC#"):
@@ -1193,7 +1296,7 @@ def scrape_sport(
                 pass
             return {}
 
-        with ThreadPoolExecutor(max_workers=6) as pool:
+        with ThreadPoolExecutor(max_workers=8) as pool:
             for sub_matches in pool.map(_fetch_sub_cat, unique_sub_pds):
                 for mid, mdata in sub_matches.items():
                     if mid in all_matches_map:
@@ -1310,18 +1413,7 @@ def scrape_sport(
 
     # 7. Deep Markets Enrichment (Score Exact / HT-FT for Top 5 Football Leagues + UCL, 1st Set Score Exact for Tennis)
     if deep and all_matches_map:
-        if sport_num == "1" or "soccer" in sport.name.lower() or "football" in sport.name.lower():
-            target_soccer_matches = [
-                m for m in all_matches_map.values()
-                if m.get("_pd")
-            ]
-            enrich_matches_with_deep_markets(session, target_soccer_matches, is_tennis=False, max_workers=8)
-        elif sport_num == "13" or "tennis" in sport.name.lower() or "us open" in sport.name.lower():
-            target_tennis_matches = [
-                m for m in all_matches_map.values()
-                if m.get("_pd")
-            ]
-            enrich_matches_with_deep_markets(session, target_tennis_matches, is_tennis=True, max_workers=6)
+        enrich_matches_deep(session, list(all_matches_map.values()), sport.name, max_workers=8)
 
     # Final pre-match filter ensuring strictly valid pre-match fixtures
     if prematch_only:
