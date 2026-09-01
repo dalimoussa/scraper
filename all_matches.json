@@ -1,405 +1,136 @@
 [
   {
-    "sport": "Badminton",
-    "matches": [
-      {
-        "id": "200171464",
-        "kickoff": "01/09/2026 08:30:00",
-        "competition": "",
-        "home": "Se Young An",
-        "away": "Hsiang Ti Lin",
-        "markets": {
-          "Match Winner": {
-            "1": "1.02",
-            "2": "10.50"
-          }
-        }
-      },
-      {
-        "id": "200169269",
-        "kickoff": "01/09/2026 09:20:00",
-        "competition": "",
-        "home": "Jia Heng Jason Teh",
-        "away": "Hong Yang Weng",
-        "markets": {
-          "Match Winner": {
-            "1": "3.50",
-            "2": "1.28"
-          }
-        }
-      },
-      {
-        "id": "200169272",
-        "kickoff": "01/09/2026 09:20:00",
-        "competition": "",
-        "home": "Rasmus Gemke",
-        "away": "Kenta Nishimoto",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.00"
-          }
-        }
-      },
-      {
-        "id": "200171467",
-        "kickoff": "01/09/2026 09:20:00",
-        "competition": "",
-        "home": "Line Christophersen",
-        "away": "Riko Gunji",
-        "markets": {
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.72"
-          }
-        }
-      },
-      {
-        "id": "200169271",
-        "kickoff": "01/09/2026 10:10:00",
-        "competition": "",
-        "home": "Anders Antonsen",
-        "away": "Zhe An Hu",
-        "markets": {
-          "Match Winner": {
-            "1": "1.22",
-            "2": "4.00"
-          }
-        }
-      },
-      {
-        "id": "200495220",
-        "kickoff": "01/09/2026 10:10:00",
-        "competition": "",
-        "home": "Ga Eun Kim",
-        "away": "Unnati Hooda",
-        "markets": {
-          "Match Winner": {
-            "1": "1.14",
-            "2": "5.00"
-          }
-        }
-      }
-    ]
-  },
-  {
     "sport": "Cycling",
     "matches": [
       {
-        "id": "198980298",
+        "id": "199807357",
         "kickoff": "",
         "competition": "Cycling",
-        "home": "Vuelta a Espana 2026 - To Win Outright",
+        "home": "Rider to Win a Stage",
         "away": "",
         "markets": {
           "To Win": {
-            "Enric Mas Nicolau": "2.10",
-            "Primoz Roglic": "2.75",
-            "Felix Gall": "5.50",
-            "Oscar Onley": "7.00",
-            "Richard Carapaz": "19.00",
-            "Mattias Skjelmose": "51.00",
-            "Sepp Kuss": "51.00",
-            "Harold Tejada": "101.00",
-            "Gregor Muhlberger": "201.00",
-            "Cristian Rodriguez": "251.00",
-            "Jakob Omrzel": "301.00",
-            "Jarno Widar": "401.00",
-            "Matthew Riccitello": "601.00",
-            "Clement Berthet": "751.00",
-            "Leo Bisiaux": "1001.00",
-            "Guillaume Martin": "1001.00",
-            "Ramses Debruyne": "1001.00",
-            "Juan Felipe Rodriguez": "1001.00",
-            "Pavel Sivakov": "1501.00",
-            "Santiago Buitrago": "1501.00",
-            "Tobias Halland Johannessen": "1501.00",
-            "Joao Almeida": "2501.00",
-            "Jorgen Nordhagen": "2501.00",
-            "Carlos Rodriguez": "2501.00",
-            "Jay Vine": "2501.00",
-            "Ibon Ruiz": "2501.00",
-            "Jan Hirt": "2501.00",
-            "Marco Brenner": "2501.00",
-            "Finlay Pickering": "2501.00",
-            "Embret Svestad-Baardseng": "2501.00",
-            "Luke Tuckwell": "4501.00",
-            "Mikel Landa": "4501.00",
-            "Ben Tulett": "4501.00",
-            "Lorenzo Fortunato": "4501.00",
-            "Ivan Ramiro Sosa": "4501.00",
-            "Pablo Castrillo": "4501.00"
-          }
-        }
-      },
-      {
-        "id": "199730272",
-        "kickoff": "",
-        "competition": "Cycling",
-        "home": "Vuelta a Espana 2026 - Top 10 Finish",
-        "away": "",
-        "markets": {
-          "To Win": {
-            "Enric Mas Nicolau": "1.01",
-            "Felix Gall": "1.01",
-            "Primoz Roglic": "1.03",
-            "Richard Carapaz": "1.03",
-            "Oscar Onley": "1.03",
-            "Harold Tejada": "1.06",
-            "Mattias Skjelmose": "1.07",
-            "Sepp Kuss": "1.10",
-            "Gregor Muhlberger": "1.44",
-            "Cristian Rodriguez": "1.44",
-            "Jakob Omrzel": "2.10",
-            "Clement Berthet": "2.75",
-            "Jarno Widar": "2.75",
-            "Guillaume Martin": "6.00",
-            "Matthew Riccitello": "7.00",
-            "Juan Felipe Rodriguez": "7.00",
-            "Leo Bisiaux": "8.00",
-            "Tobias Halland Johannessen": "10.00",
-            "Ramses Debruyne": "10.00",
-            "Finlay Pickering": "13.00",
-            "Jay Vine": "26.00",
-            "Embret Svestad-Baardseng": "26.00",
+            "Wout Van Aert": "1.33",
+            "Jarno Widar": "1.57",
+            "Felix Gall": "1.57",
+            "Mads Pedersen": "1.83",
+            "Jay Vine": "2.25",
+            "Oscar Onley": "2.25",
+            "Santiago Buitrago": "2.25",
+            "Ethan Hayter": "2.50",
+            "Jordi Meeus": "2.75",
+            "Primoz Roglic": "3.00",
+            "Tobias Halland Johannessen": "3.25",
+            "Stefan Kung": "3.25",
+            "Joao Almeida": "4.00",
+            "Richard Carapaz": "4.00",
+            "Cristian Rodriguez": "4.00",
+            "Andreas Kron": "5.00",
+            "Axel Laurance": "5.00",
+            "Lorenzo Fortunato": "5.50",
+            "Ramses Debruyne": "6.00",
+            "Mattias Skjelmose": "6.00",
+            "Harold Tejada": "6.00",
+            "Sepp Kuss": "6.00",
+            "Ben Turner": "6.00",
+            "Christophe Laporte": "7.00",
+            "Ivo Oliveira": "7.00",
+            "Alessandro Romele": "7.00",
+            "Ivan Romeo": "8.00",
+            "Thibau Nys": "8.00",
+            "Pau Miquel": "8.00",
+            "Valentin Paret-Peintre": "8.00",
+            "Magnus Cort Nielsen": "8.00",
+            "Bruno Armirail": "9.00",
+            "Leo Bisiaux": "9.00",
+            "Marcel Camprubi": "9.00",
+            "Matthew Riccitello": "9.00",
+            "Bastien Tronchon": "10.00",
+            "Finn Fisher-Black": "11.00",
+            "Jakob Omrzel": "11.00",
+            "Juan Felipe Rodriguez": "11.00",
+            "Mikel Landa": "13.00",
+            "Pello Bilbao": "13.00",
+            "Filippo Zana": "13.00",
+            "Pablo Castrillo": "15.00",
+            "Clement Berthet": "15.00",
+            "Marco Brenner": "15.00",
+            "Vincenzo Albanese": "15.00",
+            "Ivan Ramiro Sosa": "15.00",
+            "Eddie Dunbar": "15.00",
+            "Carlos Rodriguez": "15.00",
+            "Jorgen Nordhagen": "15.00",
+            "Alberto Dainese": "15.00",
+            "Ben Tulett": "17.00",
+            "Raul Garcia Pierna": "17.00",
+            "Paul Double": "17.00",
+            "Hugo Hofstetter": "17.00",
+            "Finlay Pickering": "17.00",
+            "Mats Wenzel": "17.00",
+            "Orluis Aular": "17.00",
+            "Fredrik Dversnes": "17.00",
+            "Jordan Labrosse": "17.00",
+            "Urko Berrade": "21.00",
+            "Luke Tuckwell": "21.00",
+            "Alessandro Covi": "21.00",
+            "Georg Steinhauser": "21.00",
+            "Henok Mulubrhan": "21.00",
+            "Ibon Ruiz": "26.00",
+            "Jose Manuel Diaz": "26.00",
+            "Steffen De Schuyteneer": "26.00",
             "Jan Hirt": "26.00",
-            "Santiago Buitrago": "26.00",
-            "Filippo Zana": "34.00",
-            "Jorgen Nordhagen": "41.00",
-            "Ibon Ruiz": "51.00",
-            "Mikel Landa": "51.00",
-            "Mario Aparicio": "51.00",
-            "Marco Brenner": "81.00",
-            "Carlos Rodriguez": "81.00",
-            "Luke Tuckwell": "101.00",
-            "Joao Almeida": "101.00",
-            "Ben Tulett": "101.00",
-            "Lorenzo Fortunato": "101.00",
-            "Ivan Ramiro Sosa": "101.00",
-            "Raul Garcia Pierna": "101.00",
-            "Pello Bilbao": "151.00",
-            "Thomas Gloag": "151.00",
-            "Eddie Dunbar": "151.00",
-            "Urko Berrade": "151.00",
-            "Andreas Leknessund": "151.00",
-            "Marcel Camprubi": "151.00",
-            "Will Barta": "151.00",
-            "Jack Haig": "151.00",
-            "David de la Cruz": "151.00",
-            "Jose Manuel Diaz": "151.00",
-            "Andreas Kron": "151.00",
-            "Pavel Sivakov": "151.00",
-            "Milan Vader": "151.00",
-            "Ivan Romeo": "151.00",
-            "Paul Double": "151.00",
-            "Pablo Castrillo": "151.00",
-            "Finn Fisher-Black": "201.00",
-            "George Bennett": "201.00",
-            "Georg Steinhauser": "201.00",
-            "Lars Craps": "201.00",
-            "Gianmarco Garofoli": "201.00",
-            "Lennard Kamna": "201.00",
-            "Juan Guillermo Martinez": "201.00",
-            "Valentin Paret-Peintre": "201.00",
-            "Sylvain Moniquet": "201.00",
-            "Remy Rochas": "201.00",
-            "Wout Van Aert": "201.00",
-            "Gijs Leemreize": "201.00",
-            "Bruno Armirail": "201.00",
-            "Attila Valter": "201.00",
-            "Valentin Madouas": "201.00",
-            "Rudy Porter": "201.00",
-            "Kevin Vermaerke": "201.00",
-            "Sergio Samitier": "201.00",
-            "Callum Scotson": "201.00",
-            "Jesus Herrada": "201.00",
-            "Steven Kruijswijk": "201.00",
-            "Patrick Konrad": "201.00",
-            "Jose Luis Faura": "201.00",
-            "Nick Schultz": "201.00",
-            "Mauri Vansevenant": "201.00",
-            "Rudy Molard": "201.00",
-            "Walter Calzoni": "201.00",
-            "Darren Rafferty": "201.00",
-            "Martin Tjotta": "201.00",
-            "Chris Hamilton": "201.00",
-            "Callum Thornley": "201.00",
-            "Larry Warbasse": "201.00",
-            "Pau Marti": "201.00",
-            "Ivan Cobo": "201.00",
-            "Louis Rouland": "201.00",
-            "Reuben Thompson": "201.00",
-            "Ethan Hayter": "201.00",
-            "Mats Wenzel": "201.00",
-            "Darren Van Bekkum": "201.00",
-            "James Shaw": "201.00",
-            "Sinuhe Fernandez": "201.00",
-            "Moritz Kretschy": "201.00",
-            "Xabier Mikel Azparren": "201.00",
-            "Simon Dalby": "301.00",
-            "Victor Langellotti": "301.00",
-            "Alexey Lutsenko": "301.00",
-            "Koen Bouwman": "301.00",
-            "Asbjorn Hellemose": "301.00"
+            "Callum Thornley": "26.00",
+            "Lennard Kamna": "26.00",
+            "Vito Braet": "26.00",
+            "Alexey Lutsenko": "26.00",
+            "Koen Bouwman": "34.00",
+            "Valentin Madouas": "34.00",
+            "Jesus Herrada": "34.00",
+            "Ivan Cobo": "41.00",
+            "Martin Tjotta": "41.00",
+            "Rasmus Tiller": "41.00",
+            "Marc Brustenga": "41.00",
+            "David de la Cruz": "41.00",
+            "Simon Dalby": "41.00",
+            "Frederik Wandahl": "41.00",
+            "Gal Glivar": "41.00",
+            "Gianni Vermeersch": "41.00",
+            "Juan Guillermo Martinez": "51.00",
+            "Henri Francois Renard-Haquin": "51.00",
+            "Matevz Govekar": "51.00",
+            "Alexis Renard": "51.00",
+            "Cesar Macias": "81.00",
+            "Timo De Jong": "81.00",
+            "Pavel Sivakov": "4.50"
           }
         }
       },
       {
-        "id": "200448683",
+        "id": "199813011",
         "kickoff": "",
         "competition": "Cycling",
-        "home": "Vuelta a Espana 2026 - Stage 10",
+        "home": "Team to Win a Stage",
         "away": "",
         "markets": {
           "To Win": {
-            "Wout Van Aert": "3.25",
-            "Matthew Brennan": "3.25",
-            "Mads Pedersen": "5.50",
-            "Axel Laurance": "19.00",
-            "Christophe Laporte": "26.00",
-            "Bryan Coquard": "26.00",
-            "Pau Miquel": "26.00",
-            "Jordi Meeus": "26.00",
-            "Alessandro Romele": "29.00",
-            "Andreas Kron": "34.00",
-            "Ivan Romeo": "41.00",
-            "Ben Turner": "41.00",
-            "Magnus Cort Nielsen": "41.00",
-            "Stefan Kung": "51.00",
-            "Thibau Nys": "67.00",
-            "Ivo Oliveira": "67.00",
-            "Orluis Aular": "67.00",
-            "Andreas Leknessund": "81.00",
-            "Fredrik Dversnes": "81.00",
-            "Finn Fisher-Black": "81.00",
-            "Jordan Labrosse": "81.00",
-            "Bastien Tronchon": "81.00",
-            "Vincenzo Albanese": "81.00",
-            "Marcel Camprubi": "81.00",
-            "Hugo Hofstetter": "81.00",
-            "Kevin Vermaerke": "101.00",
-            "Tobias Halland Johannessen": "101.00",
-            "Jay Vine": "151.00",
-            "Vito Braet": "151.00",
-            "Henok Mulubrhan": "151.00",
-            "Ben Tulett": "201.00",
-            "Leo Bisiaux": "201.00",
-            "Jarno Widar": "201.00",
-            "Walter Calzoni": "201.00",
-            "Mats Wenzel": "201.00",
-            "Alessandro Covi": "201.00",
-            "Pello Bilbao": "201.00",
-            "Xabier Mikel Azparren": "201.00",
-            "Alexey Lutsenko": "201.00",
-            "Primoz Roglic": "251.00",
-            "Oscar Onley": "251.00",
-            "Raul Garcia Pierna": "251.00",
-            "Marco Brenner": "251.00",
-            "Alberto Dainese": "251.00",
-            "Henri Francois Renard-Haquin": "251.00",
-            "Rasmus Tiller": "251.00",
-            "Pavel Sivakov": "301.00",
-            "Pablo Castrillo": "301.00",
-            "Ethan Hayter": "301.00",
-            "Jesus Herrada": "301.00",
-            "Gianni Vermeersch": "301.00",
-            "Bruno Armirail": "301.00",
-            "Ramses Debruyne": "301.00",
-            "Carlos Canal": "301.00",
-            "Sente Sentjens": "301.00",
-            "Francesco Busatto": "301.00",
-            "Pau Marti": "301.00",
-            "David Gonzalez": "301.00",
-            "Filippo Zana": "401.00",
-            "Valentin Paret-Peintre": "401.00",
-            "Marc Brustenga": "401.00",
-            "Koen Bouwman": "401.00",
-            "Lennard Kamna": "401.00",
-            "Valentin Madouas": "401.00",
-            "Gianmarco Garofoli": "401.00",
-            "Matevz Govekar": "401.00",
-            "Fabio Van Den Bossche": "401.00",
-            "Harold Tejada": "501.00",
-            "Santiago Buitrago": "501.00",
-            "Richard Carapaz": "501.00",
-            "Gal Glivar": "501.00",
-            "Cesar Macias": "501.00",
-            "Alexis Renard": "501.00",
-            "Yevgeniy Fedorov": "501.00",
-            "Steffen De Schuyteneer": "501.00",
-            "Mattias Skjelmose": "601.00",
-            "Paul Double": "601.00",
-            "Milan Vader": "601.00",
-            "Ivan Cobo": "601.00",
-            "Rudy Molard": "601.00",
-            "James Shaw": "601.00",
-            "Urko Berrade": "601.00",
-            "Clement Alleno": "601.00",
-            "Lars Craps": "601.00",
-            "Lorenzo Rota": "601.00",
-            "Timo De Jong": "601.00",
-            "Patrick Konrad": "601.00",
-            "Eddie Dunbar": "601.00",
-            "Thomas Gloag": "601.00",
-            "Attila Valter": "601.00",
-            "Joao Almeida": "751.00",
-            "Jorgen Nordhagen": "751.00",
-            "Rudy Porter": "751.00",
-            "Hugo Houle": "751.00",
-            "Martin Tjotta": "751.00",
-            "Callum Thornley": "751.00",
-            "Will Barta": "751.00",
-            "Frederik Wandahl": "751.00",
-            "Enzo Paleni": "751.00",
-            "Nick Schultz": "751.00",
-            "Mauri Vansevenant": "751.00",
-            "Ibon Ruiz": "1001.00",
-            "Guillaume Martin": "1001.00",
-            "Inigo Elosegui": "1001.00",
-            "Gregor Muhlberger": "1001.00",
-            "Simon Dalby": "1001.00",
-            "Mario Aparicio": "1001.00",
-            "Sinuhe Fernandez": "1001.00",
-            "Gijs Leemreize": "1001.00",
-            "Timo Roosen": "1001.00",
-            "Sander De Pestel": "1001.00",
-            "Remy Rochas": "1001.00",
-            "Julien Bernard": "1001.00",
-            "Georg Steinhauser": "1001.00",
-            "Darren Rafferty": "1001.00",
-            "Alastair MacKellar": "1001.00",
-            "Felix Gall": "1501.00",
-            "Enric Mas Nicolau": "1501.00",
-            "Lorenzo Fortunato": "1501.00",
-            "Clement Berthet": "1501.00",
-            "Jose Manuel Diaz": "1501.00",
-            "Finlay Pickering": "1501.00",
-            "Jose Luis Faura": "1501.00",
-            "Roman Ermakov": "1501.00",
-            "Sergio Samitier": "1501.00",
-            "Darren Van Bekkum": "1501.00",
-            "Louis Rouland": "1501.00",
-            "Sylvain Moniquet": "1501.00",
-            "Paul Ourselin": "1501.00",
-            "Jasha Sutterlin": "1501.00",
-            "Chris Hamilton": "1501.00",
-            "Larry Warbasse": "1501.00",
-            "Roland Thalmann": "1501.00",
-            "Hannes Wilksch": "1501.00",
-            "Fabian Weiss": "1501.00",
-            "Arthur Kluckers": "1501.00",
-            "Michael Gogl": "1501.00",
-            "Jacopo Mosca": "1501.00",
-            "Olivier Le Gac": "1501.00",
-            "Juan Felipe Rodriguez": "1501.00",
-            "Jakob Omrzel": "1501.00",
-            "Moritz Kretschy": "1501.00",
-            "Mathijs Paasschens": "1501.00",
-            "Lindsay De Vylder": "1501.00",
-            "Domen Novak": "1501.00",
-            "Asbjorn Hellemose": "2001.00",
-            "Hamish McKenzie": "2001.00",
-            "Reuben Thompson": "2001.00"
+            "Decathlon CMA CGM Team": "1.40",
+            "Lotto Intermarche": "1.50",
+            "Netcompany Ineos": "1.66",
+            "RedBull-Bora-Hansgrohe": "1.66",
+            "Lidl-Trek": "1.66",
+            "XDS Astana Team": "1.83",
+            "Bahrain Victorious": "1.83",
+            "Soudal-Quick Step": "2.50",
+            "Tudor Pro Cycling Team": "2.50",
+            "EF Education-Easy Post": "3.00",
+            "Equipo Kern Pharma": "4.00",
+            "Pinarello Q36.5 Pro Cycling Team": "4.00",
+            "Alpecin Premier Tech": "5.00",
+            "Team Jayco AlUla": "5.00",
+            "Groupama FDJ United": "6.00",
+            "NSN Cycling Team": "7.00",
+            "Burgos-BH": "8.00",
+            "Team Picnic Post NL": "15.00"
           }
         }
       }
@@ -444,9 +175,9 @@
         "away": "Sunderland",
         "markets": {
           "Match Result": {
-            "1": "1.55",
-            "X": "4.20",
-            "2": "5.50"
+            "1": "1.57",
+            "X": "4.00",
+            "2": "6.00"
           }
         }
       },
@@ -542,51 +273,9 @@
         "away": "Chelsea",
         "markets": {
           "Match Result": {
-            "1": "1.66",
+            "1": "1.70",
             "X": "3.70",
-            "2": "5.00"
-          },
-          "Both Teams to Score": {
-            "Yes": "1.75",
-            "No": "2.00"
-          },
-          "Correct Score": {
-            "1-0": "8.50",
-            "2-0": "9.50",
-            "2-1": "9.00",
-            "3-0": "15.00",
-            "3-1": "15.00",
-            "3-2": "26.00",
-            "4-0": "29.00",
-            "4-1": "29.00",
-            "4-2": "41.00",
-            "4-3": "81.00",
-            "5-0": "51.00",
-            "5-1": "51.00",
-            "5-2": "81.00",
-            "5-3": "201.00",
-            "6-0": "126.00",
-            "6-1": "126.00",
-            "6-2": "201.00",
-            "7-0": "401.00",
-            "7-1": "401.00",
-            "0-0": "12.00",
-            "1-1": "7.50",
-            "2-2": "17.00",
-            "3-3": "51.00",
-            "4-4": "251.00",
-            "0-1": "17.00",
-            "0-2": "29.00",
-            "1-2": "17.00",
-            "0-3": "51.00",
-            "1-3": "41.00",
-            "2-3": "41.00",
-            "0-4": "151.00",
-            "1-4": "101.00",
-            "2-4": "101.00",
-            "3-4": "151.00",
-            "1-5": "351.00",
-            "2-5": "401.00"
+            "2": "4.75"
           }
         }
       },
@@ -731,34 +420,6 @@
         }
       },
       {
-        "id": "199416866",
-        "kickoff": "01/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "FC Zurich",
-        "away": "Young Boys",
-        "markets": {
-          "Match Result": {
-            "1": "4.75",
-            "X": "4.50",
-            "2": "1.57"
-          }
-        }
-      },
-      {
-        "id": "199412577",
-        "kickoff": "02/09/2026 02:00:00",
-        "competition": "COLOMBIA-PRIM-A",
-        "home": "Fortaleza CEIF",
-        "away": "Once Caldas",
-        "markets": {
-          "Match Result": {
-            "1": "2.60",
-            "X": "3.10",
-            "2": "2.80"
-          }
-        }
-      },
-      {
         "id": "199415449",
         "kickoff": "01/09/2026 19:45:00",
         "competition": "NPower Champs",
@@ -766,9 +427,9 @@
         "away": "Wolverhampton",
         "markets": {
           "Match Result": {
-            "1": "2.00",
-            "X": "3.50",
-            "2": "3.60"
+            "1": "2.05",
+            "X": "3.60",
+            "2": "3.40"
           }
         }
       },
@@ -780,9 +441,9 @@
         "away": "Watford",
         "markets": {
           "Match Result": {
-            "1": "1.85",
+            "1": "1.80",
             "X": "3.60",
-            "2": "4.00"
+            "2": "4.20"
           }
         }
       },
@@ -794,9 +455,9 @@
         "away": "Derby",
         "markets": {
           "Match Result": {
-            "1": "1.95",
+            "1": "1.90",
             "X": "3.40",
-            "2": "3.80"
+            "2": "4.00"
           }
         }
       },
@@ -822,9 +483,9 @@
         "away": "Bristol City",
         "markets": {
           "Match Result": {
-            "1": "2.62",
+            "1": "2.87",
             "X": "3.40",
-            "2": "2.55"
+            "2": "2.35"
           }
         }
       },
@@ -838,7 +499,7 @@
           "Match Result": {
             "1": "1.65",
             "X": "3.80",
-            "2": "5.25"
+            "2": "5.00"
           }
         }
       },
@@ -850,9 +511,9 @@
         "away": "Norwich",
         "markets": {
           "Match Result": {
-            "1": "3.20",
-            "X": "3.50",
-            "2": "2.15"
+            "1": "3.40",
+            "X": "3.60",
+            "2": "2.05"
           }
         }
       },
@@ -864,9 +525,37 @@
         "away": "Southampton",
         "markets": {
           "Match Result": {
-            "1": "2.50",
+            "1": "2.60",
             "X": "3.30",
-            "2": "2.75"
+            "2": "2.60"
+          }
+        }
+      },
+      {
+        "id": "199412577",
+        "kickoff": "02/09/2026 02:00:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Fortaleza CEIF",
+        "away": "Once Caldas",
+        "markets": {
+          "Match Result": {
+            "1": "3.00",
+            "X": "3.10",
+            "2": "2.40"
+          }
+        }
+      },
+      {
+        "id": "199416866",
+        "kickoff": "01/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "FC Zurich",
+        "away": "Young Boys",
+        "markets": {
+          "Match Result": {
+            "1": "5.00",
+            "X": "4.50",
+            "2": "1.55"
           }
         }
       },
@@ -892,9 +581,259 @@
         "away": "Mushuc Runa",
         "markets": {
           "Match Result": {
-            "1": "1.57",
-            "X": "3.75",
-            "2": "5.50"
+            "1": "1.70",
+            "X": "3.50",
+            "2": "4.50"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sport": "Ice Hockey",
+    "matches": [
+      {
+        "id": "195919100",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "Jukurit",
+        "away": "HPK",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+1.5",
+                "odds": "1.35"
+              },
+              "2": {
+                "line": "-1.5",
+                "odds": "3.20"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "2.70"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.45"
+              }
+            },
+            "Money Line": {
+              "1": "2.00",
+              "2": "1.78"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919103",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "Karpat",
+        "away": "Assat",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-1.5",
+                "odds": "2.05"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.75"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "2.05"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.75"
+              }
+            },
+            "Money Line": {
+              "1": "1.40",
+              "2": "2.90"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919106",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "K-Espoo",
+        "away": "Kalpa",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-1.5",
+                "odds": "2.70"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.45"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "2.20"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.67"
+              }
+            },
+            "Money Line": {
+              "1": "1.65",
+              "2": "2.25"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919109",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "Lukko",
+        "away": "Ilves",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-1.5",
+                "odds": "3.00"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.37"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "2.05"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.75"
+              }
+            },
+            "Money Line": {
+              "1": "1.78",
+              "2": "2.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919113",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "Saipa",
+        "away": "Tappara",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+1.5",
+                "odds": "1.42"
+              },
+              "2": {
+                "line": "-1.5",
+                "odds": "2.80"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "1.95"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.80"
+              }
+            },
+            "Money Line": {
+              "1": "2.15",
+              "2": "1.70"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919116",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "TPS",
+        "away": "Kookoo",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-1.5",
+                "odds": "2.80"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.42"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "2.05"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.75"
+              }
+            },
+            "Money Line": {
+              "1": "1.70",
+              "2": "2.15"
+            }
+          }
+        }
+      },
+      {
+        "id": "195919119",
+        "kickoff": "01/09/2026 16:30:00",
+        "competition": "SML",
+        "home": "Sport",
+        "away": "Jokerit",
+        "markets": {
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+1.5",
+                "odds": "1.37"
+              },
+              "2": {
+                "line": "-1.5",
+                "odds": "3.00"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "5.5",
+                "odds": "1.90"
+              },
+              "under": {
+                "line": "5.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.95",
+              "2": "1.80"
+            }
           }
         }
       }
@@ -923,12 +862,12 @@
             },
             "Total": {
               "over": {
-                "line": "7.5",
-                "odds": "1.83"
+                "line": "8.0",
+                "odds": "1.90"
               },
               "under": {
-                "line": "7.5",
-                "odds": "2.00"
+                "line": "8.0",
+                "odds": "1.90"
               }
             },
             "Money Line": {
@@ -967,8 +906,8 @@
               }
             },
             "Money Line": {
-              "1": "1.76",
-              "2": "2.10"
+              "1": "1.71",
+              "2": "2.20"
             }
           }
         }
@@ -984,11 +923,11 @@
             "Run Line": {
               "1": {
                 "line": "+1.5",
-                "odds": "1.58"
+                "odds": "1.60"
               },
               "2": {
                 "line": "-1.5",
-                "odds": "2.45"
+                "odds": "2.40"
               }
             },
             "Total": {
@@ -1002,8 +941,8 @@
               }
             },
             "Money Line": {
-              "1": "2.25",
-              "2": "1.66"
+              "1": "2.35",
+              "2": "1.62"
             }
           }
         }
@@ -1028,12 +967,12 @@
             },
             "Total": {
               "over": {
-                "line": "8.0",
-                "odds": "2.00"
+                "line": "7.5",
+                "odds": "1.83"
               },
               "under": {
-                "line": "8.0",
-                "odds": "1.83"
+                "line": "7.5",
+                "odds": "2.00"
               }
             },
             "Money Line": {
@@ -1089,26 +1028,26 @@
             "Run Line": {
               "1": {
                 "line": "+1.5",
-                "odds": "1.50"
+                "odds": "1.48"
               },
               "2": {
                 "line": "-1.5",
-                "odds": "2.65"
+                "odds": "2.70"
               }
             },
             "Total": {
               "over": {
-                "line": "7.5",
-                "odds": "2.00"
+                "line": "7.0",
+                "odds": "1.86"
               },
               "under": {
-                "line": "7.5",
-                "odds": "1.83"
+                "line": "7.0",
+                "odds": "1.95"
               }
             },
             "Money Line": {
-              "1": "2.00",
-              "2": "1.83"
+              "1": "2.05",
+              "2": "1.80"
             }
           }
         }
@@ -1203,12 +1142,12 @@
             },
             "Total": {
               "over": {
-                "line": "10.0",
-                "odds": "1.83"
+                "line": "10.5",
+                "odds": "1.95"
               },
               "under": {
-                "line": "10.0",
-                "odds": "2.00"
+                "line": "10.5",
+                "odds": "1.86"
               }
             },
             "Money Line": {
@@ -1249,6 +1188,41 @@
             "Money Line": {
               "1": "2.55",
               "2": "1.54"
+            }
+          }
+        }
+      },
+      {
+        "id": "200500751",
+        "kickoff": "02/09/2026 01:10:00",
+        "competition": "MLB",
+        "home": "CHI White Sox",
+        "away": "HOU Astros",
+        "markets": {
+          "Game Lines": {
+            "Run Line": {
+              "1": {
+                "line": "-1.5",
+                "odds": "2.45"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.58"
+              }
+            },
+            "Total": {
+              "over": {
+                "line": "8.5",
+                "odds": "1.95"
+              },
+              "under": {
+                "line": "8.5",
+                "odds": "1.86"
+              }
+            },
+            "Money Line": {
+              "1": "1.83",
+              "2": "2.00"
             }
           }
         }
@@ -1396,1335 +1370,83 @@
     ]
   },
   {
-    "sport": "NRL",
+    "sport": "MMA",
     "matches": [
       {
-        "id": "200124627",
-        "kickoff": "03/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Bradford Bulls",
-        "away": "Castleford Tigers",
+        "id": "199138650",
+        "kickoff": "05/09/2026 22:30:00",
+        "competition": "",
+        "home": "Dan Hooker",
+        "away": "Salahdine Parnasse",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-2.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+2.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.66",
-              "2": "2.10"
-            }
+          "Match Winner": {
+            "1": "5.00",
+            "2": "1.18"
           }
         }
       },
       {
-        "id": "200124891",
-        "kickoff": "04/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Hull FC",
+        "id": "200161162",
+        "kickoff": "05/09/2026 22:00:00",
+        "competition": "",
+        "home": "Fares Ziam",
+        "away": "Axel Sola",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-6.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+6.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.44",
-              "2": "2.62"
-            }
+          "Match Winner": {
+            "1": "1.66",
+            "2": "2.25"
           }
         }
       },
       {
-        "id": "200124895",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Hull KR",
-        "away": "Huddersfield Giants",
+        "id": "200161166",
+        "kickoff": "05/09/2026 21:30:00",
+        "competition": "",
+        "home": "Michael Page",
+        "away": "Nursulton Ruziboev",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.25",
-              "2": "3.75"
-            }
+          "Match Winner": {
+            "1": "1.57",
+            "2": "2.45"
           }
         }
       },
       {
-        "id": "200124899",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leigh Leopards",
-        "away": "St Helens",
+        "id": "200271592",
+        "kickoff": "05/09/2026 21:00:00",
+        "competition": "",
+        "home": "Daniil Donchenko",
+        "away": "Punahele Soriano",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.28",
-              "2": "3.50"
-            }
+          "Match Winner": {
+            "1": "1.41",
+            "2": "2.95"
           }
         }
       },
       {
-        "id": "200124939",
-        "kickoff": "05/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Catalan Dragons",
-        "away": "York Knights",
+        "id": "200161161",
+        "kickoff": "05/09/2026 20:30:00",
+        "competition": "",
+        "home": "Morgan Charriere",
+        "away": "Felipe Lima",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-14.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+14.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "4.50"
-            }
+          "Match Winner": {
+            "1": "2.55",
+            "2": "1.54"
           }
         }
       },
       {
-        "id": "200124943",
+        "id": "200161167",
         "kickoff": "05/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leeds Rhinos",
-        "away": "Wigan Warriors",
+        "competition": "",
+        "home": "Losene Keita",
+        "away": "Muhammad Naimov",
         "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-1.5",
-                "odds": "1.83"
-              },
-              "2": {
-                "line": "+1.5",
-                "odds": "1.83"
-              }
-            },
-            "To Win": {
-              "1": "1.72",
-              "2": "2.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093410",
-        "kickoff": "03/09/2026 10:50:00",
-        "competition": "LNRL",
-        "home": "Canterbury Bulldogs",
-        "away": "Brisbane Broncos",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "54.5",
-                "odds": "1.95"
-              },
-              "under": {
-                "line": "54.5",
-                "odds": "1.87"
-              }
-            },
-            "To Win": {
-              "1": "1.33",
-              "2": "3.35"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093414",
-        "kickoff": "04/09/2026 09:00:00",
-        "competition": "LNRL",
-        "home": "Gold Coast Titans",
-        "away": "Dolphins",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+12.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-12.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "4.00",
-              "2": "1.25"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093418",
-        "kickoff": "04/09/2026 11:00:00",
-        "competition": "LNRL",
-        "home": "South Sydney Rabbitohs",
-        "away": "Sydney Roosters",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-15.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+15.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "48.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "48.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "5.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093422",
-        "kickoff": "05/09/2026 06:00:00",
-        "competition": "LNRL",
-        "home": "New Zealand Warriors",
-        "away": "Manly Sea Eagles",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-8.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+8.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "50.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "50.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.36",
-              "2": "3.20"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093426",
-        "kickoff": "05/09/2026 08:30:00",
-        "competition": "LNRL",
-        "home": "North Queensland Cowboys",
-        "away": "Canberra Raiders",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-4.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+4.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "55.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "55.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.56",
-              "2": "2.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093430",
-        "kickoff": "05/09/2026 10:35:00",
-        "competition": "LNRL",
-        "home": "Cronulla Sharks",
-        "away": "Melbourne Storm",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+6.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-6.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "52.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "52.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.75",
-              "2": "1.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093434",
-        "kickoff": "06/09/2026 05:00:00",
-        "competition": "LNRL",
-        "home": "St George/Illawarra Dragons",
-        "away": "Parramatta Eels",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+3.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-3.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.25",
-              "2": "1.65"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093438",
-        "kickoff": "06/09/2026 07:05:00",
-        "competition": "LNRL",
-        "home": "Penrith Panthers",
-        "away": "Wests Tigers",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "49",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "49",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.31",
-              "2": "3.50"
-            }
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "NRLW",
-    "matches": [
-      {
-        "id": "200124627",
-        "kickoff": "03/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Bradford Bulls",
-        "away": "Castleford Tigers",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-2.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+2.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.66",
-              "2": "2.10"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124891",
-        "kickoff": "04/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Hull FC",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-6.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+6.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.44",
-              "2": "2.62"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124895",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Hull KR",
-        "away": "Huddersfield Giants",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.25",
-              "2": "3.75"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124899",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leigh Leopards",
-        "away": "St Helens",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.28",
-              "2": "3.50"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124939",
-        "kickoff": "05/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Catalan Dragons",
-        "away": "York Knights",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-14.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+14.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "4.50"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124943",
-        "kickoff": "05/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leeds Rhinos",
-        "away": "Wigan Warriors",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-1.5",
-                "odds": "1.83"
-              },
-              "2": {
-                "line": "+1.5",
-                "odds": "1.83"
-              }
-            },
-            "To Win": {
-              "1": "1.72",
-              "2": "2.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093410",
-        "kickoff": "03/09/2026 10:50:00",
-        "competition": "LNRL",
-        "home": "Canterbury Bulldogs",
-        "away": "Brisbane Broncos",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "54.5",
-                "odds": "1.95"
-              },
-              "under": {
-                "line": "54.5",
-                "odds": "1.87"
-              }
-            },
-            "To Win": {
-              "1": "1.33",
-              "2": "3.35"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093414",
-        "kickoff": "04/09/2026 09:00:00",
-        "competition": "LNRL",
-        "home": "Gold Coast Titans",
-        "away": "Dolphins",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+12.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-12.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "4.00",
-              "2": "1.25"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093418",
-        "kickoff": "04/09/2026 11:00:00",
-        "competition": "LNRL",
-        "home": "South Sydney Rabbitohs",
-        "away": "Sydney Roosters",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-15.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+15.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "48.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "48.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "5.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093422",
-        "kickoff": "05/09/2026 06:00:00",
-        "competition": "LNRL",
-        "home": "New Zealand Warriors",
-        "away": "Manly Sea Eagles",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-8.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+8.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "50.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "50.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.36",
-              "2": "3.20"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093426",
-        "kickoff": "05/09/2026 08:30:00",
-        "competition": "LNRL",
-        "home": "North Queensland Cowboys",
-        "away": "Canberra Raiders",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-4.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+4.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "55.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "55.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.56",
-              "2": "2.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093430",
-        "kickoff": "05/09/2026 10:35:00",
-        "competition": "LNRL",
-        "home": "Cronulla Sharks",
-        "away": "Melbourne Storm",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+6.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-6.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "52.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "52.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.75",
-              "2": "1.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093434",
-        "kickoff": "06/09/2026 05:00:00",
-        "competition": "LNRL",
-        "home": "St George/Illawarra Dragons",
-        "away": "Parramatta Eels",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+3.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-3.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.25",
-              "2": "1.65"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093438",
-        "kickoff": "06/09/2026 07:05:00",
-        "competition": "LNRL",
-        "home": "Penrith Panthers",
-        "away": "Wests Tigers",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "49",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "49",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.31",
-              "2": "3.50"
-            }
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "Rugby League",
-    "matches": [
-      {
-        "id": "200124627",
-        "kickoff": "03/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Bradford Bulls",
-        "away": "Castleford Tigers",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-2.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+2.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.66",
-              "2": "2.10"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124891",
-        "kickoff": "04/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Toulouse Olympique",
-        "away": "Hull FC",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-6.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+6.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.44",
-              "2": "2.62"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124895",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Hull KR",
-        "away": "Huddersfield Giants",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.25",
-              "2": "3.75"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124899",
-        "kickoff": "04/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leigh Leopards",
-        "away": "St Helens",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.28",
-              "2": "3.50"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124939",
-        "kickoff": "05/09/2026 18:00:00",
-        "competition": "LSL",
-        "home": "Catalan Dragons",
-        "away": "York Knights",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-14.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+14.5",
-                "odds": "1.80"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "4.50"
-            }
-          }
-        }
-      },
-      {
-        "id": "200124943",
-        "kickoff": "05/09/2026 20:00:00",
-        "competition": "LSL",
-        "home": "Leeds Rhinos",
-        "away": "Wigan Warriors",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-1.5",
-                "odds": "1.83"
-              },
-              "2": {
-                "line": "+1.5",
-                "odds": "1.83"
-              }
-            },
-            "To Win": {
-              "1": "1.72",
-              "2": "2.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093410",
-        "kickoff": "03/09/2026 10:50:00",
-        "competition": "LNRL",
-        "home": "Canterbury Bulldogs",
-        "away": "Brisbane Broncos",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "54.5",
-                "odds": "1.95"
-              },
-              "under": {
-                "line": "54.5",
-                "odds": "1.87"
-              }
-            },
-            "To Win": {
-              "1": "1.33",
-              "2": "3.35"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093414",
-        "kickoff": "04/09/2026 09:00:00",
-        "competition": "LNRL",
-        "home": "Gold Coast Titans",
-        "away": "Dolphins",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+12.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-12.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "4.00",
-              "2": "1.25"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093418",
-        "kickoff": "04/09/2026 11:00:00",
-        "competition": "LNRL",
-        "home": "South Sydney Rabbitohs",
-        "away": "Sydney Roosters",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-15.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+15.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "48.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "48.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.18",
-              "2": "5.00"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093422",
-        "kickoff": "05/09/2026 06:00:00",
-        "competition": "LNRL",
-        "home": "New Zealand Warriors",
-        "away": "Manly Sea Eagles",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-8.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+8.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "50.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "50.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.36",
-              "2": "3.20"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093426",
-        "kickoff": "05/09/2026 08:30:00",
-        "competition": "LNRL",
-        "home": "North Queensland Cowboys",
-        "away": "Canberra Raiders",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-4.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "+4.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "55.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "55.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.56",
-              "2": "2.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093430",
-        "kickoff": "05/09/2026 10:35:00",
-        "competition": "LNRL",
-        "home": "Cronulla Sharks",
-        "away": "Melbourne Storm",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+6.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-6.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "52.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "52.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.75",
-              "2": "1.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093434",
-        "kickoff": "06/09/2026 05:00:00",
-        "competition": "LNRL",
-        "home": "St George/Illawarra Dragons",
-        "away": "Parramatta Eels",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "+3.5",
-                "odds": "1.91"
-              },
-              "2": {
-                "line": "-3.5",
-                "odds": "1.91"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "57.5",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "57.5",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "2.25",
-              "2": "1.65"
-            }
-          }
-        }
-      },
-      {
-        "id": "200093438",
-        "kickoff": "06/09/2026 07:05:00",
-        "competition": "LNRL",
-        "home": "Penrith Panthers",
-        "away": "Wests Tigers",
-        "markets": {
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-10.5",
-                "odds": "1.95"
-              },
-              "2": {
-                "line": "+10.5",
-                "odds": "1.87"
-              }
-            },
-            "Total": {
-              "over": {
-                "line": "49",
-                "odds": "1.91"
-              },
-              "under": {
-                "line": "49",
-                "odds": "1.91"
-              }
-            },
-            "To Win": {
-              "1": "1.31",
-              "2": "3.50"
-            }
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "Rugby Union",
-    "matches": [
-      {
-        "id": "200369993",
-        "kickoff": "05/09/2026 16:10:00",
-        "competition": "TEST-SERIES1",
-        "home": "South Africa",
-        "away": "New Zealand",
-        "markets": {
-          "Game Lines": {
-            "Handicap": {
-              "1": {
-                "line": "-7.5",
-                "odds": "1.90"
-              },
-              "2": {
-                "line": "+7.5",
-                "odds": "1.90"
-              }
-            },
-            "To Win": {
-              "1": "1.36",
-              "2": "3.20"
-            }
+          "Match Winner": {
+            "1": "1.27",
+            "2": "3.80"
           }
         }
       }
@@ -2733,97 +1455,6 @@
   {
     "sport": "Snooker",
     "matches": [
-      {
-        "id": "200379793",
-        "kickoff": "01/09/2026 10:00:00",
-        "competition": "",
-        "home": "Gong Chenzhi",
-        "away": "He Guoqiang",
-        "markets": {
-          "Match Winner": {
-            "1": "2.62",
-            "2": "1.50"
-          }
-        }
-      },
-      {
-        "id": "200379794",
-        "kickoff": "01/09/2026 10:00:00",
-        "competition": "",
-        "home": "Jak Jones",
-        "away": "Anthony McGill",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200379798",
-        "kickoff": "01/09/2026 10:00:00",
-        "competition": "",
-        "home": "Jackson Page",
-        "away": "Jimmy Robertson",
-        "markets": {
-          "Match Winner": {
-            "1": "1.66",
-            "2": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200379797",
-        "kickoff": "01/09/2026 13:00:00",
-        "competition": "",
-        "home": "Chatchapong Nasa",
-        "away": "Chang Bingyu",
-        "markets": {
-          "Match Winner": {
-            "1": "17.00",
-            "2": "1.02"
-          }
-        }
-      },
-      {
-        "id": "200379801",
-        "kickoff": "01/09/2026 13:00:00",
-        "competition": "",
-        "home": "Liu Yang",
-        "away": "Duane Jones",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200379802",
-        "kickoff": "01/09/2026 14:00:00",
-        "competition": "",
-        "home": "Mahmoud El Hareedy",
-        "away": "Liam Highfield",
-        "markets": {
-          "Match Winner": {
-            "1": "10.00",
-            "2": "1.06"
-          }
-        }
-      },
-      {
-        "id": "200379803",
-        "kickoff": "01/09/2026 14:00:00",
-        "competition": "",
-        "home": "Joshua Thomond",
-        "away": "Artemijs Zizins",
-        "markets": {
-          "Match Winner": {
-            "1": "6.00",
-            "2": "1.12"
-          }
-        }
-      },
       {
         "id": "200379795",
         "kickoff": "01/09/2026 19:00:00",
@@ -2871,8 +1502,8 @@
         "away": "Thanawat Tirapongpaiboon",
         "markets": {
           "Match Winner": {
-            "1": "1.11",
-            "2": "6.50"
+            "1": "1.12",
+            "2": "6.00"
           }
         }
       },
@@ -2895,34 +1526,6 @@
     "sport": "Soccer",
     "matches": [
       {
-        "id": "199416866",
-        "kickoff": "01/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "FC Zurich",
-        "away": "Young Boys",
-        "markets": {
-          "Match Result": {
-            "1": "4.75",
-            "X": "4.50",
-            "2": "1.57"
-          }
-        }
-      },
-      {
-        "id": "199412577",
-        "kickoff": "02/09/2026 02:00:00",
-        "competition": "COLOMBIA-PRIM-A",
-        "home": "Fortaleza CEIF",
-        "away": "Once Caldas",
-        "markets": {
-          "Match Result": {
-            "1": "2.60",
-            "X": "3.10",
-            "2": "2.80"
-          }
-        }
-      },
-      {
         "id": "199415449",
         "kickoff": "01/09/2026 19:45:00",
         "competition": "NPower Champs",
@@ -2930,9 +1533,9 @@
         "away": "Wolverhampton",
         "markets": {
           "Match Result": {
-            "1": "2.00",
-            "X": "3.50",
-            "2": "3.60"
+            "1": "2.05",
+            "X": "3.60",
+            "2": "3.40"
           }
         }
       },
@@ -2944,9 +1547,9 @@
         "away": "Watford",
         "markets": {
           "Match Result": {
-            "1": "1.85",
+            "1": "1.80",
             "X": "3.60",
-            "2": "4.00"
+            "2": "4.20"
           }
         }
       },
@@ -2958,9 +1561,9 @@
         "away": "Derby",
         "markets": {
           "Match Result": {
-            "1": "1.95",
+            "1": "1.90",
             "X": "3.40",
-            "2": "3.80"
+            "2": "4.00"
           }
         }
       },
@@ -2986,9 +1589,9 @@
         "away": "Bristol City",
         "markets": {
           "Match Result": {
-            "1": "2.62",
+            "1": "2.87",
             "X": "3.40",
-            "2": "2.55"
+            "2": "2.35"
           }
         }
       },
@@ -3002,7 +1605,7 @@
           "Match Result": {
             "1": "1.65",
             "X": "3.80",
-            "2": "5.25"
+            "2": "5.00"
           }
         }
       },
@@ -3014,9 +1617,9 @@
         "away": "Norwich",
         "markets": {
           "Match Result": {
-            "1": "3.20",
-            "X": "3.50",
-            "2": "2.15"
+            "1": "3.40",
+            "X": "3.60",
+            "2": "2.05"
           }
         }
       },
@@ -3028,9 +1631,37 @@
         "away": "Southampton",
         "markets": {
           "Match Result": {
-            "1": "2.50",
+            "1": "2.60",
             "X": "3.30",
-            "2": "2.75"
+            "2": "2.60"
+          }
+        }
+      },
+      {
+        "id": "199412577",
+        "kickoff": "02/09/2026 02:00:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Fortaleza CEIF",
+        "away": "Once Caldas",
+        "markets": {
+          "Match Result": {
+            "1": "3.00",
+            "X": "3.10",
+            "2": "2.40"
+          }
+        }
+      },
+      {
+        "id": "199416866",
+        "kickoff": "01/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "FC Zurich",
+        "away": "Young Boys",
+        "markets": {
+          "Match Result": {
+            "1": "5.00",
+            "X": "4.50",
+            "2": "1.55"
           }
         }
       },
@@ -3056,163 +1687,9 @@
         "away": "Mushuc Runa",
         "markets": {
           "Match Result": {
-            "1": "1.57",
-            "X": "3.75",
-            "2": "5.50"
-          }
-        }
-      },
-      {
-        "id": "199416874",
-        "kickoff": "02/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "FC Thun",
-        "away": "FC Lausanne-Sport",
-        "markets": {
-          "Match Result": {
-            "1": "1.95",
-            "X": "3.80",
-            "2": "3.50"
-          }
-        }
-      },
-      {
-        "id": "199416869",
-        "kickoff": "02/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Grasshoppers",
-        "away": "St Gallen",
-        "markets": {
-          "Match Result": {
-            "1": "4.33",
-            "X": "4.00",
-            "2": "1.70"
-          }
-        }
-      },
-      {
-        "id": "199416871",
-        "kickoff": "02/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Lucerne",
-        "away": "FC Vaduz",
-        "markets": {
-          "Match Result": {
-            "1": "1.57",
-            "X": "4.33",
-            "2": "5.00"
-          }
-        }
-      },
-      {
-        "id": "199416879",
-        "kickoff": "03/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Basel",
-        "away": "FC Sion",
-        "markets": {
-          "Match Result": {
-            "1": "2.50",
-            "X": "3.60",
-            "2": "2.60"
-          }
-        }
-      },
-      {
-        "id": "199416882",
-        "kickoff": "03/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Lugano",
-        "away": "Servette",
-        "markets": {
-          "Match Result": {
-            "1": "2.05",
-            "X": "3.60",
-            "2": "3.40"
-          }
-        }
-      },
-      {
-        "id": "199799220",
-        "kickoff": "05/09/2026 17:00:00",
-        "competition": "Switzerland Sup",
-        "home": "FC Vaduz",
-        "away": "FC Lausanne-Sport",
-        "markets": {
-          "Match Result": {
-            "1": "2.37",
-            "X": "3.60",
-            "2": "2.60"
-          }
-        }
-      },
-      {
-        "id": "199799222",
-        "kickoff": "05/09/2026 17:00:00",
-        "competition": "Switzerland Sup",
-        "home": "Young Boys",
-        "away": "Lucerne",
-        "markets": {
-          "Match Result": {
-            "1": "1.48",
-            "X": "4.40",
-            "2": "5.50"
-          }
-        }
-      },
-      {
-        "id": "199799227",
-        "kickoff": "05/09/2026 19:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Grasshoppers",
-        "away": "FC Zurich",
-        "markets": {
-          "Match Result": {
-            "1": "2.30",
-            "X": "3.60",
-            "2": "2.70"
-          }
-        }
-      },
-      {
-        "id": "199799237",
-        "kickoff": "06/09/2026 13:00:00",
-        "competition": "Switzerland Sup",
-        "home": "Servette",
-        "away": "St Gallen",
-        "markets": {
-          "Match Result": {
-            "1": "2.20",
-            "X": "3.70",
-            "2": "2.80"
-          }
-        }
-      },
-      {
-        "id": "199799239",
-        "kickoff": "06/09/2026 15:30:00",
-        "competition": "Switzerland Sup",
-        "home": "Basel",
-        "away": "Lugano",
-        "markets": {
-          "Match Result": {
-            "1": "2.90",
-            "X": "3.70",
-            "2": "2.15"
-          }
-        }
-      },
-      {
-        "id": "199799241",
-        "kickoff": "06/09/2026 15:30:00",
-        "competition": "Switzerland Sup",
-        "home": "FC Sion",
-        "away": "FC Thun",
-        "markets": {
-          "Match Result": {
-            "1": "1.66",
-            "X": "4.10",
-            "2": "4.20"
+            "1": "1.70",
+            "X": "3.50",
+            "2": "4.50"
           }
         }
       },
@@ -3266,9 +1743,9 @@
         "away": "Middlesbrough",
         "markets": {
           "Match Result": {
-            "1": "2.80",
+            "1": "2.87",
             "X": "3.40",
-            "2": "2.40"
+            "2": "2.37"
           }
         }
       },
@@ -3350,9 +1827,9 @@
         "away": "Cardiff",
         "markets": {
           "Match Result": {
-            "1": "2.55",
+            "1": "2.37",
             "X": "3.20",
-            "2": "2.70"
+            "2": "2.90"
           }
         }
       },
@@ -3437,6 +1914,244 @@
             "1": "2.87",
             "X": "3.20",
             "2": "2.40"
+          }
+        }
+      },
+      {
+        "id": "199412580",
+        "kickoff": "03/09/2026 00:20:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Cucuta Deportivo",
+        "away": "Internacional de Bogota",
+        "markets": {
+          "Match Result": {
+            "1": "2.30",
+            "X": "3.20",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199412590",
+        "kickoff": "03/09/2026 02:25:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Independiente Santa Fe",
+        "away": "Millonarios",
+        "markets": {
+          "Match Result": {
+            "1": "2.80",
+            "X": "3.10",
+            "2": "2.60"
+          }
+        }
+      },
+      {
+        "id": "199412596",
+        "kickoff": "04/09/2026 00:00:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "America de Cali",
+        "away": "Alianza",
+        "markets": {
+          "Match Result": {
+            "1": "1.38",
+            "X": "4.10",
+            "2": "8.50"
+          }
+        }
+      },
+      {
+        "id": "199412598",
+        "kickoff": "04/09/2026 02:00:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Deportivo Pereira",
+        "away": "Independiente Medellin",
+        "markets": {
+          "Match Result": {
+            "1": "4.75",
+            "X": "3.40",
+            "2": "1.70"
+          }
+        }
+      },
+      {
+        "id": "199797203",
+        "kickoff": "06/09/2026 00:00:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Boyaca Chico",
+        "away": "Once Caldas",
+        "markets": {
+          "Match Result": {
+            "1": "3.80",
+            "X": "3.20",
+            "2": "1.95"
+          }
+        }
+      },
+      {
+        "id": "199797205",
+        "kickoff": "06/09/2026 02:20:00",
+        "competition": "COLOMBIA-PRIM-A",
+        "home": "Junior",
+        "away": "Jaguares de Cordoba",
+        "markets": {
+          "Match Result": {
+            "1": "1.36",
+            "X": "4.33",
+            "2": "9.00"
+          }
+        }
+      },
+      {
+        "id": "199416874",
+        "kickoff": "02/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "FC Thun",
+        "away": "FC Lausanne-Sport",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "3.75",
+            "2": "3.40"
+          }
+        }
+      },
+      {
+        "id": "199416869",
+        "kickoff": "02/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Grasshoppers",
+        "away": "St Gallen",
+        "markets": {
+          "Match Result": {
+            "1": "4.33",
+            "X": "4.00",
+            "2": "1.70"
+          }
+        }
+      },
+      {
+        "id": "199416871",
+        "kickoff": "02/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Lucerne",
+        "away": "FC Vaduz",
+        "markets": {
+          "Match Result": {
+            "1": "1.57",
+            "X": "4.33",
+            "2": "5.00"
+          }
+        }
+      },
+      {
+        "id": "199416879",
+        "kickoff": "03/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Basel",
+        "away": "FC Sion",
+        "markets": {
+          "Match Result": {
+            "1": "2.50",
+            "X": "3.60",
+            "2": "2.60"
+          }
+        }
+      },
+      {
+        "id": "199416882",
+        "kickoff": "03/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Lugano",
+        "away": "Servette",
+        "markets": {
+          "Match Result": {
+            "1": "2.10",
+            "X": "3.60",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199799220",
+        "kickoff": "05/09/2026 17:00:00",
+        "competition": "Switzerland Sup",
+        "home": "FC Vaduz",
+        "away": "FC Lausanne-Sport",
+        "markets": {
+          "Match Result": {
+            "1": "2.37",
+            "X": "3.60",
+            "2": "2.60"
+          }
+        }
+      },
+      {
+        "id": "199799222",
+        "kickoff": "05/09/2026 17:00:00",
+        "competition": "Switzerland Sup",
+        "home": "Young Boys",
+        "away": "Lucerne",
+        "markets": {
+          "Match Result": {
+            "1": "1.48",
+            "X": "4.40",
+            "2": "5.50"
+          }
+        }
+      },
+      {
+        "id": "199799227",
+        "kickoff": "05/09/2026 19:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Grasshoppers",
+        "away": "FC Zurich",
+        "markets": {
+          "Match Result": {
+            "1": "2.30",
+            "X": "3.60",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199799237",
+        "kickoff": "06/09/2026 13:00:00",
+        "competition": "Switzerland Sup",
+        "home": "Servette",
+        "away": "St Gallen",
+        "markets": {
+          "Match Result": {
+            "1": "2.20",
+            "X": "3.70",
+            "2": "2.80"
+          }
+        }
+      },
+      {
+        "id": "199799239",
+        "kickoff": "06/09/2026 15:30:00",
+        "competition": "Switzerland Sup",
+        "home": "Basel",
+        "away": "Lugano",
+        "markets": {
+          "Match Result": {
+            "1": "2.90",
+            "X": "3.70",
+            "2": "2.15"
+          }
+        }
+      },
+      {
+        "id": "199799241",
+        "kickoff": "06/09/2026 15:30:00",
+        "competition": "Switzerland Sup",
+        "home": "FC Sion",
+        "away": "FC Thun",
+        "markets": {
+          "Match Result": {
+            "1": "1.66",
+            "X": "4.10",
+            "2": "4.20"
           }
         }
       },
@@ -3630,9 +2345,9 @@
         "away": "SC Freiburg",
         "markets": {
           "Match Result": {
-            "1": "3.10",
-            "X": "3.40",
-            "2": "2.15"
+            "1": "3.40",
+            "X": "3.50",
+            "2": "2.00"
           }
         }
       },
@@ -3644,9 +2359,9 @@
         "away": "Borussia Dortmund",
         "markets": {
           "Match Result": {
-            "1": "2.80",
+            "1": "2.87",
             "X": "3.80",
-            "2": "2.20"
+            "2": "2.15"
           }
         }
       },
@@ -3672,8 +2387,8 @@
         "away": "Bayern Munich",
         "markets": {
           "Match Result": {
-            "1": "12.00",
-            "X": "7.50",
+            "1": "13.00",
+            "X": "8.00",
             "2": "1.14"
           }
         }
@@ -3833,6 +2548,370 @@
         }
       },
       {
+        "id": "199417108",
+        "kickoff": "03/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Toulouse",
+        "away": "Lille",
+        "markets": {
+          "Match Result": {
+            "1": "3.25",
+            "X": "3.25",
+            "2": "2.15"
+          }
+        }
+      },
+      {
+        "id": "199417119",
+        "kickoff": "04/09/2026 18:00:00",
+        "competition": "France Le Champ",
+        "home": "Lyon",
+        "away": "Auxerre",
+        "markets": {
+          "Match Result": {
+            "1": "1.50",
+            "X": "4.20",
+            "2": "5.50"
+          }
+        }
+      },
+      {
+        "id": "199417110",
+        "kickoff": "04/09/2026 20:05:00",
+        "competition": "France Le Champ",
+        "home": "PSG",
+        "away": "Monaco",
+        "markets": {
+          "Match Result": {
+            "1": "1.40",
+            "X": "5.00",
+            "2": "6.25"
+          }
+        }
+      },
+      {
+        "id": "199417126",
+        "kickoff": "05/09/2026 16:15:00",
+        "competition": "France Le Champ",
+        "home": "Lens",
+        "away": "Lorient",
+        "markets": {
+          "Match Result": {
+            "1": "1.45",
+            "X": "4.40",
+            "2": "6.00"
+          }
+        }
+      },
+      {
+        "id": "199417132",
+        "kickoff": "05/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Le Havre",
+        "away": "Brest",
+        "markets": {
+          "Match Result": {
+            "1": "2.60",
+            "X": "3.20",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199417141",
+        "kickoff": "05/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Nice",
+        "away": "Le Mans",
+        "markets": {
+          "Match Result": {
+            "1": "1.75",
+            "X": "3.50",
+            "2": "4.33"
+          }
+        }
+      },
+      {
+        "id": "199417145",
+        "kickoff": "06/09/2026 14:00:00",
+        "competition": "France Le Champ",
+        "home": "Troyes",
+        "away": "Strasbourg",
+        "markets": {
+          "Match Result": {
+            "1": "3.10",
+            "X": "3.30",
+            "2": "2.20"
+          }
+        }
+      },
+      {
+        "id": "199417149",
+        "kickoff": "06/09/2026 16:15:00",
+        "competition": "France Le Champ",
+        "home": "Angers",
+        "away": "Rennes",
+        "markets": {
+          "Match Result": {
+            "1": "4.00",
+            "X": "3.70",
+            "2": "1.83"
+          }
+        }
+      },
+      {
+        "id": "199417155",
+        "kickoff": "06/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Marseille",
+        "away": "Paris FC",
+        "markets": {
+          "Match Result": {
+            "1": "1.70",
+            "X": "3.90",
+            "2": "4.00"
+          }
+        }
+      },
+      {
+        "id": "200116400",
+        "kickoff": "11/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Rennes",
+        "away": "Marseille",
+        "markets": {
+          "Match Result": {
+            "1": "2.35",
+            "X": "3.60",
+            "2": "2.62"
+          }
+        }
+      },
+      {
+        "id": "200116402",
+        "kickoff": "12/09/2026 16:15:00",
+        "competition": "France Le Champ",
+        "home": "Strasbourg",
+        "away": "Monaco",
+        "markets": {
+          "Match Result": {
+            "1": "3.00",
+            "X": "3.75",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "200116404",
+        "kickoff": "12/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Auxerre",
+        "away": "Nice",
+        "markets": {
+          "Match Result": {
+            "1": "2.37",
+            "X": "3.20",
+            "2": "2.87"
+          }
+        }
+      },
+      {
+        "id": "200116406",
+        "kickoff": "12/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Le Havre",
+        "away": "Angers",
+        "markets": {
+          "Match Result": {
+            "1": "2.10",
+            "X": "3.20",
+            "2": "3.40"
+          }
+        }
+      },
+      {
+        "id": "200116410",
+        "kickoff": "12/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Lorient",
+        "away": "Toulouse",
+        "markets": {
+          "Match Result": {
+            "1": "2.50",
+            "X": "3.20",
+            "2": "2.75"
+          }
+        }
+      },
+      {
+        "id": "200116415",
+        "kickoff": "12/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Paris FC",
+        "away": "Lyon",
+        "markets": {
+          "Match Result": {
+            "1": "2.70",
+            "X": "3.40",
+            "2": "2.37"
+          }
+        }
+      },
+      {
+        "id": "200116418",
+        "kickoff": "13/09/2026 14:00:00",
+        "competition": "France Le Champ",
+        "home": "Lille",
+        "away": "Troyes",
+        "markets": {
+          "Match Result": {
+            "1": "1.40",
+            "X": "4.75",
+            "2": "6.50"
+          }
+        }
+      },
+      {
+        "id": "200116423",
+        "kickoff": "13/09/2026 16:15:00",
+        "competition": "France Le Champ",
+        "home": "Le Mans",
+        "away": "Lens",
+        "markets": {
+          "Match Result": {
+            "1": "5.00",
+            "X": "4.00",
+            "2": "1.57"
+          }
+        }
+      },
+      {
+        "id": "200116426",
+        "kickoff": "13/09/2026 19:45:00",
+        "competition": "France Le Champ",
+        "home": "Brest",
+        "away": "PSG",
+        "markets": {
+          "Match Result": {
+            "1": "8.00",
+            "X": "5.50",
+            "2": "1.28"
+          }
+        }
+      },
+      {
+        "id": "198649784",
+        "kickoff": "02/09/2026 19:00:00",
+        "competition": "Danish Super Li",
+        "home": "AGF Aarhus",
+        "away": "Midtjylland",
+        "markets": {
+          "Match Result": {
+            "1": "3.20",
+            "X": "3.60",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "198649790",
+        "kickoff": "03/09/2026 19:00:00",
+        "competition": "Danish Super Li",
+        "home": "FC Copenhagen",
+        "away": "FC Nordsjaelland",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "4.00",
+            "2": "3.25"
+          }
+        }
+      },
+      {
+        "id": "199797297",
+        "kickoff": "04/09/2026 18:00:00",
+        "competition": "Danish Super Li",
+        "home": "Viborg",
+        "away": "Lyngby",
+        "markets": {
+          "Match Result": {
+            "1": "1.85",
+            "X": "4.00",
+            "2": "3.70"
+          }
+        }
+      },
+      {
+        "id": "199797307",
+        "kickoff": "05/09/2026 17:00:00",
+        "competition": "Danish Super Li",
+        "home": "AGF Aarhus",
+        "away": "Silkeborg IF",
+        "markets": {
+          "Match Result": {
+            "1": "1.57",
+            "X": "4.33",
+            "2": "4.75"
+          }
+        }
+      },
+      {
+        "id": "199797312",
+        "kickoff": "06/09/2026 13:00:00",
+        "competition": "Danish Super Li",
+        "home": "Sonderjyske",
+        "away": "AC Horsens",
+        "markets": {
+          "Match Result": {
+            "1": "2.10",
+            "X": "3.40",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199797318",
+        "kickoff": "06/09/2026 15:00:00",
+        "competition": "Danish Super Li",
+        "home": "Odense BK",
+        "away": "FC Copenhagen",
+        "markets": {
+          "Match Result": {
+            "1": "4.20",
+            "X": "3.90",
+            "2": "1.70"
+          }
+        }
+      },
+      {
+        "id": "199797321",
+        "kickoff": "06/09/2026 17:00:00",
+        "competition": "Danish Super Li",
+        "home": "Brondby",
+        "away": "Randers FC",
+        "markets": {
+          "Match Result": {
+            "1": "1.53",
+            "X": "4.20",
+            "2": "5.50"
+          }
+        }
+      },
+      {
+        "id": "199797328",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "Danish Super Li",
+        "home": "Midtjylland",
+        "away": "FC Nordsjaelland",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "3.60",
+            "2": "3.25"
+          }
+        }
+      },
+      {
         "id": "199644719",
         "kickoff": "01/09/2026 19:45:00",
         "competition": "German DFB Poka",
@@ -3842,6 +2921,468 @@
           "Match Result": {
             "1": "67.00",
             "X": "26.00"
+          }
+        }
+      },
+      {
+        "id": "199644724",
+        "kickoff": "02/09/2026 19:45:00",
+        "competition": "German DFB Poka",
+        "home": "VfL Osnabruck",
+        "away": "Bayern Munich",
+        "markets": {
+          "Match Result": {
+            "1": "41.00",
+            "X": "17.00",
+            "2": "1.02"
+          }
+        }
+      },
+      {
+        "id": "199420325",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Avispa Fukuoka",
+        "away": "Urawa Red Diamonds",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "3.00",
+            "2": "3.10"
+          }
+        }
+      },
+      {
+        "id": "199420335",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Cerezo Osaka",
+        "away": "Kashiwa Reysol",
+        "markets": {
+          "Match Result": {
+            "1": "3.25",
+            "X": "3.50",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "199420337",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "JEF Utd Chiba",
+        "away": "Fagiano Okayama",
+        "markets": {
+          "Match Result": {
+            "1": "4.00",
+            "X": "3.60",
+            "2": "1.85"
+          }
+        }
+      },
+      {
+        "id": "199420339",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Machida Zelvia",
+        "away": "Kawasaki Frontale",
+        "markets": {
+          "Match Result": {
+            "1": "1.90",
+            "X": "3.40",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "199420341",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Mito Hollyhock",
+        "away": "Kashima Antlers",
+        "markets": {
+          "Match Result": {
+            "1": "4.10",
+            "X": "3.50",
+            "2": "1.90"
+          }
+        }
+      },
+      {
+        "id": "199420344",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Sanfrecce Hiroshima",
+        "away": "Nagoya Grampus",
+        "markets": {
+          "Match Result": {
+            "1": "1.50",
+            "X": "4.20",
+            "2": "6.25"
+          }
+        }
+      },
+      {
+        "id": "199420346",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Shimizu S-Pulse",
+        "away": "FC Tokyo",
+        "markets": {
+          "Match Result": {
+            "1": "4.00",
+            "X": "3.30",
+            "2": "1.95"
+          }
+        }
+      },
+      {
+        "id": "199420351",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Tokyo Verdy",
+        "away": "Vissel Kobe",
+        "markets": {
+          "Match Result": {
+            "1": "3.80",
+            "X": "3.10",
+            "2": "2.15"
+          }
+        }
+      },
+      {
+        "id": "199420349",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "V-Varen Nagasaki",
+        "away": "Gamba Osaka",
+        "markets": {
+          "Match Result": {
+            "1": "3.60",
+            "X": "3.40",
+            "2": "2.05"
+          }
+        }
+      },
+      {
+        "id": "199420360",
+        "kickoff": "02/09/2026 11:00:00",
+        "competition": "Japan J-League",
+        "home": "Yokohama F-Marinos",
+        "away": "Kyoto Sanga FC",
+        "markets": {
+          "Match Result": {
+            "1": "2.20",
+            "X": "3.30",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199798333",
+        "kickoff": "04/09/2026 19:45:00",
+        "competition": "IRELAN-PREM-DIV",
+        "home": "Dundalk",
+        "away": "St Patrick's Athletic",
+        "markets": {
+          "Match Result": {
+            "1": "3.40",
+            "X": "3.40",
+            "2": "1.95"
+          }
+        }
+      },
+      {
+        "id": "199798337",
+        "kickoff": "04/09/2026 19:45:00",
+        "competition": "IRELAN-PREM-DIV",
+        "home": "Shelbourne",
+        "away": "Drogheda United",
+        "markets": {
+          "Match Result": {
+            "1": "1.66",
+            "X": "3.50",
+            "2": "4.75"
+          }
+        }
+      },
+      {
+        "id": "199798344",
+        "kickoff": "04/09/2026 19:45:00",
+        "competition": "IRELAN-PREM-DIV",
+        "home": "Waterford FC",
+        "away": "Derry City",
+        "markets": {
+          "Match Result": {
+            "1": "2.80",
+            "X": "3.50",
+            "2": "2.25"
+          }
+        }
+      },
+      {
+        "id": "199798346",
+        "kickoff": "04/09/2026 20:00:00",
+        "competition": "IRELAN-PREM-DIV",
+        "home": "Shamrock Rovers",
+        "away": "Bohemians Dublin",
+        "markets": {
+          "Match Result": {
+            "1": "2.20",
+            "X": "3.30",
+            "2": "2.90"
+          }
+        }
+      },
+      {
+        "id": "199798351",
+        "kickoff": "05/09/2026 19:45:00",
+        "competition": "IRELAN-PREM-DIV",
+        "home": "Sligo Rovers",
+        "away": "Galway United",
+        "markets": {
+          "Match Result": {
+            "1": "3.10",
+            "X": "3.40",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "199417388",
+        "kickoff": "03/09/2026 18:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Mjällby AIF",
+        "away": "Djurgarden",
+        "markets": {
+          "Match Result": {
+            "1": "3.70",
+            "X": "3.80",
+            "2": "1.80"
+          }
+        }
+      },
+      {
+        "id": "199751355",
+        "kickoff": "05/09/2026 14:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Degerfors",
+        "away": "Halmstad",
+        "markets": {
+          "Match Result": {
+            "1": "1.85",
+            "X": "3.50",
+            "2": "3.90"
+          }
+        }
+      },
+      {
+        "id": "199751360",
+        "kickoff": "05/09/2026 14:00:00",
+        "competition": "Swedish Allsven",
+        "home": "GAIS",
+        "away": "BK Hacken",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "3.50",
+            "2": "2.80"
+          }
+        }
+      },
+      {
+        "id": "199751364",
+        "kickoff": "05/09/2026 16:30:00",
+        "competition": "Swedish Allsven",
+        "home": "Västerås SK FK",
+        "away": "Sirius",
+        "markets": {
+          "Match Result": {
+            "1": "3.40",
+            "X": "3.80",
+            "2": "1.90"
+          }
+        }
+      },
+      {
+        "id": "199751367",
+        "kickoff": "06/09/2026 13:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Orgryte IS",
+        "away": "Hammarby",
+        "markets": {
+          "Match Result": {
+            "1": "9.50",
+            "X": "6.00",
+            "2": "1.25"
+          }
+        }
+      },
+      {
+        "id": "199751371",
+        "kickoff": "06/09/2026 15:30:00",
+        "competition": "Swedish Allsven",
+        "home": "Brommapojkarna",
+        "away": "Elfsborg",
+        "markets": {
+          "Match Result": {
+            "1": "3.20",
+            "X": "3.50",
+            "2": "2.05"
+          }
+        }
+      },
+      {
+        "id": "199751376",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Kalmar FF",
+        "away": "Djurgarden",
+        "markets": {
+          "Match Result": {
+            "1": "3.90",
+            "X": "3.70",
+            "2": "1.80"
+          }
+        }
+      },
+      {
+        "id": "199751384",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Malmo FF",
+        "away": "AIK",
+        "markets": {
+          "Match Result": {
+            "1": "1.70",
+            "X": "4.00",
+            "2": "4.10"
+          }
+        }
+      },
+      {
+        "id": "199751388",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "Swedish Allsven",
+        "home": "Mjällby AIF",
+        "away": "IFK Goteborg",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "3.60",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199799270",
+        "kickoff": "04/09/2026 18:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Istanbul Basaksehir",
+        "away": "Galatasaray",
+        "markets": {
+          "Match Result": {
+            "1": "4.33",
+            "X": "4.00",
+            "2": "1.66"
+          }
+        }
+      },
+      {
+        "id": "199799279",
+        "kickoff": "05/09/2026 15:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Erzurumspor FK",
+        "away": "Konyaspor",
+        "markets": {
+          "Match Result": {
+            "1": "2.30",
+            "X": "3.40",
+            "2": "2.80"
+          }
+        }
+      },
+      {
+        "id": "199799285",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Fenerbahce",
+        "away": "Besiktas",
+        "markets": {
+          "Match Result": {
+            "1": "1.80",
+            "X": "3.70",
+            "2": "3.90"
+          }
+        }
+      },
+      {
+        "id": "199799274",
+        "kickoff": "06/09/2026 15:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Corum FK",
+        "away": "Eyupspor",
+        "markets": {
+          "Match Result": {
+            "1": "1.80",
+            "X": "3.40",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "199799296",
+        "kickoff": "06/09/2026 15:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Kasimpasa",
+        "away": "Amed SK",
+        "markets": {
+          "Match Result": {
+            "1": "2.15",
+            "X": "3.30",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199799302",
+        "kickoff": "06/09/2026 18:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Kocaelispor",
+        "away": "Samsunspor",
+        "markets": {
+          "Match Result": {
+            "1": "2.50",
+            "X": "3.10",
+            "2": "2.80"
+          }
+        }
+      },
+      {
+        "id": "199799306",
+        "kickoff": "06/09/2026 18:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Trabzonspor",
+        "away": "Genclerbirligi",
+        "markets": {
+          "Match Result": {
+            "1": "1.61",
+            "X": "3.75",
+            "2": "5.00"
+          }
+        }
+      },
+      {
+        "id": "199799288",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "Turkey Super Li",
+        "home": "Goztepe",
+        "away": "Gaziantep FK",
+        "markets": {
+          "Match Result": {
+            "1": "1.72",
+            "X": "3.60",
+            "2": "4.33"
           }
         }
       },
@@ -3856,6 +3397,132 @@
             "1": "2.37",
             "X": "3.10",
             "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "200487270",
+        "kickoff": "01/09/2026 17:00:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "FK Austria Vienna (W)",
+        "away": "SK Brann (W)",
+        "markets": {
+          "Match Result": {
+            "1": "3.10",
+            "X": "4.20",
+            "2": "1.80"
+          }
+        }
+      },
+      {
+        "id": "200496767",
+        "kickoff": "02/09/2026 17:30:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "Inter Milan (W)",
+        "away": "Wolfsburg (W)",
+        "markets": {
+          "Match Result": {
+            "1": "2.80",
+            "X": "3.60",
+            "2": "2.05"
+          }
+        }
+      },
+      {
+        "id": "200496758",
+        "kickoff": "02/09/2026 17:30:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "PSG (W)",
+        "away": "Eintracht Frankfurt (W)",
+        "markets": {
+          "Match Result": {
+            "1": "1.95",
+            "X": "3.50",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "200496793",
+        "kickoff": "02/09/2026 17:45:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "Servette FC Chenois (W)",
+        "away": "Sparta Praha (W)",
+        "markets": {
+          "Match Result": {
+            "1": "1.72",
+            "X": "3.60",
+            "2": "3.90"
+          }
+        }
+      },
+      {
+        "id": "200496795",
+        "kickoff": "02/09/2026 18:00:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "HB Køge (W)",
+        "away": "PSV (W)",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "3.20",
+            "2": "2.80"
+          }
+        }
+      },
+      {
+        "id": "200496776",
+        "kickoff": "02/09/2026 18:00:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "Real Sociedad (W)",
+        "away": "Chelsea (W)",
+        "markets": {
+          "Match Result": {
+            "1": "7.50",
+            "X": "5.00",
+            "2": "1.28"
+          }
+        }
+      },
+      {
+        "id": "200496780",
+        "kickoff": "02/09/2026 19:00:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "OH Leuven (W)",
+        "away": "Czarni Sosnowiec (W)",
+        "markets": {
+          "Match Result": {
+            "1": "1.16",
+            "X": "7.00",
+            "2": "12.00"
+          }
+        }
+      },
+      {
+        "id": "200496785",
+        "kickoff": "02/09/2026 19:00:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "Real Madrid (W)",
+        "away": "Ajax (W)",
+        "markets": {
+          "Match Result": {
+            "1": "1.08",
+            "X": "9.00",
+            "2": "23.00"
+          }
+        }
+      },
+      {
+        "id": "200496790",
+        "kickoff": "02/09/2026 19:30:00",
+        "competition": "UEFA Women's Champions League Qualifying",
+        "home": "Juventus (W)",
+        "away": "SKN St Polten (W)",
+        "markets": {
+          "Match Result": {
+            "1": "1.05",
+            "X": "12.00",
+            "2": "29.00"
           }
         }
       },
@@ -3909,9 +3576,9 @@
         "away": "LASK Linz",
         "markets": {
           "Match Result": {
-            "1": "5.00",
-            "X": "4.10",
-            "2": "1.61"
+            "1": "5.75",
+            "X": "4.33",
+            "2": "1.50"
           }
         }
       },
@@ -3951,9 +3618,9 @@
         "away": "Union Saint Gilloise",
         "markets": {
           "Match Result": {
-            "1": "3.50",
+            "1": "3.70",
             "X": "3.40",
-            "2": "1.95"
+            "2": "1.90"
           }
         }
       },
@@ -3986,6 +3653,20 @@
         }
       },
       {
+        "id": "199410622",
+        "kickoff": "04/09/2026 19:45:00",
+        "competition": "Belgium First Division A",
+        "home": "Lommel",
+        "away": "Club Brugge",
+        "markets": {
+          "Match Result": {
+            "1": "9.00",
+            "X": "5.50",
+            "2": "1.25"
+          }
+        }
+      },
+      {
         "id": "200483875",
         "kickoff": "01/09/2026 17:30:00",
         "competition": "Bosnia & Herzegovina Premier Liga",
@@ -3993,8 +3674,8 @@
         "away": "NK Celik Zenica",
         "markets": {
           "Match Result": {
-            "1": "1.80",
-            "X": "3.25",
+            "1": "1.83",
+            "X": "3.10",
             "2": "4.10"
           }
         }
@@ -4007,9 +3688,9 @@
         "away": "BSK Banja Luka",
         "markets": {
           "Match Result": {
-            "1": "1.40",
-            "X": "4.00",
-            "2": "6.50"
+            "1": "1.18",
+            "X": "5.50",
+            "2": "13.00"
           }
         }
       },
@@ -4070,156 +3751,156 @@
         }
       },
       {
-        "id": "199418959",
-        "kickoff": "01/09/2026 18:30:00",
-        "competition": "Iceland Prem",
-        "home": "KR Reykjavik",
-        "away": "Vikingur Reykjavik",
+        "id": "199799537",
+        "kickoff": "02/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Hapoel Beer Sheva",
+        "away": "Hapoel Haifa",
         "markets": {
           "Match Result": {
-            "1": "2.70",
-            "X": "4.10",
-            "2": "2.00"
-          }
-        }
-      },
-      {
-        "id": "199420325",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Avispa Fukuoka",
-        "away": "Urawa Red Diamonds",
-        "markets": {
-          "Match Result": {
-            "1": "2.45",
-            "X": "3.00",
-            "2": "3.10"
-          }
-        }
-      },
-      {
-        "id": "199420335",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Cerezo Osaka",
-        "away": "Kashiwa Reysol",
-        "markets": {
-          "Match Result": {
-            "1": "3.20",
-            "X": "3.50",
-            "2": "2.15"
-          }
-        }
-      },
-      {
-        "id": "199420337",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "JEF Utd Chiba",
-        "away": "Fagiano Okayama",
-        "markets": {
-          "Match Result": {
-            "1": "4.00",
-            "X": "3.60",
-            "2": "1.85"
-          }
-        }
-      },
-      {
-        "id": "199420339",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Machida Zelvia",
-        "away": "Kawasaki Frontale",
-        "markets": {
-          "Match Result": {
-            "1": "1.90",
-            "X": "3.40",
-            "2": "4.20"
-          }
-        }
-      },
-      {
-        "id": "199420341",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Mito Hollyhock",
-        "away": "Kashima Antlers",
-        "markets": {
-          "Match Result": {
-            "1": "4.20",
-            "X": "3.50",
-            "2": "1.85"
-          }
-        }
-      },
-      {
-        "id": "199420344",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Sanfrecce Hiroshima",
-        "away": "Nagoya Grampus",
-        "markets": {
-          "Match Result": {
-            "1": "1.53",
-            "X": "4.20",
+            "1": "1.38",
+            "X": "4.33",
             "2": "6.00"
           }
         }
       },
       {
-        "id": "199420346",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Shimizu S-Pulse",
-        "away": "FC Tokyo",
+        "id": "199799541",
+        "kickoff": "03/09/2026 18:30:00",
+        "competition": "ISR Prem",
+        "home": "Hapoel Tel Aviv",
+        "away": "Beitar Jerusalem",
         "markets": {
           "Match Result": {
-            "1": "4.00",
+            "1": "2.75",
             "X": "3.30",
-            "2": "1.95"
+            "2": "2.25"
           }
         }
       },
       {
-        "id": "199420351",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Tokyo Verdy",
-        "away": "Vissel Kobe",
+        "id": "199799548",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Hapoel Beer Sheva",
+        "away": "Maccabi Tel Aviv",
         "markets": {
           "Match Result": {
-            "1": "4.00",
-            "X": "3.10",
-            "2": "2.05"
-          }
-        }
-      },
-      {
-        "id": "199420349",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "V-Varen Nagasaki",
-        "away": "Gamba Osaka",
-        "markets": {
-          "Match Result": {
-            "1": "3.75",
+            "1": "2.30",
             "X": "3.40",
-            "2": "2.00"
+            "2": "2.60"
           }
         }
       },
       {
-        "id": "199420360",
-        "kickoff": "02/09/2026 11:00:00",
-        "competition": "Japan J-League",
-        "home": "Yokohama F-Marinos",
-        "away": "Kyoto Sanga FC",
+        "id": "199799554",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Hapoel Jerusalem",
+        "away": "Hapoel Ironi Kiryat Shmona",
+        "markets": {
+          "Match Result": {
+            "1": "2.40",
+            "X": "3.10",
+            "2": "2.62"
+          }
+        }
+      },
+      {
+        "id": "199799556",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Maccabi Haifa",
+        "away": "Hapoel Petah Tikva",
+        "markets": {
+          "Match Result": {
+            "1": "1.66",
+            "X": "3.60",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "199799561",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Maccabi Netanya",
+        "away": "Hapoel Haifa",
+        "markets": {
+          "Match Result": {
+            "1": "1.83",
+            "X": "3.40",
+            "2": "3.50"
+          }
+        }
+      },
+      {
+        "id": "199799559",
+        "kickoff": "05/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Maccabi Petah Tikva",
+        "away": "Ironi Tiberias",
         "markets": {
           "Match Result": {
             "1": "2.20",
-            "X": "3.30",
-            "2": "3.30"
+            "X": "3.10",
+            "2": "3.00"
+          }
+        }
+      },
+      {
+        "id": "199799550",
+        "kickoff": "07/09/2026 18:00:00",
+        "competition": "ISR Prem",
+        "home": "Hapoel Tel Aviv",
+        "away": "Hapoel Ramat Gan",
+        "markets": {
+          "Match Result": {
+            "1": "1.40",
+            "X": "4.00",
+            "2": "6.50"
+          }
+        }
+      },
+      {
+        "id": "199799567",
+        "kickoff": "07/09/2026 18:15:00",
+        "competition": "ISR Prem",
+        "home": "Bnei Sakhnin",
+        "away": "Beitar Jerusalem",
+        "markets": {
+          "Match Result": {
+            "1": "7.50",
+            "X": "4.50",
+            "2": "1.33"
+          }
+        }
+      },
+      {
+        "id": "198658527",
+        "kickoff": "03/09/2026 17:00:00",
+        "competition": "POL Ekstraklasa",
+        "home": "Rakow Czestochowa",
+        "away": "Gornik Zabrze",
+        "markets": {
+          "Match Result": {
+            "1": "2.15",
+            "X": "3.20",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "198658504",
+        "kickoff": "03/09/2026 19:30:00",
+        "competition": "POL Ekstraklasa",
+        "home": "Lech Poznan",
+        "away": "Jagiellonia Bialystok",
+        "markets": {
+          "Match Result": {
+            "1": "1.61",
+            "X": "4.00",
+            "2": "4.75"
           }
         }
       },
@@ -4231,9 +3912,9 @@
         "away": "Al Ahli Jeddah",
         "markets": {
           "Match Result": {
-            "1": "1.53",
-            "X": "4.33",
-            "2": "5.00"
+            "1": "1.44",
+            "X": "4.50",
+            "2": "5.50"
           }
         }
       },
@@ -4287,17 +3968,971 @@
         "away": "Orlando Pirates",
         "markets": {
           "Match Result": {
-            "1": "9.00",
-            "X": "4.75",
+            "1": "9.50",
+            "X": "4.50",
             "2": "1.25"
+          }
+        }
+      },
+      {
+        "id": "200527687",
+        "kickoff": "02/09/2026 18:30:00",
+        "competition": "South Africa Premier",
+        "home": "Mamelodi Sundowns",
+        "away": "Milford FC",
+        "markets": {
+          "Match Result": {
+            "1": "1.18",
+            "X": "5.50",
+            "2": "13.00"
+          }
+        }
+      },
+      {
+        "id": "199424657",
+        "kickoff": "04/09/2026 18:30:00",
+        "competition": "South Africa Premier",
+        "home": "Marumo Gallants",
+        "away": "Polokwane City",
+        "markets": {
+          "Match Result": {
+            "1": "2.30",
+            "X": "2.70",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199424665",
+        "kickoff": "04/09/2026 18:30:00",
+        "competition": "South Africa Premier",
+        "home": "Richards Bay FC",
+        "away": "Amazulu",
+        "markets": {
+          "Match Result": {
+            "1": "2.60",
+            "X": "2.75",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199739345",
+        "kickoff": "04/09/2026 20:45:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Estudiantes Rio Cuarto",
+        "away": "Sarmiento",
+        "markets": {
+          "Match Result": {
+            "1": "2.75",
+            "X": "2.90",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199739339",
+        "kickoff": "04/09/2026 23:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Belgrano",
+        "away": "Huracan",
+        "markets": {
+          "Match Result": {
+            "1": "1.95",
+            "X": "3.00",
+            "2": "4.50"
+          }
+        }
+      },
+      {
+        "id": "199739362",
+        "kickoff": "04/09/2026 23:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Platense",
+        "away": "Deportivo Riestra",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "2.70",
+            "2": "3.60"
+          }
+        }
+      },
+      {
+        "id": "199739334",
+        "kickoff": "05/09/2026 17:30:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Aldosivi",
+        "away": "Banfield",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "2.90",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199739351",
+        "kickoff": "05/09/2026 18:30:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Gimnasia LP",
+        "away": "Tigre",
+        "markets": {
+          "Match Result": {
+            "1": "2.70",
+            "X": "2.80",
+            "2": "2.90"
+          }
+        }
+      },
+      {
+        "id": "199739356",
+        "kickoff": "05/09/2026 20:30:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Gimnasia Mendoza",
+        "away": "Boca Juniors",
+        "markets": {
+          "Match Result": {
+            "1": "4.00",
+            "X": "3.00",
+            "2": "1.95"
+          }
+        }
+      },
+      {
+        "id": "199739377",
+        "kickoff": "05/09/2026 23:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "San Lorenzo",
+        "away": "Talleres Cordoba",
+        "markets": {
+          "Match Result": {
+            "1": "2.40",
+            "X": "2.90",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199739387",
+        "kickoff": "06/09/2026 01:15:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Velez Sarsfield",
+        "away": "Estudiantes LP",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "2.87",
+            "2": "3.50"
+          }
+        }
+      },
+      {
+        "id": "199739371",
+        "kickoff": "06/09/2026 18:45:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Rosario Central",
+        "away": "Newell's",
+        "markets": {
+          "Match Result": {
+            "1": "1.61",
+            "X": "3.10",
+            "2": "7.00"
+          }
+        }
+      },
+      {
+        "id": "199739341",
+        "kickoff": "06/09/2026 21:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Central Cordoba SdE",
+        "away": "Independiente",
+        "markets": {
+          "Match Result": {
+            "1": "3.75",
+            "X": "2.90",
+            "2": "2.15"
+          }
+        }
+      },
+      {
+        "id": "199739359",
+        "kickoff": "06/09/2026 21:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Lanus",
+        "away": "Defensa y Justicia",
+        "markets": {
+          "Match Result": {
+            "1": "1.80",
+            "X": "3.10",
+            "2": "5.25"
+          }
+        }
+      },
+      {
+        "id": "199739367",
+        "kickoff": "06/09/2026 23:15:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "River Plate",
+        "away": "Independiente Rivadavia",
+        "markets": {
+          "Match Result": {
+            "1": "1.75",
+            "X": "3.25",
+            "2": "5.25"
+          }
+        }
+      },
+      {
+        "id": "199739365",
+        "kickoff": "07/09/2026 01:30:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Racing Club",
+        "away": "Atlético Tucumán",
+        "markets": {
+          "Match Result": {
+            "1": "1.75",
+            "X": "3.25",
+            "2": "5.00"
+          }
+        }
+      },
+      {
+        "id": "199739337",
+        "kickoff": "07/09/2026 23:00:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Barracas Central",
+        "away": "Argentinos Jrs",
+        "markets": {
+          "Match Result": {
+            "1": "3.80",
+            "X": "2.90",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "199739385",
+        "kickoff": "08/09/2026 01:15:00",
+        "competition": "Argentina Liga Profesional",
+        "home": "Union Santa Fe",
+        "away": "Instituto AC Cordoba",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "3.00",
+            "2": "2.90"
+          }
+        }
+      },
+      {
+        "id": "199797079",
+        "kickoff": "04/09/2026 19:30:00",
+        "competition": "Argentina Nacional B",
+        "home": "Defensores de Belgrano",
+        "away": "Racing de Cordoba",
+        "markets": {
+          "Match Result": {
+            "1": "2.30",
+            "X": "2.80",
+            "2": "3.40"
+          }
+        }
+      },
+      {
+        "id": "199797090",
+        "kickoff": "05/09/2026 00:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Ferro Carril Oeste",
+        "away": "Club Atletico Mitre",
+        "markets": {
+          "Match Result": {
+            "1": "1.65",
+            "X": "3.25",
+            "2": "5.75"
+          }
+        }
+      },
+      {
+        "id": "199797109",
+        "kickoff": "05/09/2026 19:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "CA San Telmo",
+        "away": "Los Andes",
+        "markets": {
+          "Match Result": {
+            "1": "3.00",
+            "X": "2.80",
+            "2": "2.55"
+          }
+        }
+      },
+      {
+        "id": "199797114",
+        "kickoff": "05/09/2026 19:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Tristan Suarez",
+        "away": "San Martin de Tucuman",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "2.75",
+            "2": "3.70"
+          }
+        }
+      },
+      {
+        "id": "199797064",
+        "kickoff": "05/09/2026 19:30:00",
+        "competition": "Argentina Nacional B",
+        "home": "Chacarita Juniors",
+        "away": "CA Atlanta",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "2.75",
+            "2": "3.10"
+          }
+        }
+      },
+      {
+        "id": "199797112",
+        "kickoff": "05/09/2026 20:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Temperley",
+        "away": "CA Colegiales",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "2.87",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "199797075",
+        "kickoff": "05/09/2026 21:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Colon",
+        "away": "CD Moron",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "2.90",
+            "2": "4.10"
+          }
+        }
+      },
+      {
+        "id": "199797107",
+        "kickoff": "06/09/2026 19:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "CA San Miguel",
+        "away": "Godoy Cruz",
+        "markets": {
+          "Match Result": {
+            "1": "3.50",
+            "X": "2.90",
+            "2": "2.20"
+          }
+        }
+      },
+      {
+        "id": "199797052",
+        "kickoff": "06/09/2026 19:30:00",
+        "competition": "Argentina Nacional B",
+        "home": "Acassuso",
+        "away": "All Boys",
+        "markets": {
+          "Match Result": {
+            "1": "2.87",
+            "X": "2.75",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199797105",
+        "kickoff": "06/09/2026 19:30:00",
+        "competition": "Argentina Nacional B",
+        "home": "San Martin SJ",
+        "away": "Ferrocarril Midland",
+        "markets": {
+          "Match Result": {
+            "1": "2.15",
+            "X": "2.87",
+            "2": "3.80"
+          }
+        }
+      },
+      {
+        "id": "199797066",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "CA Chaco For Ever",
+        "away": "CA Estudiantes Caseros",
+        "markets": {
+          "Match Result": {
+            "1": "2.62",
+            "X": "2.70",
+            "2": "3.00"
+          }
+        }
+      },
+      {
+        "id": "199797083",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Deportivo Madryn",
+        "away": "Club Ciudad de Bolivar",
+        "markets": {
+          "Match Result": {
+            "1": "1.65",
+            "X": "3.25",
+            "2": "5.75"
+          }
+        }
+      },
+      {
+        "id": "199797086",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Deportivo Maipu",
+        "away": "Patronato Parana",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "2.90",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199797073",
+        "kickoff": "06/09/2026 21:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "CA Guemes",
+        "away": "Gimnasia y Tiro",
+        "markets": {
+          "Match Result": {
+            "1": "3.30",
+            "X": "2.80",
+            "2": "2.35"
+          }
+        }
+      },
+      {
+        "id": "199797061",
+        "kickoff": "06/09/2026 21:00:00",
+        "competition": "Argentina Nacional B",
+        "home": "Central Norte",
+        "away": "Almirante Brown",
+        "markets": {
+          "Match Result": {
+            "1": "2.45",
+            "X": "2.62",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199797095",
+        "kickoff": "07/09/2026 23:30:00",
+        "competition": "Argentina Nacional B",
+        "home": "Nueva Chicago",
+        "away": "Quilmes",
+        "markets": {
+          "Match Result": {
+            "1": "2.87",
+            "X": "2.75",
+            "2": "2.70"
+          }
+        }
+      },
+      {
+        "id": "199741444",
+        "kickoff": "05/09/2026 20:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Bragantino",
+        "away": "Bahia",
+        "markets": {
+          "Match Result": {
+            "1": "1.95",
+            "X": "3.40",
+            "2": "3.80"
+          }
+        }
+      },
+      {
+        "id": "199741454",
+        "kickoff": "05/09/2026 22:30:00",
+        "competition": "Brazil Serie A",
+        "home": "Sao Paulo",
+        "away": "Atletico Mineiro",
+        "markets": {
+          "Match Result": {
+            "1": "2.15",
+            "X": "3.20",
+            "2": "3.40"
+          }
+        }
+      },
+      {
+        "id": "199741457",
+        "kickoff": "06/09/2026 01:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Fluminense",
+        "away": "Vasco da Gama",
+        "markets": {
+          "Match Result": {
+            "1": "1.85",
+            "X": "3.40",
+            "2": "4.20"
+          }
+        }
+      },
+      {
+        "id": "199741451",
+        "kickoff": "06/09/2026 15:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Coritiba",
+        "away": "Mirassol",
+        "markets": {
+          "Match Result": {
+            "1": "2.25",
+            "X": "3.20",
+            "2": "3.25"
+          }
+        }
+      },
+      {
+        "id": "199741460",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Cruzeiro",
+        "away": "Athletico Paranaense",
+        "markets": {
+          "Match Result": {
+            "1": "1.75",
+            "X": "3.40",
+            "2": "4.50"
+          }
+        }
+      },
+      {
+        "id": "199741462",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Internacional",
+        "away": "Santos",
+        "markets": {
+          "Match Result": {
+            "1": "1.85",
+            "X": "3.50",
+            "2": "4.10"
+          }
+        }
+      },
+      {
+        "id": "199741464",
+        "kickoff": "06/09/2026 20:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Remo",
+        "away": "Flamengo",
+        "markets": {
+          "Match Result": {
+            "1": "5.25",
+            "X": "3.90",
+            "2": "1.57"
+          }
+        }
+      },
+      {
+        "id": "199741466",
+        "kickoff": "06/09/2026 22:30:00",
+        "competition": "Brazil Serie A",
+        "home": "Botafogo",
+        "away": "Palmeiras",
+        "markets": {
+          "Match Result": {
+            "1": "3.30",
+            "X": "3.30",
+            "2": "2.15"
+          }
+        }
+      },
+      {
+        "id": "199741468",
+        "kickoff": "06/09/2026 23:30:00",
+        "competition": "Brazil Serie A",
+        "home": "Corinthians",
+        "away": "Chapecoense",
+        "markets": {
+          "Match Result": {
+            "1": "1.38",
+            "X": "4.50",
+            "2": "7.50"
+          }
+        }
+      },
+      {
+        "id": "199741477",
+        "kickoff": "08/09/2026 00:00:00",
+        "competition": "Brazil Serie A",
+        "home": "Vitoria",
+        "away": "Gremio",
+        "markets": {
+          "Match Result": {
+            "1": "2.00",
+            "X": "3.30",
+            "2": "3.60"
+          }
+        }
+      },
+      {
+        "id": "199741490",
+        "kickoff": "04/09/2026 23:30:00",
+        "competition": "Brazil Serie B",
+        "home": "Criciuma",
+        "away": "Cuiaba",
+        "markets": {
+          "Match Result": {
+            "1": "1.80",
+            "X": "3.20",
+            "2": "5.00"
+          }
+        }
+      },
+      {
+        "id": "199741498",
+        "kickoff": "05/09/2026 00:30:00",
+        "competition": "Brazil Serie B",
+        "home": "Athletic Club MG",
+        "away": "Vila Nova",
+        "markets": {
+          "Match Result": {
+            "1": "2.55",
+            "X": "3.00",
+            "2": "2.87"
+          }
+        }
+      },
+      {
+        "id": "199741502",
+        "kickoff": "05/09/2026 01:30:00",
+        "competition": "Brazil Serie B",
+        "home": "CRB",
+        "away": "America MG",
+        "markets": {
+          "Match Result": {
+            "1": "1.50",
+            "X": "3.75",
+            "2": "6.50"
+          }
+        }
+      },
+      {
+        "id": "199741508",
+        "kickoff": "05/09/2026 20:00:00",
+        "competition": "Brazil Serie B",
+        "home": "Goias",
+        "away": "Fortaleza",
+        "markets": {
+          "Match Result": {
+            "1": "2.50",
+            "X": "3.00",
+            "2": "2.90"
+          }
+        }
+      },
+      {
+        "id": "199741517",
+        "kickoff": "05/09/2026 20:00:00",
+        "competition": "Brazil Serie B",
+        "home": "Novorizontino",
+        "away": "Avai",
+        "markets": {
+          "Match Result": {
+            "1": "1.45",
+            "X": "3.80",
+            "2": "7.50"
+          }
+        }
+      },
+      {
+        "id": "199741525",
+        "kickoff": "05/09/2026 22:00:00",
+        "competition": "Brazil Serie B",
+        "home": "Juventude",
+        "away": "Atletico GO",
+        "markets": {
+          "Match Result": {
+            "1": "1.90",
+            "X": "3.10",
+            "2": "4.10"
+          }
+        }
+      },
+      {
+        "id": "199741528",
+        "kickoff": "05/09/2026 22:30:00",
+        "competition": "Brazil Serie B",
+        "home": "Ceara",
+        "away": "Sport Recife",
+        "markets": {
+          "Match Result": {
+            "1": "2.15",
+            "X": "3.10",
+            "2": "3.30"
+          }
+        }
+      },
+      {
+        "id": "199741531",
+        "kickoff": "06/09/2026 15:00:00",
+        "competition": "Brazil Serie B",
+        "home": "Londrina",
+        "away": "Operario PR",
+        "markets": {
+          "Match Result": {
+            "1": "2.37",
+            "X": "3.10",
+            "2": "3.00"
+          }
+        }
+      },
+      {
+        "id": "199741533",
+        "kickoff": "06/09/2026 22:30:00",
+        "competition": "Brazil Serie B",
+        "home": "Ponte Preta",
+        "away": "Sao Bernardo",
+        "markets": {
+          "Match Result": {
+            "1": "19.00",
+            "X": "6.50",
+            "2": "1.12"
+          }
+        }
+      },
+      {
+        "id": "199797118",
+        "kickoff": "05/09/2026 21:00:00",
+        "competition": "Canada Premier League",
+        "home": "Atletico Ottawa",
+        "away": "Pacific FC",
+        "markets": {
+          "Match Result": {
+            "1": "1.50",
+            "X": "4.00",
+            "2": "5.00"
+          }
+        }
+      },
+      {
+        "id": "199797125",
+        "kickoff": "06/09/2026 00:00:00",
+        "competition": "Canada Premier League",
+        "home": "Forge FC",
+        "away": "Inter Toronto",
+        "markets": {
+          "Match Result": {
+            "1": "1.30",
+            "X": "5.00",
+            "2": "7.00"
+          }
+        }
+      },
+      {
+        "id": "199797130",
+        "kickoff": "06/09/2026 23:00:00",
+        "competition": "Canada Premier League",
+        "home": "Vancouver FC",
+        "away": "Supra du Quebec",
+        "markets": {
+          "Match Result": {
+            "1": "1.90",
+            "X": "3.60",
+            "2": "3.20"
+          }
+        }
+      },
+      {
+        "id": "199797138",
+        "kickoff": "07/09/2026 20:00:00",
+        "competition": "Canada Premier League",
+        "home": "HFX Wanderers FC",
+        "away": "Cavalry FC",
+        "markets": {
+          "Match Result": {
+            "1": "4.10",
+            "X": "3.75",
+            "2": "1.66"
           }
         }
       }
     ]
   },
   {
-    "sport": "Tennis",
+    "sport": "US Open",
     "matches": [
+      {
+        "id": "200288528",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Alex Molcan",
+        "away": "Benjamin Bonzi",
+        "markets": {
+          "Match Winner": {
+            "1": "2.75",
+            "2": "1.44"
+          }
+        }
+      },
+      {
+        "id": "200288349",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Dane Sweeny",
+        "away": "Corentin Moutet",
+        "markets": {
+          "Match Winner": {
+            "1": "3.50",
+            "2": "1.30"
+          }
+        }
+      },
+      {
+        "id": "200288535",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Filip Misolic",
+        "away": "Francisco Cerundolo",
+        "markets": {
+          "Match Winner": {
+            "1": "10.00",
+            "2": "1.06"
+          }
+        }
+      },
+      {
+        "id": "200288538",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Francisco Comesana",
+        "away": "Flavio Cobolli",
+        "markets": {
+          "Match Winner": {
+            "1": "4.50",
+            "2": "1.20"
+          }
+        }
+      },
+      {
+        "id": "200349747",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Nishesh Basavareddy",
+        "away": "Tristan Schoolkate",
+        "markets": {
+          "Match Winner": {
+            "1": "1.30",
+            "2": "3.50"
+          }
+        }
+      },
+      {
+        "id": "200349745",
+        "kickoff": "01/09/2026 16:00:00",
+        "competition": "",
+        "home": "Mattia Bellucci",
+        "away": "Zsombor Piros",
+        "markets": {
+          "Match Winner": {
+            "1": "1.44",
+            "2": "2.75"
+          }
+        }
+      },
+      {
+        "id": "200288350",
+        "kickoff": "01/09/2026 17:30:00",
+        "competition": "",
+        "home": "Arthur Fery",
+        "away": "Lorenzo Musetti",
+        "markets": {
+          "Match Winner": {
+            "1": "4.00",
+            "2": "1.25"
+          }
+        }
+      },
+      {
+        "id": "200288534",
+        "kickoff": "01/09/2026 17:30:00",
+        "competition": "",
+        "home": "Camilo Ugo Carabelli",
+        "away": "Jan-Lennard Struff",
+        "markets": {
+          "Match Winner": {
+            "1": "2.37",
+            "2": "1.57"
+          }
+        }
+      },
+      {
+        "id": "200288355",
+        "kickoff": "01/09/2026 17:30:00",
+        "competition": "",
+        "home": "Zizou Bergs",
+        "away": "Carlos Taberner",
+        "markets": {
+          "Match Winner": {
+            "1": "1.04",
+            "2": "13.00"
+          }
+        }
+      },
+      {
+        "id": "200349740",
+        "kickoff": "01/09/2026 18:00:00",
+        "competition": "",
+        "home": "Jesper De Jong",
+        "away": "Francesco Passaro",
+        "markets": {
+          "Match Winner": {
+            "1": "1.72",
+            "2": "2.10"
+          }
+        }
+      },
+      {
+        "id": "200288533",
+        "kickoff": "01/09/2026 18:00:00",
+        "competition": "",
+        "home": "Taylor Fritz",
+        "away": "Darwin Blanch",
+        "markets": {
+          "Match Winner": {
+            "1": "1.02",
+            "2": "19.00"
+          }
+        }
+      },
+      {
+        "id": "200288351",
+        "kickoff": "01/09/2026 19:00:00",
+        "competition": "",
+        "home": "Rafael Jodar",
+        "away": "Thanasi Kokkinakis",
+        "markets": {
+          "Match Winner": {
+            "1": "1.06",
+            "2": "10.00"
+          }
+        }
+      },
       {
         "id": "200351127",
         "kickoff": "01/09/2026 16:00:00",
@@ -4451,162 +5086,6 @@
           "Match Winner": {
             "1": "1.22",
             "2": "4.33"
-          }
-        }
-      },
-      {
-        "id": "200288528",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Alex Molcan",
-        "away": "Benjamin Bonzi",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200288349",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Dane Sweeny",
-        "away": "Corentin Moutet",
-        "markets": {
-          "Match Winner": {
-            "1": "3.50",
-            "2": "1.30"
-          }
-        }
-      },
-      {
-        "id": "200288535",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Filip Misolic",
-        "away": "Francisco Cerundolo",
-        "markets": {
-          "Match Winner": {
-            "1": "10.00",
-            "2": "1.06"
-          }
-        }
-      },
-      {
-        "id": "200288538",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Francisco Comesana",
-        "away": "Flavio Cobolli",
-        "markets": {
-          "Match Winner": {
-            "1": "4.50",
-            "2": "1.20"
-          }
-        }
-      },
-      {
-        "id": "200349747",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Nishesh Basavareddy",
-        "away": "Tristan Schoolkate",
-        "markets": {
-          "Match Winner": {
-            "1": "1.30",
-            "2": "3.50"
-          }
-        }
-      },
-      {
-        "id": "200349745",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Mattia Bellucci",
-        "away": "Zsombor Piros",
-        "markets": {
-          "Match Winner": {
-            "1": "1.44",
-            "2": "2.75"
-          }
-        }
-      },
-      {
-        "id": "200288350",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Arthur Fery",
-        "away": "Lorenzo Musetti",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200288534",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Camilo Ugo Carabelli",
-        "away": "Jan-Lennard Struff",
-        "markets": {
-          "Match Winner": {
-            "1": "2.62",
-            "2": "1.50"
-          }
-        }
-      },
-      {
-        "id": "200288355",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Zizou Bergs",
-        "away": "Carlos Taberner",
-        "markets": {
-          "Match Winner": {
-            "1": "1.04",
-            "2": "13.00"
-          }
-        }
-      },
-      {
-        "id": "200349740",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "",
-        "home": "Jesper De Jong",
-        "away": "Francesco Passaro",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200288533",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "",
-        "home": "Taylor Fritz",
-        "away": "Darwin Blanch",
-        "markets": {
-          "Match Winner": {
-            "1": "1.02",
-            "2": "19.00"
-          }
-        }
-      },
-      {
-        "id": "200288351",
-        "kickoff": "01/09/2026 19:00:00",
-        "competition": "",
-        "home": "Rafael Jodar",
-        "away": "Thanasi Kokkinakis",
-        "markets": {
-          "Match Winner": {
-            "1": "1.10",
-            "2": "7.00"
           }
         }
       },
@@ -4813,705 +5292,8 @@
         "away": "Alexandra Eala",
         "markets": {
           "Match Winner": {
-            "1": "4.33",
-            "2": "1.22"
-          }
-        }
-      }
-    ]
-  },
-  {
-    "sport": "US Open",
-    "matches": [
-      {
-        "id": "200288528",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Alex Molcan",
-        "away": "Benjamin Bonzi",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200288349",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Dane Sweeny",
-        "away": "Corentin Moutet",
-        "markets": {
-          "Match Winner": {
-            "1": "3.50",
-            "2": "1.30"
-          }
-        }
-      },
-      {
-        "id": "200288535",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Filip Misolic",
-        "away": "Francisco Cerundolo",
-        "markets": {
-          "Match Winner": {
-            "1": "10.00",
-            "2": "1.06"
-          }
-        }
-      },
-      {
-        "id": "200288538",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Francisco Comesana",
-        "away": "Flavio Cobolli",
-        "markets": {
-          "Match Winner": {
             "1": "4.50",
             "2": "1.20"
-          }
-        }
-      },
-      {
-        "id": "200349745",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Mattia Bellucci",
-        "away": "Zsombor Piros",
-        "markets": {
-          "Match Winner": {
-            "1": "1.44",
-            "2": "2.75"
-          }
-        }
-      },
-      {
-        "id": "200349747",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Nishesh Basavareddy",
-        "away": "Tristan Schoolkate",
-        "markets": {
-          "Match Winner": {
-            "1": "1.30",
-            "2": "3.50"
-          }
-        }
-      },
-      {
-        "id": "200288350",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "Round 1 ",
-        "home": "Arthur Fery",
-        "away": "Lorenzo Musetti",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200288534",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "Round 1 ",
-        "home": "Camilo Ugo Carabelli",
-        "away": "Jan-Lennard Struff",
-        "markets": {
-          "Match Winner": {
-            "1": "2.62",
-            "2": "1.50"
-          }
-        }
-      },
-      {
-        "id": "200288355",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "Round 1 ",
-        "home": "Zizou Bergs",
-        "away": "Carlos Taberner",
-        "markets": {
-          "Match Winner": {
-            "1": "1.04",
-            "2": "13.00"
-          }
-        }
-      },
-      {
-        "id": "200349740",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "Round 1 ",
-        "home": "Jesper De Jong",
-        "away": "Francesco Passaro",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200288533",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "Round 1 ",
-        "home": "Taylor Fritz",
-        "away": "Darwin Blanch",
-        "markets": {
-          "Match Winner": {
-            "1": "1.02",
-            "2": "19.00"
-          }
-        }
-      },
-      {
-        "id": "200445601",
-        "kickoff": "01/09/2026 19:00:00",
-        "competition": "Round 1 ",
-        "home": "Juan Manuel Cerundolo",
-        "away": "Arthur Gea",
-        "markets": {
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "200288351",
-        "kickoff": "01/09/2026 19:00:00",
-        "competition": "Round 1 ",
-        "home": "Rafael Jodar",
-        "away": "Thanasi Kokkinakis",
-        "markets": {
-          "Match Winner": {
-            "1": "1.10",
-            "2": "7.00"
-          }
-        }
-      },
-      {
-        "id": "200288352",
-        "kickoff": "01/09/2026 19:30:00",
-        "competition": "Round 1 ",
-        "home": "Fabian Marozsan",
-        "away": "Michael Zheng",
-        "markets": {
-          "Match Winner": {
-            "1": "2.20",
-            "2": "1.66"
-          }
-        }
-      },
-      {
-        "id": "200288353",
-        "kickoff": "01/09/2026 19:30:00",
-        "competition": "Round 1 ",
-        "home": "Zachary Svajda",
-        "away": "Daniel Altmaier",
-        "markets": {
-          "Match Winner": {
-            "1": "1.66",
-            "2": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200288356",
-        "kickoff": "01/09/2026 21:00:00",
-        "competition": "Round 1 ",
-        "home": "Jan Choinski",
-        "away": "Botic Van De Zandschulp",
-        "markets": {
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          }
-        }
-      },
-      {
-        "id": "200288529",
-        "kickoff": "01/09/2026 21:30:00",
-        "competition": "Round 1 ",
-        "home": "Marcos Giron",
-        "away": "Ignacio Buse",
-        "markets": {
-          "Match Winner": {
-            "1": "2.20",
-            "2": "1.66"
-          }
-        }
-      },
-      {
-        "id": "200349742",
-        "kickoff": "01/09/2026 22:00:00",
-        "competition": "Round 1 ",
-        "home": "Andrea Guerrieri",
-        "away": "Alex De Minaur",
-        "markets": {
-          "Match Winner": {
-            "1": "13.00",
-            "2": "1.04"
-          }
-        }
-      },
-      {
-        "id": "200288530",
-        "kickoff": "02/09/2026 00:00:10",
-        "competition": "Round 1 ",
-        "home": "Adolfo Daniel Vallejo",
-        "away": "Gael Monfils",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200288346",
-        "kickoff": "02/09/2026 01:30:00",
-        "competition": "Round 1 ",
-        "home": "Alexander Zverev",
-        "away": "Lorenzo Sonego",
-        "markets": {
-          "Match Winner": {
-            "1": "1.05",
-            "2": "11.00"
-          }
-        }
-      },
-      {
-        "id": "200509394",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Daniel Merida",
-        "away": "Andrey Rublev",
-        "markets": {
-          "Match Winner": {
-            "1": "2.75",
-            "2": "1.44"
-          }
-        }
-      },
-      {
-        "id": "200509393",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Daniil Medvedev",
-        "away": "Sebastian Gorzny",
-        "markets": {
-          "Match Winner": {
-            "1": "1.02",
-            "2": "17.00"
-          }
-        }
-      },
-      {
-        "id": "200462772",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Denis Shapovalov",
-        "away": "Luca Van Assche",
-        "markets": {
-          "Match Winner": {
-            "1": "1.66",
-            "2": "2.20"
-          }
-        }
-      },
-      {
-        "id": "200456270",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Dino Prizmic",
-        "away": "Tommy Paul",
-        "markets": {
-          "Match Winner": {
-            "1": "4.33",
-            "2": "1.22"
-          }
-        }
-      },
-      {
-        "id": "200510249",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Jaime Faria",
-        "away": "Carlos Alcaraz",
-        "markets": {
-          "Match Winner": {
-            "1": "7.00",
-            "2": "1.10"
-          }
-        }
-      },
-      {
-        "id": "200462771",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Jaume Munar",
-        "away": "Arthur Rinderknech",
-        "markets": {
-          "Match Winner": {
-            "1": "2.37",
-            "2": "1.57"
-          }
-        }
-      },
-      {
-        "id": "200458182",
-        "kickoff": "02/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Jiri Lehecka",
-        "away": "Toby Samuel",
-        "markets": {
-          "Match Winner": {
-            "1": "1.36",
-            "2": "3.20"
-          }
-        }
-      },
-      {
-        "id": "200504528",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Alexander Bublik",
-        "away": "Adrian Mannarino",
-        "markets": {
-          "Match Winner": {
-            "1": "1.30",
-            "2": "3.50"
-          }
-        }
-      },
-      {
-        "id": "200525634",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Alexei Popyrin",
-        "away": "Alejandro Tabilo",
-        "markets": {
-          "Match Winner": {
-            "1": "1.90",
-            "2": "1.90"
-          },
-          "1st Set Correct Score": {
-            "Alexei Popyrin 6-0": "81.00",
-            "Alexei Popyrin 6-1": "41.00",
-            "Alexei Popyrin 6-2": "15.00",
-            "Alexei Popyrin 6-3": "13.00",
-            "Alexei Popyrin 6-4": "4.50",
-            "Alexei Popyrin 7-5": "17.00",
-            "Alexei Popyrin 7-6": "6.00",
-            "Alejandro Tabilo 6-0": "81.00",
-            "Alejandro Tabilo 6-1": "21.00",
-            "Alejandro Tabilo 6-2": "21.00",
-            "Alejandro Tabilo 6-3": "5.00",
-            "Alejandro Tabilo 6-4": "9.50",
-            "Alejandro Tabilo 7-5": "17.00",
-            "Alejandro Tabilo 7-6": "6.00"
-          }
-        }
-      },
-      {
-        "id": "200526935",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Felix Auger Aliassime",
-        "away": "Karen Khachanov",
-        "markets": {
-          "Match Winner": {
-            "1": "1.40",
-            "2": "3.00"
-          }
-        }
-      },
-      {
-        "id": "200525635",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Jakub Mensik",
-        "away": "Jurij Rodionov",
-        "markets": {
-          "Match Winner": {
-            "1": "1.12",
-            "2": "6.00"
-          }
-        }
-      },
-      {
-        "id": "200506969",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Lloyd Harris",
-        "away": "Stefanos Tsitsipas",
-        "markets": {
-          "Match Winner": {
-            "1": "3.50",
-            "2": "1.30"
-          }
-        }
-      },
-      {
-        "id": "200504527",
-        "kickoff": "03/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Valentin Vacherot",
-        "away": "Kamil Majchrzak",
-        "markets": {
-          "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
-          }
-        }
-      },
-      {
-        "id": "200524401",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Alexander Blockx",
-        "away": "Marco Trungelliti",
-        "markets": {
-          "Match Winner": {
-            "1": "1.25",
-            "2": "4.00"
-          }
-        }
-      },
-      {
-        "id": "200524402",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Ben Shelton",
-        "away": "Hubert Hurkacz",
-        "markets": {
-          "Match Winner": {
-            "1": "1.50",
-            "2": "2.62"
-          }
-        }
-      },
-      {
-        "id": "200517679",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Brandon Nakashima",
-        "away": "Alex Michelsen",
-        "markets": {
-          "Match Winner": {
-            "1": "1.61",
-            "2": "2.30"
-          }
-        }
-      },
-      {
-        "id": "200517682",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "James Duckworth",
-        "away": "Yibing Wu",
-        "markets": {
-          "Match Winner": {
-            "1": "2.20",
-            "2": "1.66"
-          }
-        }
-      },
-      {
-        "id": "200520291",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Luciano Darderi",
-        "away": "Dalibor Svrcina",
-        "markets": {
-          "Match Winner": {
-            "1": "1.57",
-            "2": "2.37"
-          }
-        }
-      },
-      {
-        "id": "200518780",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Matteo Berrettini",
-        "away": "Mariano Navone",
-        "markets": {
-          "Match Winner": {
-            "1": "1.50",
-            "2": "2.62"
-          }
-        }
-      },
-      {
-        "id": "200517681",
-        "kickoff": "04/09/2026 16:00:00",
-        "competition": "Round 1 ",
-        "home": "Tomas Martin Etcheverry",
-        "away": "Jacob Fearnley",
-        "markets": {
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.80"
-          }
-        }
-      },
-      {
-        "id": "200351127",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Maria Sakkari",
-        "away": "Robin Montgomery",
-        "markets": {
-          "Match Winner": {
-            "1": "1.61",
-            "2": "2.30"
-          }
-        }
-      },
-      {
-        "id": "200290983",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Thea Frodin",
-        "away": "Elena Rybakina",
-        "markets": {
-          "Match Winner": {
-            "1": "13.00",
-            "2": "1.04"
-          }
-        }
-      },
-      {
-        "id": "200290972",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Yulia Putintseva",
-        "away": "Belinda Bencic",
-        "markets": {
-          "Match Winner": {
-            "1": "5.00",
-            "2": "1.16"
-          }
-        }
-      },
-      {
-        "id": "200290981",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Yuliia Starodubtseva",
-        "away": "Ella Seidel",
-        "markets": {
-          "Match Winner": {
-            "1": "1.36",
-            "2": "3.20"
-          }
-        }
-      },
-      {
-        "id": "200351115",
-        "kickoff": "01/09/2026 16:00:00",
-        "competition": "",
-        "home": "Gabriela Knutson",
-        "away": "Eva Lys",
-        "markets": {
-          "Match Winner": {
-            "1": "2.30",
-            "2": "1.61"
-          }
-        }
-      },
-      {
-        "id": "200290970",
-        "kickoff": "01/09/2026 16:30:00",
-        "competition": "",
-        "home": "Madison Keys",
-        "away": "Alina Korneeva",
-        "markets": {
-          "Match Winner": {
-            "1": "1.36",
-            "2": "3.20"
-          }
-        }
-      },
-      {
-        "id": "200290425",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Mirra Andreeva",
-        "away": "Janice Tjen",
-        "markets": {
-          "Match Winner": {
-            "1": "1.11",
-            "2": "6.50"
-          }
-        }
-      },
-      {
-        "id": "200351124",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Lucie Havlickova",
-        "away": "Anna Bondar",
-        "markets": {
-          "Match Winner": {
-            "1": "2.37",
-            "2": "1.57"
-          }
-        }
-      },
-      {
-        "id": "200290434",
-        "kickoff": "01/09/2026 17:30:00",
-        "competition": "",
-        "home": "Daria Kasatkina",
-        "away": "Paula Badosa",
-        "markets": {
-          "Match Winner": {
-            "1": "2.10",
-            "2": "1.72"
-          }
-        }
-      },
-      {
-        "id": "200290427",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "",
-        "home": "Tatjana Maria",
-        "away": "Jelena Ostapenko",
-        "markets": {
-          "Match Winner": {
-            "1": "2.30",
-            "2": "1.61"
-          }
-        }
-      },
-      {
-        "id": "200290982",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "",
-        "home": "Darja Vidmanova",
-        "away": "Jessica Bouzas Maneiro",
-        "markets": {
-          "Match Winner": {
-            "1": "1.90",
-            "2": "1.90"
-          }
-        }
-      },
-      {
-        "id": "200521955",
-        "kickoff": "01/09/2026 18:00:00",
-        "competition": "",
-        "home": "Anastasia Potapova",
-        "away": "Darja Semenistaja",
-        "markets": {
-          "Match Winner": {
-            "1": "1.22",
-            "2": "4.33"
           }
         }
       }
@@ -5736,8 +5518,8 @@
         "away": "Francesca Jones",
         "markets": {
           "Match Winner": {
-            "1": "1.80",
-            "2": "2.00"
+            "1": "1.90",
+            "2": "1.90"
           }
         }
       },
@@ -5775,8 +5557,8 @@
         "away": "Alexandra Eala",
         "markets": {
           "Match Winner": {
-            "1": "4.33",
-            "2": "1.22"
+            "1": "4.50",
+            "2": "1.20"
           }
         }
       },
@@ -5827,8 +5609,8 @@
         "away": "Taylah Preston",
         "markets": {
           "Match Winner": {
-            "1": "1.30",
-            "2": "3.50"
+            "1": "1.25",
+            "2": "4.00"
           }
         }
       },
@@ -5840,8 +5622,8 @@
         "away": "Anna Kalinskaya",
         "markets": {
           "Match Winner": {
-            "1": "3.00",
-            "2": "1.40"
+            "1": "2.62",
+            "2": "1.50"
           }
         }
       },
@@ -5853,8 +5635,8 @@
         "away": "Donna Vekic",
         "markets": {
           "Match Winner": {
-            "1": "1.72",
-            "2": "2.10"
+            "1": "1.57",
+            "2": "2.37"
           }
         }
       },
@@ -5892,8 +5674,8 @@
         "away": "Maya Joint",
         "markets": {
           "Match Winner": {
-            "1": "1.16",
-            "2": "5.00"
+            "1": "1.12",
+            "2": "6.00"
           }
         }
       },
@@ -6009,8 +5791,8 @@
         "away": "Diana Shnaider",
         "markets": {
           "Match Winner": {
-            "1": "3.40",
-            "2": "1.33"
+            "1": "4.00",
+            "2": "1.25"
           }
         }
       },
@@ -6037,6 +5819,19 @@
           "Match Winner": {
             "1": "1.12",
             "2": "6.00"
+          }
+        }
+      },
+      {
+        "id": "200528676",
+        "kickoff": "04/09/2026 16:00:00",
+        "competition": "Round 1 ",
+        "home": "Naomi Osaka",
+        "away": "Katerina Siniakova",
+        "markets": {
+          "Match Winner": {
+            "1": "1.25",
+            "2": "4.00"
           }
         }
       },
@@ -6139,8 +5934,8 @@
         "away": "Jan-Lennard Struff",
         "markets": {
           "Match Winner": {
-            "1": "2.62",
-            "2": "1.50"
+            "1": "2.37",
+            "2": "1.57"
           }
         }
       },
@@ -6191,8 +5986,48 @@
         "away": "Thanasi Kokkinakis",
         "markets": {
           "Match Winner": {
-            "1": "1.10",
-            "2": "7.00"
+            "1": "1.06",
+            "2": "10.00"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "sport": "Volleyball",
+    "matches": [
+      {
+        "id": "200352580",
+        "kickoff": "01/09/2026 17:00:00",
+        "competition": "VB-ECF",
+        "home": "Türkiye (W)",
+        "away": "Azerbaijan (W)",
+        "markets": {
+          "Game Lines": {
+            "Winner": {
+              "1": "1.03",
+              "2": "10.00"
+            },
+            "Total": {
+              "over": {
+                "line": "132.5",
+                "odds": "1.83"
+              },
+              "under": {
+                "line": "132.5",
+                "odds": "1.83"
+              }
+            },
+            "Handicap": {
+              "1": {
+                "line": "-2.5",
+                "odds": "1.40"
+              },
+              "2": {
+                "line": "+2.5",
+                "odds": "2.75"
+              }
+            }
           }
         }
       }
