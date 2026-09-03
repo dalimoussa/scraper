@@ -48,7 +48,6 @@ python scrape.py --concurrency 8 --deep --out all_matches.json
 |---|---|
 | **Scrape All Sports with Deep Markets** | `python scrape.py --concurrency 8 --deep --out all_matches.json` |
 | **Scrape Key Sports (Soccer, Tennis, Basketball)** | `python scrape.py --sports "Soccer,Tennis,Basketball" --out target.json` |
-| **Scrape Only Soccer (with Correct Score & HT)** | `python scrape.py --sport Soccer --out soccer.json` |
 | **Scrape Only Tennis / US Open (with 1st Set Score)** | `python scrape.py --sport "US Open" --out tennis.json` |
 | **Scrape Only Live In-Play Matches** | `python scrape.py --live --out live.json` |
 
