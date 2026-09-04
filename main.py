@@ -1,25 +1,10 @@
-import json
+"""
+Bet365 Scraper - Main Entrypoint
+Exports upcoming matches across all sports with deep markets to all_matches.json.
+"""
 
-from bet365 import Bet365AndroidSession
+import sys
+from bet365_engine import main
 
-with open("config.json", encoding="utf8") as fp:
-    config = json.load(fp)
-
-print("Fetching soccer page using android api")
-
-session = Bet365AndroidSession(
-    config["api_url"],
-    config["api_key"],
-    proxy=config["proxy"] or None,
-    verify=False,
-    host=config["host"]
-)
-
-session.go_homepage()
-
-sports = session.extract_available_sports()
-print("sports")
-for sport in sports:
-    print(f"{sport.name} -> {sport.PD}")
-
-session.get_sport_homepage(next(filter(lambda m: m.name == "Soccer", sports)))
+if __name__ == "__main__":
+    main()

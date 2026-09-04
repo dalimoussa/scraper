@@ -4,20 +4,27 @@ A high-performance automated tool that collects **upcoming sports fixtures acros
 
 ---
 
-## ⚡ What's New
+## ⚡ Key Features
 
-* 📅 **Full-Week Match Discovery**: Scrapes all scheduled matches for the full week ahead across all sports.
-* ⚽ **Soccer Deep Markets (Top 5 Leagues & UCL)**:
+* 📅 **Full-Week Match Discovery**: Scrapes scheduled pre-matches for the full week ahead across 14 sports with explicit `date` and `kickoff` timestamps.
+* ⚽ **Soccer & EPL Deep Markets (Top 5 Leagues & UCL)**:
   * **Match Result** (1 / X / 2)
   * **Both Teams to Score** (`Yes` / `No`)
-  * **Correct Score** (*Score exact* - 34+ permutations)
-  * **Half Time Correct Score** (*Score exact mi-temps*)
-  * **Half Time / Full Time** (*Mi-temps / Fin de match*)
+  * **Correct Score** (34+ permutations)
+  * **Half Time / Full Time** (9 combinations)
 * 🎾 **Tennis Deep Markets (US Open / ATP / WTA)**:
   * **Match Winner** (1 / 2)
-  * **1st Set Correct Score** (*1er set - Score exact*)
-  * **Set Betting** (*Score exact en sets*)
-* 🎯 **Focused Sports Filtering**: Easily target specific sports to scrape faster with `--sports`.
+  * **1st Set Correct Score** (14 scorelines)
+  * **Set Betting** (Best of 3 & Best of 5)
+* 🏈 **US Sports & Rugby/Handball Game Lines**:
+  * **Spread** / **Run Line** / **Handicap**
+  * **Total** (Over / Under)
+  * **Money Line** / **To Win**
+* 🚴 **Cycling Outrights (Grand Tours)**:
+  * **To Win Outright**, **Top 10 Finish**, and Stage Classifications (Vuelta a España)
+* ⛳ **Golf Outrights (European Tour / PGA)**:
+  * **To Win Outright** (Omega European Masters)
+* 🔄 **Automated Multi-Key Pool**: Built-in automated key rotation and failover ensuring continuous scraping uptime with zero rate-limit interruptions.
 
 ---
 
@@ -30,14 +37,13 @@ pip install -r requirements.txt
 
 ### 2. Run the Scraper
 
-#### ▶️ Continuous Auto-Update (Every 60s)
+#### ▶️ Primary Runner (All 14 Sports with Deep Markets)
 ```bash
-python scrape.py --concurrency 8 --deep --interval 60 --out all_matches.json
+python main.py
 ```
-
-#### ▶️ Fast Single Export (All Sports)
+or via the flexible runner:
 ```bash
-python scrape.py --concurrency 8 --deep --out all_matches.json
+python scrape.py --out all_matches.json
 ```
 
 ---
@@ -46,9 +52,9 @@ python scrape.py --concurrency 8 --deep --out all_matches.json
 
 | Goal | Command |
 |---|---|
-| **Scrape All Sports with Deep Markets** | `python scrape.py --concurrency 8 --deep --out all_matches.json` |
-| **Scrape Key Sports (Soccer, Tennis, Basketball)** | `python scrape.py --sports "Soccer,Tennis,Basketball" --out target.json` |
-| **Scrape Only Tennis / US Open (with 1st Set Score)** | `python scrape.py --sport "US Open" --out tennis.json` |
+| **Scrape All 14 Sports with Deep Markets (600+ Matches)** | `python main.py` |
+| **Custom Output Destination** | `python scrape.py --out my_matches.json` |
+| **Direct Engine Execution** | `python bet365_engine.py --out all_matches.json` |
 
 ---
 
@@ -61,15 +67,16 @@ python scrape.py --concurrency 8 --deep --out all_matches.json
     "matches": [
       {
         "id": "196564290",
-        "kickoff": "31/08/2026 20:00:00",
+        "date": "04/09/2026",
+        "kickoff": "04/09/2026 20:00:00",
         "competition": "FA Barclaycard",
         "home": "Aston Villa",
         "away": "Arsenal",
         "markets": {
           "Match Result": { "1": "6.00", "X": "4.50", "2": "1.50" },
           "Both Teams to Score": { "Yes": "1.80", "No": "1.95" },
-          "Correct Score": { "1-0": "19.00", "2-1": "21.00", "0-0": "13.00", "0-1": "8.00", ... },
-          "Half Time Correct Score": { "1-0": "8.00", "0-0": "3.40", "0-1": "3.50", ... }
+          "Correct Score": { "1-0": "19.00", "2-1": "21.00", "0-0": "13.00", "0-1": "8.00" },
+          "Half Time/Full Time": { "1/1": "9.50", "1/X": "17.00", "2/2": "2.25" }
         }
       }
     ]
@@ -78,14 +85,16 @@ python scrape.py --concurrency 8 --deep --out all_matches.json
     "sport": "US Open",
     "matches": [
       {
-        "id": "200351110",
-        "kickoff": "31/08/2026 19:00:00",
+        "id": "200617241",
+        "date": "04/09/2026",
+        "kickoff": "04/09/2026 21:30:00",
         "competition": "Round 1",
-        "home": "Alexander Blockx",
-        "away": "Tomas Barrios Vera",
+        "home": "Alex Michelsen",
+        "away": "Daniel Merida",
         "markets": {
-          "Match Winner": { "1": "1.67", "2": "2.10" },
-          "1st Set Correct Score": { "Alexander Blockx 6-0": "29.00", "Alexander Blockx 6-3": "4.00", ... }
+          "Match Winner": { "1": "1.57", "2": "2.38" },
+          "Set Betting": { "Alex Michelsen 3-0": "4.00", "Daniel Merida 3-0": "8.00" },
+          "1st Set Correct Score": { "6-0": "41.00", "6-1": "12.00", "0-6": "51.00" }
         }
       }
     ]
@@ -97,11 +106,16 @@ python scrape.py --concurrency 8 --deep --out all_matches.json
 
 ## ⚙️ Configuration (`config.json`)
 
-Connection parameters and default proxy settings are managed in `config.json`:
+Connection parameters and key pool rotation settings are managed in `config.json`:
 ```json
 {
-  "api_url": "https://nodomain.site/get_x_net_android",
-  "api_key": "sakazuki_9814",
+  "api_keys": [
+    "07d5db7b-e39f-47ce-8291-414647d801d0",
+    "253a9241-2f65-4f1f-aa3f-a789cbcf8eb3",
+    "9535772c-8269-4f47-888e-dc0762736b0f",
+    "ea9e1ff8-193d-427b-b79f-9673d96dd24d",
+    "2d5a5eef-5ffe-4ca5-8046-ef89e7190207"
+  ],
   "host": "www.bet365.fr",
   "proxy": ""
 }

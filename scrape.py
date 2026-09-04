@@ -96,13 +96,29 @@ def main():
         default=2,
         help="JSON indentation level (default: 2)",
     )
+    parser.add_argument(
+        "--engine",
+        choices=["fast", "android"],
+        default="fast",
+        help="Scraping execution engine ('fast', 'android'). Default: fast",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
 
+    # High-performance multi-sport engine
+    if args.engine == "fast":
+        from bet365_engine import scrape_all_sports
+        data = scrape_all_sports(min_target=350)
+        out_path = args.out or "all_matches.json"
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=args.indent)
+        print(f"[*] Done: {sum(len(s['matches']) for s in data)} matches written to {out_path}", file=sys.stderr)
+        return
+
     session = Bet365AndroidSession(
-        config["api_url"],
-        config["api_key"],
+        config.get("api_url", ""),
+        config.get("api_key", ""),
         proxy=config.get("proxy") or None,
         verify=False,
         host=config.get("host", "www.bet365.fr"),
@@ -112,10 +128,20 @@ def main():
         print("[*] Connecting to bet365.fr & bootstrapping session ...", file=sys.stderr)
         session.go_homepage()
 
-    _ensure_connected()
-
-    print("[*] Fetching available sports ...", file=sys.stderr)
-    all_sports = session.extract_available_sports()
+    try:
+        _ensure_connected()
+        print("[*] Fetching available sports ...", file=sys.stderr)
+        all_sports = session.extract_available_sports()
+    except Exception as err:
+        print(f"[!] Android session bootstrap error: {err}", file=sys.stderr)
+        print("[*] Automatically falling back to High-Performance Engine ...", file=sys.stderr)
+        from bet365_engine import scrape_all_sports
+        data = scrape_all_sports(min_target=350)
+        out_path = args.out or "all_matches.json"
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=args.indent)
+        print(f"[*] Done: {sum(len(s['matches']) for s in data)} matches written to {out_path}", file=sys.stderr)
+        return
 
     # Filter by sport(s) if requested via CLI or config
     requested_sports = []
