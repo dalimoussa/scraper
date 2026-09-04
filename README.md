@@ -114,11 +114,7 @@ The authentication key pool is managed in `config.json`:
 ```json
 {
   "api_keys": [
-    "07d5db7b-e39f-47ce-8291-414647d801d0",
-    "253a9241-2f65-4f1f-aa3f-a789cbcf8eb3",
-    "9535772c-8269-4f47-888e-dc0762736b0f",
-    "ea9e1ff8-193d-427b-b79f-9673d96dd24d",
-    "2d5a5eef-5ffe-4ca5-8046-ef89e7190207"
+    
   ]
 }
 ```
