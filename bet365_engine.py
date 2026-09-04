@@ -349,7 +349,11 @@ def extract_game_lines(event: Dict[str, Any], sport_label: str = "") -> Dict[str
 
 
 def load_outright_sport(sport_name: str) -> List[Dict[str, Any]]:
-    """Load and synchronize outright events for sports like Cycling and Golf."""
+    """
+    Load and synchronize outright events for sports like Cycling and Golf.
+    Features an auto-rotating seasonal calendar that automatically selects
+    the active real-world tournaments and competitors for the current calendar month.
+    """
     base_dir = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else "."
     json_path = os.path.join(base_dir, "outright_events.json")
     if not os.path.exists(json_path):
@@ -358,25 +362,46 @@ def load_outright_sport(sport_name: str) -> List[Dict[str, Any]]:
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            events = data.get(sport_name, [])
-            today_str = datetime.now().strftime("%d/%m/%Y")
+            sport_data = data.get(sport_name, {})
+            now = datetime.now()
+            current_month = str(now.month)
+            today_str = now.strftime("%d/%m/%Y")
+
+            # Check if organized by monthly seasonal calendar or flat list
+            if isinstance(sport_data, dict):
+                events = sport_data.get(current_month) or sport_data.get("9", [])
+            elif isinstance(sport_data, list):
+                events = sport_data
+            else:
+                events = []
+
+            formatted_events = []
             for ev in events:
-                ev["date"] = today_str
-                k = ev.get("kickoff", "")
+                ev_copy = json.loads(json.dumps(ev))
+                ev_copy["date"] = today_str
+                k = ev_copy.get("kickoff", "")
                 if k and " " in k:
-                    ev["kickoff"] = f"{today_str} {k.split(' ')[-1]}"
+                    ev_copy["kickoff"] = f"{today_str} {k.split(' ')[-1]}"
+                elif k and ":" in k:
+                    ev_copy["kickoff"] = f"{today_str} {k}"
                 else:
-                    ev["kickoff"] = f"{today_str} 12:00:00"
-            return events
+                    ev_copy["kickoff"] = f"{today_str} 12:00:00"
+                formatted_events.append(ev_copy)
+            return formatted_events
         except Exception as e:
             print(f"  [Notice] Could not load outrights from {json_path}: {e}")
     return []
 
 
-def scrape_all_sports(min_target: int = 350) -> List[Dict[str, Any]]:
+def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Scrapes across EPL, Soccer, US Open, Tennis, American Football, MLB, Basketball, etc."""
     results = []
     total_matches_scraped = 0
+
+    def want_sport(name: str) -> bool:
+        if not target_sports:
+            return True
+        return any(t.lower() in name.lower() or name.lower() in t.lower() for t in target_sports)
 
     print(f"[*] Active key pool: {len(API_KEYS)} keys loaded for rotation")
 
@@ -842,23 +867,34 @@ def scrape_all_sports(min_target: int = 350) -> List[Dict[str, Any]]:
 
 
 def main():
-    out_file = "all_matches.json"
-    if "--out" in sys.argv:
-        idx = sys.argv.index("--out")
-        if idx + 1 < len(sys.argv):
-            out_file = sys.argv[idx + 1]
+    import argparse
+    parser = argparse.ArgumentParser(description="Bet365 Multi-Sport Scraper")
+    parser.add_argument("--out", default="all_matches.json", help="Output JSON path (default: all_matches.json)")
+    parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf)")
+    parser.add_argument("--sports", default=None, help="Comma-separated target sports list")
+    parser.add_argument("--min", type=int, default=350, help="Minimum matches target threshold (default: 350)")
+    args = parser.parse_args()
 
-    print(f"Starting Bet365 Engine -> {out_file}")
-    data = scrape_all_sports(min_target=350)
+    target_sports = None
+    if args.sports:
+        target_sports = [s.strip() for s in args.sports.split(",") if s.strip()]
+    elif args.sport:
+        target_sports = [args.sport.strip()]
+
+    print(f"Starting Bet365 Engine -> {args.out}")
+    if target_sports:
+        print(f"Targeting sports: {', '.join(target_sports)}")
+
+    data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
 
     # Write output atomically
-    tmp_file = f"{out_file}.tmp"
+    tmp_file = f"{args.out}.tmp"
     with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    os.replace(tmp_file, out_file)
+    os.replace(tmp_file, args.out)
     total_m = sum(len(s["matches"]) for s in data)
-    print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {out_file}")
+    print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
 
 
 if __name__ == "__main__":

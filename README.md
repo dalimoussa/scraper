@@ -20,11 +20,13 @@ A high-performance automated tool that collects **upcoming sports fixtures acros
   * **Spread** / **Run Line** / **Handicap**
   * **Total** (Over / Under)
   * **Money Line** / **To Win**
-* 🚴 **Cycling Outrights (Grand Tours)**:
-  * **To Win Outright**, **Top 10 Finish**, and Stage Classifications (Vuelta a España)
-* ⛳ **Golf Outrights (European Tour / PGA)**:
-  * **To Win Outright** (Omega European Masters)
-* 🔄 **Automated Multi-Key Pool**: Built-in automated key rotation and failover ensuring continuous scraping uptime with zero rate-limit interruptions.
+* 🚴 **Cycling (Auto-Rotating Seasonal Calendar)**:
+  * **To Win Outright**, **Top 10 Finish**, and Stage Classifications.
+  * Dynamically synchronized to the real-world cycling calendar (Vuelta a España in September, Il Lombardia / Monuments in October, Tour de France / Giro in spring/summer).
+* ⛳ **Golf (Auto-Rotating Seasonal Calendar)**:
+  * **To Win Outright**, **Top 5 / 10 Finishes**.
+  * Dynamically synchronized to the PGA Tour / European Tour schedule (Omega European Masters in September, Dunhill Links in October, The Masters / PGA Majors in spring/summer).
+* 🔄 **Automated Multi-Key Pool**: Built-in automated key rotation and failover across 5 accounts (2,500+ requests/month pool) ensuring continuous scraping uptime with zero rate-limit interruptions.
 
 ---
 
@@ -54,6 +56,8 @@ python scrape.py --out all_matches.json
 |---|---|
 | **Scrape All 14 Sports with Deep Markets (600+ Matches)** | `python main.py` |
 | **Custom Output Destination** | `python scrape.py --out my_matches.json` |
+| **Filter by Single Sport** | `python scrape.py --sport Soccer` |
+| **Filter by Multiple Sports** | `python scrape.py --sports Soccer,Tennis,Cycling,Golf` |
 | **Direct Engine Execution** | `python bet365_engine.py --out all_matches.json` |
 
 ---
@@ -106,7 +110,7 @@ python scrape.py --out all_matches.json
 
 ## ⚙️ Configuration (`config.json`)
 
-Connection parameters and key pool rotation settings are managed in `config.json`:
+The authentication key pool is managed in `config.json`:
 ```json
 {
   "api_keys": [
@@ -115,9 +119,7 @@ Connection parameters and key pool rotation settings are managed in `config.json
     "9535772c-8269-4f47-888e-dc0762736b0f",
     "ea9e1ff8-193d-427b-b79f-9673d96dd24d",
     "2d5a5eef-5ffe-4ca5-8046-ef89e7190207"
-  ],
-  "host": "www.bet365.fr",
-  "proxy": ""
+  ]
 }
 ```
 
