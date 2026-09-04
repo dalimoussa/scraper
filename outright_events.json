@@ -2,7 +2,7 @@
   "Cycling": [
     {
       "id": "198980298",
-      "kickoff": "04/09/2026 12:50:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - To Win Outright",
       "away": "",
@@ -46,11 +46,11 @@
           "Pablo Castrillo": "4501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199730272",
-      "kickoff": "04/09/2026 12:50:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Top 10 Finish",
       "away": "",
@@ -158,13 +158,13 @@
           "Asbjorn Hellemose": "301.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
-      "id": "200456663",
-      "kickoff": "04/09/2026 12:50:00",
+      "id": "200231",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
-      "home": "Vuelta a Espana 2026 - Stage 11",
+      "home": "Vuelta a Espana 2026 - Stage 14",
       "away": "",
       "markets": {
         "To Win": {
@@ -310,11 +310,11 @@
           "Domen Novak": "1501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199693401",
-      "kickoff": "04/09/2026 12:50:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Young Rider Classification",
       "away": "",
@@ -367,11 +367,11 @@
           "Roman Ermakov": "4501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199722569",
-      "kickoff": "04/09/2026 12:50:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - King of the Mountains",
       "away": "",
@@ -500,11 +500,11 @@
           "Lucas Hamilton": "2501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199807357",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Rider to Win a Stage",
       "away": "",
@@ -603,11 +603,11 @@
           "Kevin Vermaerke": "13.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199811905",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Rider to Win 2+ Stages",
       "away": "",
@@ -709,11 +709,11 @@
           "Kevin Vermaerke": "67.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199813280",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Team to Win 2+ Stages",
       "away": "",
@@ -742,11 +742,11 @@
           "Team Picnic Post NL": "81.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199813493",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Team to Win 3+ Stages",
       "away": "",
@@ -776,11 +776,11 @@
           "Team Picnic Post NL": "501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "199892432",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "05/09/2026 11:30:00",
       "competition": "Vuelta a Espana 2026",
       "home": "Vuelta a Espana 2026 - Straight Forecast",
       "away": "",
@@ -858,11 +858,11 @@
           "1er - Joao Almeida, 2e - Tobias Halland Johannessen": "4501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "200541227",
-      "kickoff": "04/09/2026 10:30:00",
+      "kickoff": "05/09/2026 10:30:00",
       "competition": "Tour of Britain 2026",
       "home": "Tour of Britain 2026 - To Win Outright",
       "away": "",
@@ -937,11 +937,11 @@
           "Emil Schandorff Iwersen": "1001.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "05/09/2026"
     },
     {
       "id": "198446723",
-      "kickoff": "04/09/2026 12:00:00",
+      "kickoff": "02/07/2027 11:00:00",
       "competition": "Tour de France 2027",
       "home": "Tour de France 2027 - To Win Outright",
       "away": "",
@@ -1053,13 +1053,13 @@
           "Archie Ryan": "2501.00"
         }
       },
-      "date": "04/09/2026"
+      "date": "02/07/2027"
     }
   ],
   "Golf": [
     {
       "id": "200435805",
-      "kickoff": "06:00:00",
+      "kickoff": "05/09/2026 06:00:00",
       "competition": "Omega European Masters 2026",
       "home": "Omega European Masters 2026 - To Win Outright",
       "away": "",
@@ -1141,11 +1141,12 @@
           "Gunn Charoenkul": "251.00",
           "David Horsey": "301.00"
         }
-      }
+      },
+      "date": "05/09/2026"
     },
     {
       "id": "200435806",
-      "kickoff": "07:30:00",
+      "kickoff": "05/09/2026 07:30:00",
       "competition": "BMW PGA Championship 2026 (Wentworth)",
       "home": "BMW PGA Championship 2026 - To Win Outright",
       "away": "",
@@ -1212,11 +1213,12 @@
           "Grant Forrest": "301.00",
           "Richie Ramsay": "301.00"
         }
-      }
+      },
+      "date": "05/09/2026"
     },
     {
       "id": "200435807",
-      "kickoff": "14:00:00",
+      "kickoff": "05/09/2026 14:00:00",
       "competition": "PGA Tour & European Majors 2026/2027",
       "home": "The Masters Tournament 2027 - To Win Outright",
       "away": "",
@@ -1245,7 +1247,8 @@
           "Shane Lowry": "51.00",
           "Tiger Woods": "81.00"
         }
-      }
+      },
+      "date": "05/09/2026"
     }
   ]
 }

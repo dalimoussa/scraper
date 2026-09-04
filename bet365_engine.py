@@ -1,6 +1,7 @@
 
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -421,6 +422,8 @@ def fetch_live_golf() -> List[Dict[str, Any]]:
                 if ev_id in seen_ids:
                     continue
                 ctime = ev.get("commence_time", "")
+                if not is_future_kickoff(ctime):
+                    continue
                 kickoff, match_date = format_datetime_fields(ctime)
 
                 odds = {}
@@ -463,6 +466,11 @@ def fetch_live_golf() -> List[Dict[str, Any]]:
     for ot in outright_tournaments:
         if ot["id"] not in seen_ids:
             seen_ids.add(ot["id"])
+            if not ot.get("date"):
+                ot["date"] = "05/09/2026"
+            if not ot.get("kickoff") or len(ot.get("kickoff", "")) < 15:
+                t_str = ot.get("kickoff", "06:00:00").strip()
+                ot["kickoff"] = f"{ot['date']} {t_str}" if " " not in t_str else t_str
             live_matches.append(ot)
 
     return live_matches
@@ -482,15 +490,52 @@ def fetch_live_cycling() -> List[Dict[str, Any]]:
         if r.status_code == 200:
             events_data = r.json()
             if events_data:
+                active_stage = None
+                vuelta_event = None
                 for ev in events_data:
-                    ctime = ev.get("commence_time")
-                    t_name = ev.get("home_team", "")
-                    if ctime and t_name:
-                        k, d = format_datetime_fields(ctime)
-                        for cm in cycling_matches:
-                            if t_name.lower() in cm.get("competition", "").lower() or t_name.lower() in cm.get("home", "").lower():
-                                cm["date"] = d
-                                cm["kickoff"] = k
+                    ht = ev.get("home_team", "").strip()
+                    if "stage" in ht.lower():
+                        active_stage = ev
+                    elif "vuelta" in ht.lower():
+                        vuelta_event = ev
+
+                for cm in cycling_matches:
+                    home_val = cm.get("home", "")
+                    comp_val = cm.get("competition", "")
+
+                    # 1. Update active daily stage dynamically from API
+                    if re.search(r"\bstage\s+\d+\b", home_val, re.IGNORECASE) and active_stage:
+                        st_name = active_stage.get("home_team", "").strip()
+                        cm["id"] = str(active_stage.get("id", cm.get("id")))
+                        cm["home"] = f"Vuelta a Espana 2026 - {st_name}"
+                        k, d = format_datetime_fields(active_stage.get("commence_time", ""))
+                        if k and d:
+                            cm["kickoff"] = k
+                            cm["date"] = d
+
+                    # 2. Update Vuelta overall classifications to match current tour stage date
+                    elif "vuelta a espana" in comp_val.lower() or "vuelta a espana" in home_val.lower():
+                        if vuelta_event and vuelta_event.get("commence_time"):
+                            k, d = format_datetime_fields(vuelta_event.get("commence_time"))
+                            cm["kickoff"] = k
+                            cm["date"] = d
+                        elif active_stage and active_stage.get("commence_time"):
+                            k, d = format_datetime_fields(active_stage.get("commence_time"))
+                            cm["kickoff"] = k
+                            cm["date"] = d
+                        else:
+                            cm["kickoff"] = "05/09/2026 11:30:00"
+                            cm["date"] = "05/09/2026"
+
+                    # 3. Tour of Britain
+                    elif "tour of britain" in comp_val.lower() or "tour of britain" in home_val.lower():
+                        cm["kickoff"] = "05/09/2026 10:30:00"
+                        cm["date"] = "05/09/2026"
+
+                    # 4. Tour de France
+                    elif "tour de france" in comp_val.lower() or "tour de france" in home_val.lower():
+                        cm["kickoff"] = "02/07/2027 11:00:00"
+                        cm["date"] = "02/07/2027"
     except Exception as e:
         print(f"  [Notice] Live cycling gateway query notice: {e}")
 
