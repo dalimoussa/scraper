@@ -1,8 +1,3 @@
-"""
-Bet365 High-Performance Engine & Multi-Sport Scraper
-Fetches upcoming matches with deep betting markets across all major sports,
-featuring automated multi-key rotation and 100% schema parity for client export.
-"""
 
 import json
 import os
