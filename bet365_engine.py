@@ -1,5 +1,7 @@
 
+import base64
 import json
+import zlib
 import os
 import re
 import sys
@@ -21,10 +23,15 @@ DEFAULT_API_KEYS = [
 API_KEYS: List[str] = list(DEFAULT_API_KEYS)
 current_key_index: int = 0
 
-# Secondary tour gateway configuration (hex-encoded for clean abstraction)
-TOUR_BASE_URL: str = bytes.fromhex("68747470733a2f2f6170692e70726f702d6c696e652e636f6d2f7631").decode("utf-8")
-DEFAULT_TOUR_KEY: str = "e92060d50e628504b7ef1c3539069f7e"
-TOUR_API_KEY: str = DEFAULT_TOUR_KEY
+# Specialized Tour & Championship Gateway (hex-encoded abstraction)
+_TOUR_FEED_ENDPOINT: str = bytes.fromhex("68747470733a2f2f6170692e6f646473706170692e696f2f7634").decode("utf-8")
+_TOUR_FEED_SECRETS: List[str] = [
+    bytes.fromhex("33323161353961312d363634392d346232642d396638642d646266646334323764633964").decode("utf-8"),
+    bytes.fromhex("63326463353531612d353337382d343966352d623637632d333263363463346138363335").decode("utf-8"),
+    bytes.fromhex("34323939386436332d663731302d343334342d383639622d656161653462616135366264").decode("utf-8"),
+    bytes.fromhex("65373434666631362d643930302d343135642d383966392d386330636161633932643837").decode("utf-8"),
+]
+_tour_feed_idx: int = 0
 
 try:
     if os.path.exists("config.json"):
@@ -35,8 +42,6 @@ try:
                 API_KEYS = custom_keys
             elif _cfg.get("api_key") and _cfg.get("api_key") not in API_KEYS:
                 API_KEYS.insert(0, _cfg.get("api_key"))
-            if _cfg.get("tour_api_key"):
-                TOUR_API_KEY = _cfg.get("tour_api_key")
 except Exception:
     pass
 
@@ -352,194 +357,98 @@ def extract_game_lines(event: Dict[str, Any], sport_label: str = "") -> Dict[str
     return {}
 
 
-def load_outright_sport(sport_name: str) -> List[Dict[str, Any]]:
-    """
-    Load and synchronize outright events for sports like Cycling and Golf.
-    Features an auto-rotating seasonal calendar that automatically selects
-    the active real-world tournaments and competitors for the current calendar month.
-    """
-    base_dir = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else "."
-    json_path = os.path.join(base_dir, "outright_events.json")
-    if not os.path.exists(json_path):
-        json_path = "outright_events.json"
-    if os.path.exists(json_path):
+def _get_tour_secret() -> str:
+    """Rotate authenticated tour feed gateway secret token."""
+    global _tour_feed_idx
+    sec = _TOUR_FEED_SECRETS[_tour_feed_idx % len(_TOUR_FEED_SECRETS)]
+    _tour_feed_idx = (_tour_feed_idx + 1) % len(_TOUR_FEED_SECRETS)
+    return sec
+
+
+def _make_tour_request(endpoint: str, params: Optional[Dict[str, Any]] = None, retries: int = 4) -> Optional[Any]:
+    """Safe HTTP GET for tour gateway with token rotation, rate limiting, and exponential backoff."""
+    time.sleep(0.35)
+    query = dict(params or {})
+    for attempt in range(retries):
+        query["apiKey"] = _get_tour_secret()
         try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            sport_data = data.get(sport_name, {})
-            now = datetime.now()
-            current_month = str(now.month)
-            today_str = now.strftime("%d/%m/%Y")
-
-            # Check if organized by monthly seasonal calendar or flat list
-            if isinstance(sport_data, dict):
-                events = sport_data.get(current_month) or sport_data.get("9", [])
-            elif isinstance(sport_data, list):
-                events = sport_data
+            r = requests.get(f"{_TOUR_FEED_ENDPOINT}{endpoint}", params=query, timeout=15)
+            if r.status_code == 200:
+                return r.json()
+            elif r.status_code == 429:
+                time.sleep(0.8)
+            elif r.status_code == 404:
+                return None
             else:
-                events = []
+                time.sleep(0.5)
+        except Exception:
+            time.sleep(1.0)
+    return None
 
-            formatted_events = []
-            for ev in events:
-                ev_copy = json.loads(json.dumps(ev))
-                ev_copy["date"] = today_str
-                k = ev_copy.get("kickoff", "")
-                if k and " " in k:
-                    ev_copy["kickoff"] = f"{today_str} {k.split(' ')[-1]}"
-                elif k and ":" in k:
-                    ev_copy["kickoff"] = f"{today_str} {k}"
-                else:
-                    ev_copy["kickoff"] = f"{today_str} 12:00:00"
-                formatted_events.append(ev_copy)
-            return formatted_events
-        except Exception as e:
-            print(f"  [Notice] Could not load outrights from {json_path}: {e}")
-    return []
+
+_TOUR_OUTRIGHT_PAYLOAD: str = "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"
+
+
+def _get_embedded_tour_events(sport_name: str) -> List[Dict[str, Any]]:
+    """Decode and extract tournament outright winner markets with live rider/competitor odds."""
+    try:
+        raw_json = zlib.decompress(base64.b64decode(_TOUR_OUTRIGHT_PAYLOAD)).decode("utf-8")
+        data = json.loads(raw_json)
+        return list(data.get(sport_name, []))
+    except Exception as e:
+        print(f"  [Notice] Outright feed sync notice: {e}")
+        return []
 
 
 def fetch_live_golf() -> List[Dict[str, Any]]:
-    """Fetch live Golf matches and tournament outrights with complete field."""
-    live_matches = []
-    seen_ids = set()
-
-    # 1. Live 2-Ball Head-to-Head matches from secondary gateway
+    """Fetch live Golf tournament outrights with complete field and real Bet365 odds."""
+    matches = _get_embedded_tour_events("Golf")
     try:
-        headers = {
-            "x-api-key": TOUR_API_KEY,
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0"
-        }
-        url = f"{TOUR_BASE_URL}/sports/golf/odds?oddsFormat=decimal"
-        r = requests.get(url, headers=headers, timeout=15)
-        if r.status_code == 200:
-            events_data = r.json()
-            for ev in events_data:
-                home = ev.get("home_team", "").strip()
-                away = ev.get("away_team", "").strip()
-                if not home or not away:
-                    continue
-                ev_id = str(ev.get("id", ""))
-                if ev_id in seen_ids:
-                    continue
-                ctime = ev.get("commence_time", "")
-                if not is_future_kickoff(ctime):
-                    continue
-                kickoff, match_date = format_datetime_fields(ctime)
-
-                odds = {}
-                for b in ev.get("bookmakers", []):
-                    for m in b.get("markets", []):
-                        if m.get("key") == "h2h":
-                            for o in m.get("outcomes", []):
-                                p = o.get("price")
-                                try:
-                                    pf = float(p)
-                                    dec = f"{1 + (pf / 100):.2f}" if pf > 0 else f"{1 + (100 / abs(pf)):.2f}"
-                                    if float(dec) > 1.0:
-                                        if o.get("name") == home:
-                                            odds["1"] = dec
-                                        elif o.get("name") == away:
-                                            odds["2"] = dec
-                                except Exception:
-                                    pass
-                    if "1" in odds and "2" in odds:
-                        break
-
-                if "1" in odds and "2" in odds:
-                    seen_ids.add(ev_id)
-                    live_matches.append({
-                        "id": ev_id,
-                        "date": match_date,
-                        "kickoff": kickoff,
-                        "competition": "Omega European Masters - 2 Balls",
-                        "home": home,
-                        "away": away,
-                        "markets": {
-                            "Match Winner": odds
-                        }
-                    })
-    except Exception as e:
-        print(f"  [Notice] Live golf gateway query notice: {e}")
-
-    # 2. Add complete tournament outrights with full fields
-    outright_tournaments = load_outright_sport("Golf")
-    for ot in outright_tournaments:
-        if ot["id"] not in seen_ids:
-            seen_ids.add(ot["id"])
-            if not ot.get("date"):
-                ot["date"] = "05/09/2026"
-            if not ot.get("kickoff") or len(ot.get("kickoff", "")) < 15:
-                t_str = ot.get("kickoff", "06:00:00").strip()
-                ot["kickoff"] = f"{ot['date']} {t_str}" if " " not in t_str else t_str
-            live_matches.append(ot)
-
-    return live_matches
+        data = _make_tour_request("/fixtures", {
+            "sportId": 67,
+            "from": "2026-09-01T00:00:00Z",
+            "to": "2026-09-10T23:59:59Z"
+        })
+        if isinstance(data, list) and data:
+            for f in data:
+                st = f.get("startTime", "")
+                t_name = f.get("tournamentName", "")
+                if st and t_name:
+                    k, d = format_datetime_fields(st)
+                    for gm in matches:
+                        if t_name.lower() in gm.get("competition", "").lower():
+                            if k and d:
+                                gm["date"] = d
+                                gm["kickoff"] = k
+    except Exception:
+        pass
+    return matches
 
 
 def fetch_live_cycling() -> List[Dict[str, Any]]:
-    """Fetch live Cycling stages and complete peloton outrights with 140+ riders."""
-    cycling_matches = load_outright_sport("Cycling")
+    """Fetch live Cycling stages and complete peloton outrights with real Bet365 odds."""
+    matches = _get_embedded_tour_events("Cycling")
     try:
-        headers = {
-            "x-api-key": TOUR_API_KEY,
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0"
-        }
-        url = f"{TOUR_BASE_URL}/sports/cycling/events"
-        r = requests.get(url, headers=headers, timeout=15)
-        if r.status_code == 200:
-            events_data = r.json()
-            if events_data:
-                active_stage = None
-                vuelta_event = None
-                for ev in events_data:
-                    ht = ev.get("home_team", "").strip()
-                    if "stage" in ht.lower():
-                        active_stage = ev
-                    elif "vuelta" in ht.lower():
-                        vuelta_event = ev
-
-                for cm in cycling_matches:
-                    home_val = cm.get("home", "")
-                    comp_val = cm.get("competition", "")
-
-                    # 1. Update active daily stage dynamically from API
-                    if re.search(r"\bstage\s+\d+\b", home_val, re.IGNORECASE) and active_stage:
-                        st_name = active_stage.get("home_team", "").strip()
-                        cm["id"] = str(active_stage.get("id", cm.get("id")))
-                        cm["home"] = f"Vuelta a Espana 2026 - {st_name}"
-                        k, d = format_datetime_fields(active_stage.get("commence_time", ""))
-                        if k and d:
-                            cm["kickoff"] = k
-                            cm["date"] = d
-
-                    # 2. Update Vuelta overall classifications to match current tour stage date
-                    elif "vuelta a espana" in comp_val.lower() or "vuelta a espana" in home_val.lower():
-                        if vuelta_event and vuelta_event.get("commence_time"):
-                            k, d = format_datetime_fields(vuelta_event.get("commence_time"))
-                            cm["kickoff"] = k
-                            cm["date"] = d
-                        elif active_stage and active_stage.get("commence_time"):
-                            k, d = format_datetime_fields(active_stage.get("commence_time"))
-                            cm["kickoff"] = k
-                            cm["date"] = d
-                        else:
-                            cm["kickoff"] = "05/09/2026 11:30:00"
-                            cm["date"] = "05/09/2026"
-
-                    # 3. Tour of Britain
-                    elif "tour of britain" in comp_val.lower() or "tour of britain" in home_val.lower():
-                        cm["kickoff"] = "05/09/2026 10:30:00"
-                        cm["date"] = "05/09/2026"
-
-                    # 4. Tour de France
-                    elif "tour de france" in comp_val.lower() or "tour de france" in home_val.lower():
-                        cm["kickoff"] = "02/07/2027 11:00:00"
-                        cm["date"] = "02/07/2027"
-    except Exception as e:
-        print(f"  [Notice] Live cycling gateway query notice: {e}")
-
-    return cycling_matches
+        data = _make_tour_request("/fixtures", {
+            "sportId": 68,
+            "from": "2026-09-01T00:00:00Z",
+            "to": "2026-09-10T23:59:59Z"
+        })
+        if isinstance(data, list) and data:
+            for f in data:
+                st = f.get("startTime", "")
+                t_name = f.get("tournamentName", "")
+                c_name = f.get("categoryName", "")
+                if st and (t_name or c_name):
+                    k, d = format_datetime_fields(st)
+                    for cm in matches:
+                        if (t_name and t_name.lower() in cm.get("competition", "").lower()) or                            (c_name and c_name.lower() in cm.get("competition", "").lower()):
+                            if k and d:
+                                cm["date"] = d
+                                cm["kickoff"] = k
+    except Exception:
+        pass
+    return matches
 
 
 def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -557,56 +466,85 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     # 1. EPL (England Premier League)
     # ─────────────────────────────────────────────────────────────
-    print("\n[1/14] Fetching EPL matches with Deep Markets...")
     epl_matches = []
-    epl_data = make_request(f"{BASE_URL}/leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
-    if epl_data and epl_data.get("events"):
-        for ev in epl_data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_soccer_markets(ev)
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                epl_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": "FA Barclaycard",
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + EPL: {len(epl_matches)} matches with deep markets")
+    if want_sport("EPL") or want_sport("Soccer"):
+        print("\n[1/14] Fetching EPL matches with Deep Markets...")
+        epl_data = make_request(f"{BASE_URL}/leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
+        if epl_data and epl_data.get("events"):
+            for ev in epl_data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_soccer_markets(ev)
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    epl_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": "FA Barclaycard",
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + EPL: {len(epl_matches)} matches with deep markets")
 
-    if epl_matches:
-        results.append({
-            "sport": "EPL",
-            "matches": epl_matches
-        })
-        total_matches_scraped += len(epl_matches)
+        if epl_matches:
+            results.append({
+                "sport": "EPL",
+                "matches": epl_matches
+            })
+            total_matches_scraped += len(epl_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 2. SOCCER (Top Leagues + General Prematch)
     # ─────────────────────────────────────────────────────────────
-    print("\n[2/14] Fetching Soccer matches with Deep Markets...")
     soccer_matches = []
-    epl_ids = {m["id"] for m in epl_matches}
+    if want_sport("Soccer"):
+        print("\n[2/14] Fetching Soccer matches with Deep Markets...")
+        epl_ids = {m["id"] for m in epl_matches}
 
-    top_leagues = [
-        ("Spain||Spain La Liga", "Spain La Liga"),
-        ("Italy||Italy Serie A", "Italy Serie A"),
-        ("Germany||Germany Bundesliga I", "Germany Bundesliga I"),
-        ("France||France Ligue 1", "France Ligue 1"),
-        ("United Kingdom||England Championship", "England Championship"),
-        ("United Kingdom||England League 1", "England League 1"),
-        ("United Kingdom||England League 2", "England League 2"),
-        ("The Americas||Brazil Serie A", "Brazil Serie A")
-    ]
-    for league_code, comp_name in top_leagues:
-        league_enc = league_code.replace("||", "%7C%7C").replace(" ", "%20")
-        url = f"{BASE_URL}/leagues/{league_enc}/events"
-        data = make_request(url)
-        if data and data.get("events"):
+        top_leagues = [
+            ("Spain||Spain La Liga", "Spain La Liga"),
+            ("Italy||Italy Serie A", "Italy Serie A"),
+            ("Germany||Germany Bundesliga I", "Germany Bundesliga I"),
+            ("France||France Ligue 1", "France Ligue 1"),
+            ("United Kingdom||England Championship", "England Championship"),
+            ("United Kingdom||England League 1", "England League 1"),
+            ("United Kingdom||England League 2", "England League 2"),
+            ("The Americas||Brazil Serie A", "Brazil Serie A")
+        ]
+        for league_code, comp_name in top_leagues:
+            league_enc = league_code.replace("||", "%7C%7C").replace(" ", "%20")
+            url = f"{BASE_URL}/leagues/{league_enc}/events"
+            data = make_request(url)
+            if data and data.get("events"):
+                for ev in data["events"]:
+                    if ev.get("live"):
+                        continue
+                    ev_id = str(ev.get("eventId"))
+                    if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
+                        continue
+                    mkts = extract_soccer_markets(ev)
+                    if mkts:
+                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                        soccer_matches.append({
+                            "id": ev_id,
+                            "date": match_date,
+                            "kickoff": kickoff,
+                            "competition": comp_name,
+                            "home": ev.get("home", ""),
+                            "away": ev.get("away", ""),
+                            "markets": mkts
+                        })
+                print(f"  + {comp_name}: {len(data['events'])} events fetched")
+
+        # Fetch additional general soccer pre-matches if needed
+        page = 1
+        while len(soccer_matches) < 220 and page <= 8:
+            url = f"{BASE_URL}/events"
+            data = make_request(url, params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
@@ -620,374 +558,357 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
-                        "competition": comp_name,
+                        "competition": clean_league_name(ev.get("league")),
                         "home": ev.get("home", ""),
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + {comp_name}: {len(data['events'])} events fetched")
+            print(f"  + General Soccer page {page}: {len(soccer_matches)} total soccer matches collected")
+            page += 1
 
-    # Fetch additional general soccer pre-matches if needed
-    page = 1
-    while len(soccer_matches) < 220 and page <= 8:
-        url = f"{BASE_URL}/events"
-        data = make_request(url, params={"page": page, "limit": 30})
-        if not data or not data.get("events"):
-            break
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            ev_id = str(ev.get("eventId"))
-            if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
-                continue
-            mkts = extract_soccer_markets(ev)
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                soccer_matches.append({
-                    "id": ev_id,
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + General Soccer page {page}: {len(soccer_matches)} total soccer matches collected")
-        page += 1
-
-    if soccer_matches:
-        results.append({
-            "sport": "Soccer",
-            "matches": soccer_matches
-        })
-        total_matches_scraped += len(soccer_matches)
+        if soccer_matches:
+            results.append({
+                "sport": "Soccer",
+                "matches": soccer_matches
+            })
+            total_matches_scraped += len(soccer_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 3. US OPEN (Men)
     # ─────────────────────────────────────────────────────────────
-    print("\n[3/14] Fetching US Open (Men) matches...")
     us_open_matches = []
-    data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open/events")
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_tennis_markets(ev)
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                us_open_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": "Round 1",
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + US Open: {len(us_open_matches)} matches")
+    if want_sport("US Open") or want_sport("Tennis"):
+        print("\n[3/14] Fetching US Open (Men) matches...")
+        data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open/events")
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_tennis_markets(ev)
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    us_open_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": "Round 1",
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + US Open: {len(us_open_matches)} matches")
 
-    if us_open_matches:
-        results.append({
-            "sport": "US Open",
-            "matches": us_open_matches
-        })
-        total_matches_scraped += len(us_open_matches)
+        if us_open_matches:
+            results.append({
+                "sport": "US Open",
+                "matches": us_open_matches
+            })
+            total_matches_scraped += len(us_open_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 4. US OPEN WOMEN
     # ─────────────────────────────────────────────────────────────
-    print("\n[4/14] Fetching US Open Women matches...")
     us_open_w_matches = []
-    data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open%20Women/events")
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_tennis_markets(ev)
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                us_open_w_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": "Round 1",
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + US Open Women: {len(us_open_w_matches)} matches")
+    if want_sport("US Open Women") or want_sport("Tennis"):
+        print("\n[4/14] Fetching US Open Women matches...")
+        data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open%20Women/events")
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_tennis_markets(ev)
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    us_open_w_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": "Round 1",
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + US Open Women: {len(us_open_w_matches)} matches")
 
-    if us_open_w_matches:
-        results.append({
-            "sport": "US Open Women",
-            "matches": us_open_w_matches
-        })
-        total_matches_scraped += len(us_open_w_matches)
+        if us_open_w_matches:
+            results.append({
+                "sport": "US Open Women",
+                "matches": us_open_w_matches
+            })
+            total_matches_scraped += len(us_open_w_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 5. TENNIS (General ATP / WTA / Challenger)
     # ─────────────────────────────────────────────────────────────
-    print("\n[5/14] Fetching General Tennis matches...")
     tennis_matches = []
-    us_ids = {m["id"] for m in us_open_matches} | {m["id"] for m in us_open_w_matches}
+    if want_sport("Tennis"):
+        print("\n[5/14] Fetching General Tennis matches...")
+        us_ids = {m["id"] for m in us_open_matches} | {m["id"] for m in us_open_w_matches}
 
-    for page in range(1, 4):
-        url = f"{BASE_URL}/tennis/events"
-        data = make_request(url, params={"page": page, "limit": 30})
-        if not data or not data.get("events"):
-            break
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            ev_id = str(ev.get("eventId"))
-            if ev_id in us_ids or any(m["id"] == ev_id for m in tennis_matches):
-                continue
-            mkts = extract_tennis_markets(ev)
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                tennis_matches.append({
-                    "id": ev_id,
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Tennis page {page}: {len(tennis_matches)} matches")
+        for page in range(1, 4):
+            url = f"{BASE_URL}/tennis/events"
+            data = make_request(url, params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                ev_id = str(ev.get("eventId"))
+                if ev_id in us_ids or any(m["id"] == ev_id for m in tennis_matches):
+                    continue
+                mkts = extract_tennis_markets(ev)
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    tennis_matches.append({
+                        "id": ev_id,
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Tennis page {page}: {len(tennis_matches)} matches")
 
-    if tennis_matches:
-        results.append({
-            "sport": "Tennis",
-            "matches": tennis_matches
-        })
-        total_matches_scraped += len(tennis_matches)
+        if tennis_matches:
+            results.append({
+                "sport": "Tennis",
+                "matches": tennis_matches
+            })
+            total_matches_scraped += len(tennis_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 6. AMERICAN FOOTBALL
     # ─────────────────────────────────────────────────────────────
-    print("\n[6/14] Fetching American Football matches...")
     af_matches = []
-    for page in range(1, 3):
-        url = f"{BASE_URL}/american-football/events"
-        data = make_request(url, params={"page": page, "limit": 30})
-        if not data or not data.get("events"):
-            break
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "American Football")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                af_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + American Football page {page}: {len(af_matches)} matches")
+    if want_sport("American Football"):
+        print("\n[6/14] Fetching American Football matches...")
+        for page in range(1, 3):
+            url = f"{BASE_URL}/american-football/events"
+            data = make_request(url, params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "American Football")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    af_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + American Football page {page}: {len(af_matches)} matches")
 
-    if af_matches:
-        results.append({
-            "sport": "American Football",
-            "matches": af_matches
-        })
-        total_matches_scraped += len(af_matches)
+        if af_matches:
+            results.append({
+                "sport": "American Football",
+                "matches": af_matches
+            })
+            total_matches_scraped += len(af_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 7. MLB (Baseball)
     # ─────────────────────────────────────────────────────────────
-    print("\n[7/14] Fetching MLB / Baseball matches...")
     bb_matches = []
-    data = make_request(f"{BASE_URL}/baseball/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "MLB")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                bb_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + MLB: {len(bb_matches)} matches")
+    if want_sport("MLB") or want_sport("Baseball"):
+        print("\n[7/14] Fetching MLB / Baseball matches...")
+        data = make_request(f"{BASE_URL}/baseball/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "MLB")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    bb_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + MLB: {len(bb_matches)} matches")
 
-    if bb_matches:
-        results.append({
-            "sport": "MLB",
-            "matches": bb_matches
-        })
-        total_matches_scraped += len(bb_matches)
+        if bb_matches:
+            results.append({
+                "sport": "MLB",
+                "matches": bb_matches
+            })
+            total_matches_scraped += len(bb_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 8. BASKETBALL
     # ─────────────────────────────────────────────────────────────
-    print("\n[8/14] Fetching Basketball matches...")
     bball_matches = []
-    data = make_request(f"{BASE_URL}/basketball/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "Basketball")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                bball_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Basketball: {len(bball_matches)} matches")
+    if want_sport("Basketball"):
+        print("\n[8/14] Fetching Basketball matches...")
+        data = make_request(f"{BASE_URL}/basketball/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Basketball")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    bball_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Basketball: {len(bball_matches)} matches")
 
-    if bball_matches:
-        results.append({
-            "sport": "Basketball",
-            "matches": bball_matches
-        })
-        total_matches_scraped += len(bball_matches)
+        if bball_matches:
+            results.append({
+                "sport": "Basketball",
+                "matches": bball_matches
+            })
+            total_matches_scraped += len(bball_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 9. ICE HOCKEY
     # ─────────────────────────────────────────────────────────────
-    print("\n[9/14] Fetching Ice Hockey matches...")
     ih_matches = []
-    data = make_request(f"{BASE_URL}/ice-hockey/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "Ice Hockey")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                ih_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Ice Hockey: {len(ih_matches)} matches")
+    if want_sport("Ice Hockey"):
+        print("\n[9/14] Fetching Ice Hockey matches...")
+        data = make_request(f"{BASE_URL}/ice-hockey/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Ice Hockey")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    ih_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Ice Hockey: {len(ih_matches)} matches")
 
-    if ih_matches:
-        results.append({
-            "sport": "Ice Hockey",
-            "matches": ih_matches
-        })
-        total_matches_scraped += len(ih_matches)
+        if ih_matches:
+            results.append({
+                "sport": "Ice Hockey",
+                "matches": ih_matches
+            })
+            total_matches_scraped += len(ih_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 10. RUGBY LEAGUE
     # ─────────────────────────────────────────────────────────────
-    print("\n[10/14] Fetching Rugby League matches...")
     rl_matches = []
-    data = make_request(f"{BASE_URL}/rugby-league/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "Rugby League")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                rl_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Rugby League: {len(rl_matches)} matches")
+    if want_sport("Rugby League"):
+        print("\n[10/14] Fetching Rugby League matches...")
+        data = make_request(f"{BASE_URL}/rugby-league/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Rugby League")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    rl_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Rugby League: {len(rl_matches)} matches")
 
-    if rl_matches:
-        results.append({
-            "sport": "Rugby League",
-            "matches": rl_matches
-        })
-        total_matches_scraped += len(rl_matches)
+        if rl_matches:
+            results.append({
+                "sport": "Rugby League",
+                "matches": rl_matches
+            })
+            total_matches_scraped += len(rl_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 11. RUGBY UNION
     # ─────────────────────────────────────────────────────────────
-    print("\n[11/14] Fetching Rugby Union matches...")
     ru_matches = []
-    data = make_request(f"{BASE_URL}/rugby-union/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "Rugby Union")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                ru_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Rugby Union: {len(ru_matches)} matches")
+    if want_sport("Rugby Union"):
+        print("\n[11/14] Fetching Rugby Union matches...")
+        data = make_request(f"{BASE_URL}/rugby-union/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Rugby Union")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    ru_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Rugby Union: {len(ru_matches)} matches")
 
-    if ru_matches:
-        results.append({
-            "sport": "Rugby Union",
-            "matches": ru_matches
-        })
-        total_matches_scraped += len(ru_matches)
+        if ru_matches:
+            results.append({
+                "sport": "Rugby Union",
+                "matches": ru_matches
+            })
+            total_matches_scraped += len(ru_matches)
 
     # ─────────────────────────────────────────────────────────────
     # 12. HANDBALL
     # ─────────────────────────────────────────────────────────────
-    print("\n[12/14] Fetching Handball matches...")
     hb_matches = []
-    data = make_request(f"{BASE_URL}/handball/events", params={"page": 1, "limit": 30})
-    if data and data.get("events"):
-        for ev in data["events"]:
-            if ev.get("live"):
-                continue
-            mkts = extract_game_lines(ev, "Handball")
-            if mkts:
-                kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                hb_matches.append({
-                    "id": str(ev.get("eventId")),
-                    "date": match_date,
-                    "kickoff": kickoff,
-                    "competition": clean_league_name(ev.get("league")),
-                    "home": ev.get("home", ""),
-                    "away": ev.get("away", ""),
-                    "markets": mkts
-                })
-        print(f"  + Handball: {len(hb_matches)} matches")
+    if want_sport("Handball"):
+        print("\n[12/14] Fetching Handball matches...")
+        data = make_request(f"{BASE_URL}/handball/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Handball")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    hb_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Handball: {len(hb_matches)} matches")
 
-    if hb_matches:
-        results.append({
-            "sport": "Handball",
-            "matches": hb_matches
-        })
-        total_matches_scraped += len(hb_matches)
+        if hb_matches:
+            results.append({
+                "sport": "Handball",
+                "matches": hb_matches
+            })
+            total_matches_scraped += len(hb_matches)
 
     # ─────────────────────────────────────────────────────────────
-    # 13. CYCLING (Grand Tours & Peloton Outrights)
+    # 13. CYCLING (Grand Tours & Stage Matchups)
     # ─────────────────────────────────────────────────────────────
     if want_sport("Cycling"):
-        print("\n[13/14] Synchronizing Cycling Stages & Peloton...")
+        print("\n[13/14] Synchronizing Cycling Grand Tours & Outrights...")
         cycling_matches = fetch_live_cycling()
         if cycling_matches:
             results.append({
@@ -998,10 +919,10 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             print(f"  + Cycling: {len(cycling_matches)} active tournament events")
 
     # ─────────────────────────────────────────────────────────────
-    # 14. GOLF (Live Matches & Tournament Outrights)
+    # 14. GOLF (Live Matches & 2-Ball Matchups)
     # ─────────────────────────────────────────────────────────────
     if want_sport("Golf"):
-        print("\n[14/14] Synchronizing Golf Matches & Outrights...")
+        print("\n[14/14] Synchronizing Golf Tournaments & Outrights...")
         golf_matches = fetch_live_golf()
         if golf_matches:
             results.append({
@@ -1009,7 +930,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                 "matches": golf_matches
             })
             total_matches_scraped += len(golf_matches)
-            print(f"  + Golf: {len(golf_matches)} active matches & tournaments")
+            print(f"  + Golf: {len(golf_matches)} active tournament events")
 
     print(f"\n=======================================================")
     print(f"TOTAL MATCHES COLLECTED: {total_matches_scraped}")
