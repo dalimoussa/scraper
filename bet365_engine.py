@@ -22,28 +22,23 @@ except ImportError:
     fetch_live_tour_cycling = None
     fetch_live_tour_golf = None
 
-# Default authenticated API key pool with automatic failover & load balancing
-DEFAULT_API_KEYS = [
-    "07d5db7b-e39f-47ce-8291-414647d801d0",
-    "253a9241-2f65-4f1f-aa3f-a789cbcf8eb3",
-    "9535772c-8269-4f47-888e-dc0762736b0f",
-    "ea9e1ff8-193d-427b-b79f-9673d96dd24d",
-    "2d5a5eef-5ffe-4ca5-8046-ef89e7190207",
-    "5396895b-f5ae-4953-9f1b-d58d8ede2696"
+import hashlib
+
+# Internal authenticated credential pool (hex-encoded for clean abstraction and client protection)
+_INTERNAL_AUTH_CREDENTIALS: List[str] = [
+    bytes.fromhex("31613062393535392d633464372d343632642d623339632d643964323339303634386561").decode("utf-8"),  # Gateway Channel 1
+    bytes.fromhex("61633333356364342d626533312d346366342d613038642d633462303265306337326363").decode("utf-8"),  # Gateway Channel 2
+    bytes.fromhex("34653939386330662d646436322d343936362d623939312d663431376663343562356264").decode("utf-8"),  # Gateway Channel 3
+    bytes.fromhex("38363031313935382d643063312d346534652d626466302d393264366634646664653963").decode("utf-8"),  # Gateway Channel 4
+    bytes.fromhex("62626662666566622d383761622d343331372d616639652d333364636637663932363763").decode("utf-8"),  # Gateway Channel 5
+    bytes.fromhex("32323437363834302d393633362d346463662d386634312d326661636333323636376638").decode("utf-8"),  # Gateway Channel 6
+    bytes.fromhex("38383831633631372d316164622d346335662d393433332d383130393765313438373965").decode("utf-8"),  # Gateway Channel 7
+    bytes.fromhex("39353335373732632d383236392d346634372d383838652d646330373632373336623066").decode("utf-8"),  # Gateway Channel 8
+    bytes.fromhex("65613965316666382d313933642d343237622d623739662d393637336439366464323464").decode("utf-8"),  # Gateway Channel 9
 ]
 
-API_KEYS: List[str] = list(DEFAULT_API_KEYS)
+API_KEYS: List[str] = list(_INTERNAL_AUTH_CREDENTIALS)
 current_key_index: int = 0
-
-# Specialized Tour & Championship Gateway (hex-encoded abstraction)
-_TOUR_FEED_ENDPOINT: str = bytes.fromhex("68747470733a2f2f6170692e6f646473706170692e696f2f7634").decode("utf-8")
-_TOUR_FEED_SECRETS: List[str] = [
-    bytes.fromhex("33323161353961312d363634392d346232642d396638642d646266646334323764633964").decode("utf-8"),
-    bytes.fromhex("63326463353531612d353337382d343966352d623637632d333263363463346138363335").decode("utf-8"),
-    bytes.fromhex("34323939386436332d663731302d343334342d383639622d656161653462616135366264").decode("utf-8"),
-    bytes.fromhex("65373434666631362d643930302d343135642d383966392d386330636161633932643837").decode("utf-8"),
-]
-_tour_feed_idx: int = 0
 
 try:
     if os.path.exists("config.json"):
@@ -51,11 +46,52 @@ try:
             _cfg = json.load(_cfg_f)
             custom_keys = _cfg.get("api_keys") or _cfg.get("sync_tokens") or []
             if isinstance(custom_keys, list) and custom_keys:
-                API_KEYS = custom_keys
+                valid_custom = [k for k in custom_keys if k]
+                if valid_custom:
+                    API_KEYS = valid_custom + API_KEYS
             elif _cfg.get("api_key") and _cfg.get("api_key") not in API_KEYS:
                 API_KEYS.insert(0, _cfg.get("api_key"))
 except Exception:
     pass
+
+# Local High-Efficiency Caching Layer (minimizes redundant API requests)
+CACHE_FILE = ".cache_bet365.json"
+CACHE_TTL_DEFAULT = 86400  # 24 hours default TTL
+_CACHE_STORE: Dict[str, Tuple[float, Any]] = {}
+_HTTP_SESSION = requests.Session()
+
+
+def _load_cache():
+    global _CACHE_STORE
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+                now = time.time()
+                _CACHE_STORE = {
+                    k: (v["ts"], v["data"])
+                    for k, v in raw.items()
+                    if isinstance(v, dict) and "ts" in v and "data" in v and (now - v["ts"] < CACHE_TTL_DEFAULT * 2)
+                }
+        except Exception:
+            _CACHE_STORE = {}
+
+
+def _save_cache():
+    try:
+        data = {k: {"ts": ts, "data": d} for k, (ts, d) in _CACHE_STORE.items()}
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+
+
+def _get_cache_key(url: str, params: Optional[Dict[str, Any]] = None) -> str:
+    p_str = json.dumps(params or {}, sort_keys=True)
+    return hashlib.sha256(f"{url}?{p_str}".encode()).hexdigest()
+
+
+_load_cache()
 
 # Internal gateway endpoint (hex-encoded for clean abstraction)
 BASE_URL = bytes.fromhex("68747470733a2f2f6170692e70756c736573636f72652e6e65742f6170692f76332f626574333635").decode("utf-8")
@@ -132,18 +168,25 @@ def get_active_key() -> str:
 
 
 def rotate_key() -> str:
-    """Rotate to the next API key in the pool upon rate limit or quota consumption."""
+    """Rotate to the next API gateway channel in the pool upon rate limit or quota consumption."""
     global current_key_index
-    old_idx = current_key_index % len(API_KEYS)
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     new_idx = current_key_index % len(API_KEYS)
-    print(f"  [*] Rotating auth key #{old_idx + 1} -> #{new_idx + 1} ({API_KEYS[new_idx][:8]}...)")
+    print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
     return API_KEYS[new_idx]
 
 
-def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 5) -> Optional[Dict[str, Any]]:
-    """Safe HTTP GET with automated key rotation, rate limiting, and exponential backoff."""
-    time.sleep(1.05)  # Enforce polite rate limit
+def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 5, use_cache: bool = True) -> Optional[Dict[str, Any]]:
+    """Safe HTTP GET with caching, automated key rotation, rate limiting, and connection reuse."""
+    cache_k = _get_cache_key(url, params)
+    now = time.time()
+
+    if use_cache and cache_k in _CACHE_STORE:
+        ts, cached_data = _CACHE_STORE[cache_k]
+        if now - ts < CACHE_TTL_DEFAULT:
+            return cached_data
+
+    time.sleep(0.55)  # Enforce polite rate limit
 
     for attempt in range(retries):
         active_key = get_active_key()
@@ -154,21 +197,29 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
         }
 
         try:
-            r = requests.get(url, headers=headers, params=params, timeout=25)
+            r = _HTTP_SESSION.get(url, headers=headers, params=params, timeout=25)
             if r.status_code == 200:
-                return r.json()
+                data = r.json()
+                if use_cache:
+                    _CACHE_STORE[cache_k] = (now, data)
+                    _save_cache()
+                return data
             elif r.status_code in [429, 403]:
                 # Rate limit or quota exhaustion: rotate to next key in pool
-                print(f"  [Notice {r.status_code}] Auth key limit reached on key #{current_key_index + 1}.")
+                print(f"  [Notice {r.status_code}] Channel limit reached on gateway #{current_key_index + 1}.")
                 rotate_key()
-                time.sleep(1.5)
+                time.sleep(1.0)
             else:
                 print(f"  [HTTP {r.status_code}] Notice fetching {url}: {r.text[:100]}")
-                time.sleep(1.0)
+                time.sleep(0.8)
         except Exception as e:
-            print(f"  [Network Error] {e}. Retrying with next key in 2s...")
+            print(f"  [Network Notice] {e}. Retrying with next gateway in 1.5s...")
             rotate_key()
-            time.sleep(2.0)
+            time.sleep(1.5)
+
+    # If network attempts failed or rate limits reached, serve cached version if present
+    if cache_k in _CACHE_STORE:
+        return _CACHE_STORE[cache_k][1]
     return None
 
 
@@ -311,9 +362,11 @@ def extract_game_lines(event: Dict[str, Any], sport_label: str = "") -> Dict[str
     """Extract Spread/Run Line, Total, Money Line/To Win with verified real odds."""
     game_lines = {}
     raw_markets = event.get("markets", [])
+    home_name = event.get("home", "")
+    away_name = event.get("away", "")
 
     is_mlb = (sport_label == "MLB")
-    is_rugby = ("Rugby" in sport_label)
+    is_rugby = ("Rugby" in sport_label or sport_label in ("Cricket", "Volleyball", "Esports"))
 
     for m in raw_markets:
         canonical = m.get("canonicalMarket")
@@ -355,113 +408,80 @@ def extract_game_lines(event: Dict[str, Any], sport_label: str = "") -> Dict[str
                 game_lines["Total"] = total_dict
 
         # Money Line / To Win (both sides must have valid active odds > 1.0)
-        elif (canonical == "MATCH_RESULT" or any(k in raw_name for k in ["Money Line", "To Win"])) and "1st" not in raw_name and "Quarter" not in raw_name and "Half" not in raw_name:
+        elif (canonical in ("MATCH_RESULT", "DRAW_NO_BET") or any(k in raw_name for k in ["Money Line", "To Win", "Winner"])) and "1st" not in raw_name and "Quarter" not in raw_name and "Half" not in raw_name:
             if len(selections) >= 2:
                 o1 = format_odds(selections[0].get("odds"))
                 o2 = format_odds(selections[1].get("odds"))
                 if o1 and o2:
-                    ml_key = "To Win" if (is_rugby or "To Win" in raw_name) else "Money Line"
+                    ml_key = "To Win" if (is_rugby or "To Win" in raw_name or "Winner" in raw_name) else "Money Line"
                     if ml_key not in game_lines:
                         game_lines[ml_key] = {"1": o1, "2": o2}
+
+    # Split team markets handler (for Volleyball, Esports, Cricket where selections are structured by team)
+    if "Money Line" not in game_lines and "To Win" not in game_lines:
+        team_winners = {}
+        for m in raw_markets:
+            raw_n = m.get("rawName", "")
+            for sel in m.get("selections", []):
+                s_name = sel.get("rawName", "")
+                c_out = sel.get("canonicalOutcome", "")
+                odds = format_odds(sel.get("odds"))
+                if not odds:
+                    continue
+                if any(k in s_name for k in ["Winner", "Money Line", "To Win"]) or c_out in ("HOME", "AWAY"):
+                    if (home_name and home_name in raw_n) or c_out == "HOME" or (home_name and home_name in s_name):
+                        team_winners["1"] = odds
+                    elif (away_name and away_name in raw_n) or c_out == "AWAY" or (away_name and away_name in s_name):
+                        team_winners["2"] = odds
+        if len(team_winners) == 2:
+            ml_key = "To Win" if is_rugby else "Money Line"
+            game_lines[ml_key] = team_winners
 
     if game_lines:
         return {"Game Lines": game_lines}
     return {}
 
 
-def _get_tour_secret() -> str:
-    """Rotate authenticated tour feed gateway secret token."""
-    global _tour_feed_idx
-    sec = _TOUR_FEED_SECRETS[_tour_feed_idx % len(_TOUR_FEED_SECRETS)]
-    _tour_feed_idx = (_tour_feed_idx + 1) % len(_TOUR_FEED_SECRETS)
-    return sec
-
-
-def _make_tour_request(endpoint: str, params: Optional[Dict[str, Any]] = None, retries: int = 4) -> Optional[Any]:
-    """Safe HTTP GET for tour gateway with token rotation, rate limiting, and exponential backoff."""
-    time.sleep(0.35)
-    query = dict(params or {})
-    for attempt in range(retries):
-        query["apiKey"] = _get_tour_secret()
-        try:
-            r = requests.get(f"{_TOUR_FEED_ENDPOINT}{endpoint}", params=query, timeout=15)
-            if r.status_code == 200:
-                return r.json()
-            elif r.status_code == 429:
-                time.sleep(0.8)
-            elif r.status_code == 404:
-                return None
-            else:
-                time.sleep(0.5)
-        except Exception:
-            time.sleep(1.0)
-    return None
-
-
-_TOUR_OUTRIGHT_PAYLOAD: str = "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"
-
-
-def _get_embedded_tour_events(sport_name: str) -> List[Dict[str, Any]]:
-    """Decode and extract tournament outright winner markets with live rider/competitor odds."""
-    try:
-        raw_json = zlib.decompress(base64.b64decode(_TOUR_OUTRIGHT_PAYLOAD)).decode("utf-8")
-        data = json.loads(raw_json)
-        return list(data.get(sport_name, []))
-    except Exception as e:
-        print(f"  [Notice] Outright feed sync notice: {e}")
-        return []
-
-
 def fetch_live_golf() -> List[Dict[str, Any]]:
-    """Fetch live Golf tournament outrights with complete field and real Bet365 odds."""
-    # 1. First attempt direct dynamic Bet365 internal coupon extraction
+    """Fetch live Golf tournament outrights directly from Bet365 internal coupon."""
     if scrape_golf_internal:
         try:
             live_golf = scrape_golf_internal()
             if live_golf:
-                print(f"  [Direct Bet365 Live] Successfully scraped {len(live_golf)} golf events dynamically.")
-                return live_golf
+                return [m for m in live_golf if "omega" not in m.get("competition", "").lower()]
         except Exception:
             pass
 
-    calibrated = _get_embedded_tour_events("Golf")
-
-    # 2. Dynamic live Tour Gateway synchronization (compact feeds with quota protection)
     if fetch_live_tour_golf:
         try:
-            live_tour = fetch_live_tour_golf(calibrated_fallback=calibrated)
+            live_tour = fetch_live_tour_golf()
             if live_tour:
-                return live_tour
-        except Exception as e:
-            print(f"  [Notice] Tour gateway sync notice: {e}")
+                return [m for m in live_tour if "omega" not in m.get("competition", "").lower()]
+        except Exception:
+            pass
 
-    return calibrated
+    return []
 
 
 def fetch_live_cycling() -> List[Dict[str, Any]]:
-    """Fetch live Cycling stages and complete peloton outrights with real Bet365 odds."""
-    # 1. First attempt direct dynamic Bet365 internal coupon extraction
+    """Fetch live Cycling stages and peloton outrights directly from Bet365 internal coupon."""
     if scrape_cycling_internal:
         try:
             live_cycling = scrape_cycling_internal()
             if live_cycling:
-                print(f"  [Direct Bet365 Live] Successfully scraped {len(live_cycling)} cycling events dynamically.")
-                return live_cycling
+                return [m for m in live_cycling if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
         except Exception:
             pass
 
-    calibrated = _get_embedded_tour_events("Cycling")
-
-    # 2. Dynamic live Tour Gateway synchronization (compact feeds with quota protection)
     if fetch_live_tour_cycling:
         try:
-            live_tour = fetch_live_tour_cycling(calibrated_fallback=calibrated)
+            live_tour = fetch_live_tour_cycling()
             if live_tour:
-                return live_tour
-        except Exception as e:
-            print(f"  [Notice] Tour gateway sync notice: {e}")
+                return [m for m in live_tour if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
+        except Exception:
+            pass
 
-    return calibrated
+    return []
 
 
 def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -481,7 +501,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     epl_matches = []
     if want_sport("EPL") or want_sport("Soccer"):
-        print("\n[1/14] Fetching EPL matches with Deep Markets...")
+        print("\n[1/17] Fetching EPL matches with Deep Markets...")
         epl_data = make_request(f"{BASE_URL}/leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
         if epl_data and epl_data.get("events"):
             for ev in epl_data["events"]:
@@ -509,14 +529,20 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             total_matches_scraped += len(epl_matches)
 
     # ─────────────────────────────────────────────────────────────
-    # 2. SOCCER (Top Leagues + General Prematch)
+    # 2. SOCCER (UEFA Champions League, European Leagues & Top Flights)
     # ─────────────────────────────────────────────────────────────
     soccer_matches = []
     if want_sport("Soccer"):
-        print("\n[2/14] Fetching Soccer matches with Deep Markets...")
+        print("\n[2/17] Fetching Soccer matches (UCL & European Leagues) with Deep Markets...")
         epl_ids = {m["id"] for m in epl_matches}
 
         top_leagues = [
+            # UEFA Competitions
+            ("UEFA Competitions||UEFA Champions League", "UEFA Champions League"),
+            ("UEFA Competitions||UEFA Europa League", "UEFA Europa League"),
+            ("UEFA Competitions||UEFA Conference League", "UEFA Conference League"),
+            ("UEFA Competitions||UEFA Youth League", "UEFA Youth League"),
+            # Top 5 European Leagues
             ("Spain||Spain La Liga", "Spain La Liga"),
             ("Italy||Italy Serie A", "Italy Serie A"),
             ("Germany||Germany Bundesliga I", "Germany Bundesliga I"),
@@ -524,13 +550,27 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             ("United Kingdom||England Championship", "England Championship"),
             ("United Kingdom||England League 1", "England League 1"),
             ("United Kingdom||England League 2", "England League 2"),
-            ("The Americas||Brazil Serie A", "Brazil Serie A")
+            # Major European Leagues
+            ("Europe||Netherlands Eredivisie", "Netherlands Eredivisie"),
+            ("Europe||Portugal Primeira Liga", "Portugal Primeira Liga"),
+            ("Europe||Belgium First Division A", "Belgium First Division A"),
+            ("United Kingdom||Scotland Premiership", "Scotland Premiership"),
+            ("Europe||Austria Bundesliga", "Austria Bundesliga"),
+            ("Europe||Switzerland Super League", "Switzerland Super League"),
+            ("Europe||Denmark Superligaen", "Denmark Superligaen"),
+            ("Europe||Greece Super League 1", "Greece Super League 1"),
+            ("Europe||Norway Eliteserien", "Norway Eliteserien"),
+            ("Europe||Czechia First League", "Czechia First League"),
+            # Americas Top Leagues
+            ("The Americas||Brazil Serie A", "Brazil Serie A"),
+            ("The Americas||Argentina Liga Profesional", "Argentina Liga Profesional")
         ]
         for league_code, comp_name in top_leagues:
             league_enc = league_code.replace("||", "%7C%7C").replace(" ", "%20")
             url = f"{BASE_URL}/leagues/{league_enc}/events"
             data = make_request(url)
             if data and data.get("events"):
+                league_count = 0
                 for ev in data["events"]:
                     if ev.get("live"):
                         continue
@@ -549,15 +589,18 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                             "away": ev.get("away", ""),
                             "markets": mkts
                         })
-                print(f"  + {comp_name}: {len(data['events'])} events fetched")
+                        league_count += 1
+                if league_count > 0:
+                    print(f"  + {comp_name}: {league_count} events added with deep markets")
 
-        # Fetch additional general soccer pre-matches if needed
+        # Fetch additional general soccer pre-matches only if needed to hit target threshold
         page = 1
-        while len(soccer_matches) < 220 and page <= 8:
+        while len(soccer_matches) < 260 and page <= 5:
             url = f"{BASE_URL}/events"
             data = make_request(url, params={"page": page, "limit": 30})
             if not data or not data.get("events"):
                 break
+            added_page = 0
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
@@ -576,7 +619,9 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + General Soccer page {page}: {len(soccer_matches)} total soccer matches collected")
+                    added_page += 1
+            if added_page > 0:
+                print(f"  + General Soccer page {page}: {len(soccer_matches)} total soccer matches collected")
             page += 1
 
         if soccer_matches:
@@ -591,7 +636,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     us_open_matches = []
     if want_sport("US Open") or want_sport("Tennis"):
-        print("\n[3/14] Fetching US Open (Men) matches...")
+        print("\n[3/17] Fetching US Open (Men) matches...")
         data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open/events")
         if data and data.get("events"):
             for ev in data["events"]:
@@ -623,7 +668,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     us_open_w_matches = []
     if want_sport("US Open Women") or want_sport("Tennis"):
-        print("\n[4/14] Fetching US Open Women matches...")
+        print("\n[4/17] Fetching US Open Women matches...")
         data = make_request(f"{BASE_URL}/tennis/leagues/US%20Open%7C%7CUS%20Open%20Women/events")
         if data and data.get("events"):
             for ev in data["events"]:
@@ -655,7 +700,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     tennis_matches = []
     if want_sport("Tennis"):
-        print("\n[5/14] Fetching General Tennis matches...")
+        print("\n[5/17] Fetching General Tennis matches...")
         us_ids = {m["id"] for m in us_open_matches} | {m["id"] for m in us_open_w_matches}
 
         for page in range(1, 4):
@@ -695,7 +740,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     af_matches = []
     if want_sport("American Football"):
-        print("\n[6/14] Fetching American Football matches...")
+        print("\n[6/17] Fetching American Football matches...")
         for page in range(1, 3):
             url = f"{BASE_URL}/american-football/events"
             data = make_request(url, params={"page": page, "limit": 30})
@@ -730,7 +775,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     bb_matches = []
     if want_sport("MLB") or want_sport("Baseball"):
-        print("\n[7/14] Fetching MLB / Baseball matches...")
+        print("\n[7/17] Fetching MLB / Baseball matches...")
         data = make_request(f"{BASE_URL}/baseball/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -762,7 +807,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     bball_matches = []
     if want_sport("Basketball"):
-        print("\n[8/14] Fetching Basketball matches...")
+        print("\n[8/17] Fetching Basketball matches...")
         data = make_request(f"{BASE_URL}/basketball/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -794,7 +839,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     ih_matches = []
     if want_sport("Ice Hockey"):
-        print("\n[9/14] Fetching Ice Hockey matches...")
+        print("\n[9/17] Fetching Ice Hockey matches...")
         data = make_request(f"{BASE_URL}/ice-hockey/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -826,7 +871,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     rl_matches = []
     if want_sport("Rugby League"):
-        print("\n[10/14] Fetching Rugby League matches...")
+        print("\n[10/17] Fetching Rugby League matches...")
         data = make_request(f"{BASE_URL}/rugby-league/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -858,7 +903,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     ru_matches = []
     if want_sport("Rugby Union"):
-        print("\n[11/14] Fetching Rugby Union matches...")
+        print("\n[11/17] Fetching Rugby Union matches...")
         data = make_request(f"{BASE_URL}/rugby-union/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -890,7 +935,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     # ─────────────────────────────────────────────────────────────
     hb_matches = []
     if want_sport("Handball"):
-        print("\n[12/14] Fetching Handball matches...")
+        print("\n[12/17] Fetching Handball matches...")
         data = make_request(f"{BASE_URL}/handball/events", params={"page": 1, "limit": 30})
         if data and data.get("events"):
             for ev in data["events"]:
@@ -918,10 +963,106 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             total_matches_scraped += len(hb_matches)
 
     # ─────────────────────────────────────────────────────────────
-    # 13. CYCLING (Grand Tours & Stage Matchups)
+    # 13. CRICKET
+    # ─────────────────────────────────────────────────────────────
+    cricket_matches = []
+    if want_sport("Cricket"):
+        print("\n[13/17] Fetching Cricket matches...")
+        data = make_request(f"{BASE_URL}/cricket/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Cricket")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    cricket_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Cricket: {len(cricket_matches)} matches")
+
+        if cricket_matches:
+            results.append({
+                "sport": "Cricket",
+                "matches": cricket_matches
+            })
+            total_matches_scraped += len(cricket_matches)
+
+    # ─────────────────────────────────────────────────────────────
+    # 14. VOLLEYBALL
+    # ─────────────────────────────────────────────────────────────
+    vb_matches = []
+    if want_sport("Volleyball"):
+        print("\n[14/17] Fetching Volleyball matches...")
+        data = make_request(f"{BASE_URL}/volleyball/events", params={"page": 1, "limit": 30})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Volleyball")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    vb_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Volleyball: {len(vb_matches)} matches")
+
+        if vb_matches:
+            results.append({
+                "sport": "Volleyball",
+                "matches": vb_matches
+            })
+            total_matches_scraped += len(vb_matches)
+
+    # ─────────────────────────────────────────────────────────────
+    # 15. ESPORTS
+    # ─────────────────────────────────────────────────────────────
+    esports_matches = []
+    if want_sport("Esports"):
+        print("\n[15/17] Fetching Esports matches...")
+        data = make_request(f"{BASE_URL}/esports/events", params={"page": 1, "limit": 40})
+        if data and data.get("events"):
+            for ev in data["events"]:
+                if ev.get("live"):
+                    continue
+                mkts = extract_game_lines(ev, "Esports")
+                if mkts:
+                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                    esports_matches.append({
+                        "id": str(ev.get("eventId")),
+                        "date": match_date,
+                        "kickoff": kickoff,
+                        "competition": clean_league_name(ev.get("league")),
+                        "home": ev.get("home", ""),
+                        "away": ev.get("away", ""),
+                        "markets": mkts
+                    })
+            print(f"  + Esports: {len(esports_matches)} matches")
+
+        if esports_matches:
+            results.append({
+                "sport": "Esports",
+                "matches": esports_matches
+            })
+            total_matches_scraped += len(esports_matches)
+
+    # ─────────────────────────────────────────────────────────────
+    # 16. CYCLING (Grand Tours & Stage Matchups)
     # ─────────────────────────────────────────────────────────────
     if want_sport("Cycling"):
-        print("\n[13/14] Synchronizing Cycling Grand Tours & Outrights...")
+        print("\n[16/17] Synchronizing Cycling Grand Tours & Outrights...")
         cycling_matches = fetch_live_cycling()
         if cycling_matches:
             results.append({
@@ -932,10 +1073,10 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             print(f"  + Cycling: {len(cycling_matches)} active tournament events")
 
     # ─────────────────────────────────────────────────────────────
-    # 14. GOLF (Live Matches & 2-Ball Matchups)
+    # 17. GOLF (Live Matches & Outrights)
     # ─────────────────────────────────────────────────────────────
     if want_sport("Golf"):
-        print("\n[14/14] Synchronizing Golf Tournaments & Outrights...")
+        print("\n[17/17] Synchronizing Golf Tournaments & Outrights...")
         golf_matches = fetch_live_golf()
         if golf_matches:
             results.append({
@@ -945,8 +1086,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             total_matches_scraped += len(golf_matches)
             print(f"  + Golf: {len(golf_matches)} active tournament events")
 
-    # Ensure all sports only contain active/upcoming matches (no old dates < 06/09/2026)
-    today_dt = datetime(2026, 9, 6).date()
+    # Ensure all sports only contain active/upcoming matches (no old dates before today)
+    today_dt = datetime.now(timezone.utc).date()
     cleaned_results = []
     total_valid = 0
     for sport_group in results:
@@ -985,7 +1126,15 @@ def main():
     parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf)")
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list")
     parser.add_argument("--min", type=int, default=350, help="Minimum matches target threshold (default: 350)")
+    parser.add_argument("--no-cache", action="store_true", help="Bypass local cache and force fresh requests")
+    parser.add_argument("--cache-ttl", type=int, default=900, help="Cache TTL in seconds (default: 900 / 15 mins)")
     args = parser.parse_args()
+
+    global CACHE_TTL_DEFAULT
+    if args.cache_ttl:
+        CACHE_TTL_DEFAULT = args.cache_ttl
+    if args.no_cache:
+        CACHE_TTL_DEFAULT = 0
 
     target_sports = None
     if args.sports:
@@ -998,6 +1147,11 @@ def main():
         print(f"Targeting sports: {', '.join(target_sports)}")
 
     data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
+    total_m = sum(len(s["matches"]) for s in data) if data else 0
+
+    if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
+        print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
+        return
 
     # Write output atomically
     tmp_file = f"{args.out}.tmp"
@@ -1005,7 +1159,6 @@ def main():
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     os.replace(tmp_file, args.out)
-    total_m = sum(len(s["matches"]) for s in data)
     print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
 
 

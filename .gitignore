@@ -8,3 +8,7 @@ venv/
 ENV/
 .idea/
 .vscode/
+.cache_bet365.json
+.cache*
+*.tmp
+
