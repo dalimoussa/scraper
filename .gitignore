@@ -11,4 +11,5 @@ ENV/
 .cache_bet365.json
 .cache*
 *.tmp
+.chrome_profile/
 

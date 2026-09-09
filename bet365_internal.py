@@ -613,7 +613,7 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Generalized Multi-Sport CDP Scraper for All Sports
+# Generalized Multi-Sport CDP Scraper for All Sports (Fixtures & Matches)
 # ─────────────────────────────────────────────────────────────────────────────
 
 SPORT_CODE_MAP: Dict[str, Tuple[str, str]] = {
@@ -622,6 +622,7 @@ SPORT_CODE_MAP: Dict[str, Tuple[str, str]] = {
     "football": ("Football", "B1"),
     "tennis": ("Tennis", "B13"),
     "us open": ("Tennis", "B13"),
+    "us open women": ("Tennis", "B13"),
     "basketball": ("Basketball", "B18"),
     "american football": ("American Football", "B12"),
     "nfl": ("American Football", "B12"),
@@ -640,10 +641,164 @@ SPORT_CODE_MAP: Dict[str, Tuple[str, str]] = {
 }
 
 
+def parse_bc_datetime(bc_str: str) -> Tuple[str, str]:
+    """Converts Bet365 BC timestamp 'YYYYMMDDHHMMSS' to (kickoff, date)."""
+    if bc_str and len(bc_str) >= 12:
+        try:
+            dt = datetime.strptime(bc_str[:14], "%Y%m%d%H%M%S")
+            return dt.strftime("%d/%m/%Y %H:%M:%S"), dt.strftime("%d/%m/%Y")
+        except Exception:
+            pass
+    now = datetime.now(timezone.utc)
+    return now.strftime("%d/%m/%Y 18:00:00"), now.strftime("%d/%m/%Y")
+
+
+_CHROME_PROC = None
+
+def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
+    """Verify if Chrome CDP is responsive on cdp_port; if not, auto-launch it."""
+    global _CHROME_PROC
+    import urllib.request
+    try:
+        urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/version", timeout=1.5)
+        return True
+    except Exception:
+        pass
+
+    chrome_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+    ]
+    chrome_bin = next((p for p in chrome_paths if os.path.exists(p)), None)
+    if not chrome_bin:
+        print("  [Notice] Google Chrome not found in standard directories.")
+        return False
+
+    temp_profile = os.path.join(os.environ.get("TEMP", r"C:\Temp"), "bet365_cdp_profile")
+    cmd = [
+        chrome_bin,
+        f"--remote-debugging-port={cdp_port}",
+        f"--user-data-dir={temp_profile}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "https://www.bet365.com"
+    ]
+    try:
+        import subprocess
+        # Launch detached and store reference so it stays active
+        _CHROME_PROC = subprocess.Popen(cmd, creationflags=0x00000008 | 0x00000200, close_fds=True)
+        print(f"  [*] Auto-launched Google Chrome on CDP port {cdp_port}...")
+        for _ in range(12):
+            time.sleep(0.5)
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{cdp_port}/json/version", timeout=1.0)
+                return True
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"  [Notice] Could not auto-launch Chrome: {e}")
+    return False
+
+
+def extract_dom_coupon_matches(page, competition_name: str, sport_name: str) -> List[Dict[str, Any]]:
+    """Extracts matches and 1X2 / 2-way odds directly from Bet365 DOM coupon tables."""
+    try:
+        return page.evaluate("""([comp, sport]) => {
+            const results = [];
+            let currentDate = '';
+            const today = new Date();
+            const year = today.getFullYear();
+            const monthMap = {
+                'janv': '01', 'fevr': '02', 'févr': '02', 'mars': '03', 'avr': '04',
+                'mai': '05', 'juin': '06', 'juil': '07', 'aout': '08', 'août': '08',
+                'sept': '09', 'oct': '10', 'nov': '11', 'dec': '12', 'déc': '12',
+                'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05',
+                'jun': '06', 'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10',
+                'nov': '11', 'dec': '12'
+            };
+
+            const elements = Array.from(document.querySelectorAll('div'));
+            for (const el of elements) {
+                const text = el.innerText ? el.innerText.trim() : '';
+                const dm = text.match(/(\\d{1,2})\\s*([a-zéû]+)/i);
+                if (el.children.length === 0 && dm && (text.length < 20)) {
+                    const day = dm[1].padStart(2, '0');
+                    const mStr = dm[2].toLowerCase().slice(0, 4);
+                    const month = monthMap[mStr] || '09';
+                    currentDate = `${day}/${month}/${year}`;
+                }
+
+                if (el.className && el.className.includes('rrc-9') && el.innerText) {
+                    const lines = el.innerText.split('\\n').map(l => l.trim()).filter(Boolean);
+                    if (lines.length >= 4) {
+                        const timeMatch = lines[0].match(/^(\\d{1,2}:\\d{2})$/);
+                        if (timeMatch) {
+                            const timeStr = timeMatch[1] + ':00';
+                            let idx = 1;
+                            // Skip badge number or markets count indicator if present
+                            if (idx < lines.length && /^\\d+$/.test(lines[idx])) {
+                                idx++;
+                            }
+                            const home = lines[idx++];
+                            const away = lines[idx++];
+                            const odds = lines.slice(idx).filter(l => /^\\d+\\.\\d+$/.test(l) || /^\\d+\\/\\d+$/.test(l));
+
+                            // Strict validation: must be a real fixture between two distinct teams
+                            if (!home || !away || home === away || home === comp) continue;
+                            if (home.toLowerCase().includes('winner') || away.toLowerCase().includes('winner')) continue;
+
+                            const mDate = currentDate || `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${year}`;
+                            const kickoff = `${mDate} ${timeStr}`;
+                            const mId = Math.abs((home + away + kickoff).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)).toString();
+
+                            if (odds.length >= 3) {
+                                results.push({
+                                    id: mId,
+                                    date: mDate,
+                                    kickoff: kickoff,
+                                    competition: comp,
+                                    home: home,
+                                    away: away,
+                                    markets: {
+                                        "Match Result": {
+                                            "1": odds[0],
+                                            "X": odds[1],
+                                            "2": odds[2]
+                                        }
+                                    }
+                                });
+                            } else if (odds.length === 2) {
+                                const mktName = (sport.toLowerCase().includes('soccer') || sport.toLowerCase().includes('football')) ? "Match Result" : "Match Winner";
+                                results.push({
+                                    id: mId,
+                                    date: mDate,
+                                    kickoff: kickoff,
+                                    competition: comp,
+                                    home: home,
+                                    away: away,
+                                    markets: {
+                                        [mktName]: {
+                                            "1": odds[0],
+                                            "2": odds[1]
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            return results;
+        }""", [competition_name, sport_name])
+    except Exception:
+        return []
+
+
 def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
     """
-    Direct Bet365 CDP Scraper for any sport (Soccer, Tennis, Basketball, NFL, MLB, etc.).
-    Uses the exact same Chrome DevTools Protocol interception process as Cycling & Golf.
+    Direct Bet365 CDP Scraper for any sport (Soccer, EPL, Tennis, Basketball, NFL, MLB, etc.).
+    Connects to Chrome on port 9222 (launched via start_chrome_cdp.bat).
+    Extracts authentic MATCHES and FIXTURES (Home vs Away) with decimal odds.
     Zero third-party API keys required.
     """
     s_clean = sport_name.strip().lower()
@@ -652,10 +807,13 @@ def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dic
     if s_clean == "golf":
         return scrape_golf_internal(cdp_port)
 
-    bet365_sport_name, sport_code = SPORT_CODE_MAP.get(s_clean, ("Football", "B1"))
     if not HAS_PLAYWRIGHT:
         return []
 
+    # Ensure Chrome CDP is running
+    ensure_chrome_cdp(cdp_port)
+
+    bet365_sport_name, sport_code = SPORT_CODE_MAP.get(s_clean, ("Football", "B1"))
     matches_out: List[Dict[str, Any]] = []
 
     try:
@@ -671,108 +829,153 @@ def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dic
                 return []
 
             domain = _detect_bet365_domain(context)
+
+            # ─────────────────────────────────────────────────────────
+            # 1. EPL (England Premier League) Matches
+            # ─────────────────────────────────────────────────────────
+            if s_clean == "epl":
+                print(f"  [CDP EPL] Scraping England Premier League matches directly from {domain}...")
+                page.goto(f"{domain}/#/AS/B1/", wait_until="commit")
+                time.sleep(2)
+                comp_tab = page.query_selector('text="Competitions"') or page.query_selector('text="Compétitions"')
+                if comp_tab:
+                    page.evaluate("el => el.click()", comp_tab)
+                    time.sleep(2)
+                epl_el = page.query_selector('text="England Premier League"')
+                if epl_el:
+                    page.evaluate("el => el.click()", epl_el)
+                    time.sleep(2)
+                    m_tab = page.query_selector('text="Matches"') or page.query_selector('text="Matchs"')
+                    if m_tab:
+                        page.evaluate("el => el.click()", m_tab)
+                        time.sleep(3)
+                    epl_found = extract_dom_coupon_matches(page, "FA Barclaycard", "Football")
+                    # Strict validation: match must have both home and away
+                    for m in epl_found:
+                        if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
+                            matches_out.append(m)
+                    if matches_out:
+                        print(f"  + [EPL] Captured {len(matches_out)} real match fixtures via Bet365 CDP")
+                return matches_out
+
+            # ─────────────────────────────────────────────────────────
+            # 2. SOCCER (UEFA Champions League, European Top Leagues)
+            # ─────────────────────────────────────────────────────────
+            if s_clean == "soccer":
+                print(f"  [CDP Soccer] Scraping Soccer matches (UCL & European Leagues) directly from {domain}...")
+                page.goto(f"{domain}/#/AS/B1/", wait_until="commit")
+                time.sleep(2)
+
+                top_leagues = [
+                    ("UEFA Champions League", "UEFA Champions League"),
+                    ("England Championship", "England Championship"),
+                    ("Spain La Liga", "Spain La Liga"),
+                    ("Italy Serie A", "Italy Serie A"),
+                    ("Germany Bundesliga I", "Germany Bundesliga I"),
+                    ("France Ligue 1", "France Ligue 1"),
+                    ("Netherlands Eredivisie", "Netherlands Eredivisie"),
+                    ("USA MLS", "USA MLS")
+                ]
+
+                # First check Popular tab on Soccer home page
+                for league_click_name, comp_title in top_leagues[:4]:
+                    l_el = page.query_selector(f'text="{league_click_name}"')
+                    if l_el:
+                        try:
+                            page.evaluate("el => el.click()", l_el)
+                            time.sleep(2)
+                            m_tab = page.query_selector('text="Matches"') or page.query_selector('text="Matchs"')
+                            if m_tab:
+                                page.evaluate("el => el.click()", m_tab)
+                                time.sleep(2.5)
+                            found = extract_dom_coupon_matches(page, comp_title, "Football")
+                            for m in found:
+                                if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
+                                    if not any(x["id"] == m["id"] for x in matches_out):
+                                        matches_out.append(m)
+                            # Go back to Soccer
+                            page.goto(f"{domain}/#/AS/B1/", wait_until="commit")
+                            time.sleep(1.5)
+                        except Exception:
+                            pass
+
+                # Then check Competitions tab for remaining leagues
+                comp_tab = page.query_selector('text="Competitions"') or page.query_selector('text="Compétitions"')
+                if comp_tab:
+                    try:
+                        page.evaluate("el => el.click()", comp_tab)
+                        time.sleep(2)
+                        for league_click_name, comp_title in top_leagues[4:]:
+                            l_el = page.query_selector(f'text="{league_click_name}"')
+                            if l_el:
+                                page.evaluate("el => el.click()", l_el)
+                                time.sleep(2)
+                                m_tab = page.query_selector('text="Matches"') or page.query_selector('text="Matchs"')
+                                if m_tab:
+                                    page.evaluate("el => el.click()", m_tab)
+                                    time.sleep(2.5)
+                                found = extract_dom_coupon_matches(page, comp_title, "Football")
+                                for m in found:
+                                    if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
+                                        if not any(x["id"] == m["id"] for x in matches_out):
+                                            matches_out.append(m)
+                                page.goto(f"{domain}/#/AS/B1/", wait_until="commit")
+                                time.sleep(1.5)
+                                c_tab2 = page.query_selector('text="Competitions"') or page.query_selector('text="Compétitions"')
+                                if c_tab2:
+                                    page.evaluate("el => el.click()", c_tab2)
+                                    time.sleep(1.5)
+                    except Exception:
+                        pass
+
+                if matches_out:
+                    print(f"  + [Soccer] Captured {len(matches_out)} real match fixtures via Bet365 CDP")
+                return matches_out
+
+            # ─────────────────────────────────────────────────────────
+            # 3. TENNIS / US OPEN / US OPEN WOMEN
+            # ─────────────────────────────────────────────────────────
+            if s_clean in ["tennis", "us open", "us open women"]:
+                print(f"  [CDP {sport_name}] Scraping Tennis matches directly from {domain}...")
+                page.goto(f"{domain}/#/AS/B13/", wait_until="commit")
+                time.sleep(2.5)
+                m_tab = page.query_selector('text="Matches"') or page.query_selector('text="Matchs"')
+                if m_tab:
+                    page.evaluate("el => el.click()", m_tab)
+                    time.sleep(3)
+                found = extract_dom_coupon_matches(page, sport_name, "Tennis")
+                for m in found:
+                    if m.get("home") and m.get("away") and m["home"] != m["away"]:
+                        matches_out.append(m)
+                if matches_out:
+                    print(f"  + [{sport_name}] Captured {len(matches_out)} matches via Bet365 CDP")
+                return matches_out
+
+            # ─────────────────────────────────────────────────────────
+            # 4. OTHER TEAM SPORTS (Basketball, Baseball/MLB, NFL, NHL, Rugby, etc.)
+            # ─────────────────────────────────────────────────────────
             sport_url = f"{domain}/#/AS/{sport_code}/"
-            print(f"  [CDP {sport_name}] Intercepting {sport_name} discovery from {domain} (Sport {sport_code})...")
+            print(f"  [CDP {sport_name}] Scraping {sport_name} matches from {domain} (Sport {sport_code})...")
+            page.goto(sport_url, wait_until="commit")
+            time.sleep(2.5)
 
-            raw_splash = _intercepter_donnees_sport(page, sport_url, bet365_sport_name, sport_code, timeout_s=10)
-            if not raw_splash:
-                return []
+            m_tab = page.query_selector('text="Matches"') or page.query_selector('text="Matchs"') or page.query_selector('text="Lines"') or page.query_selector('text="Games"')
+            if m_tab:
+                page.evaluate("el => el.click()", m_tab)
+                time.sleep(3)
 
-            tournois = parser_splash(raw_splash, domain)
-            if not tournois:
-                return []
-
-            today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 18:00:00")
-
-            for i, tournoi in enumerate(tournois[:5]):
-                t_nom = tournoi.get("nom", sport_name)
-                marches = tournoi.get("marches", [])
-                for j, marche in enumerate(marches[:4]):
-                    m_url = marche.get("url")
-                    if not m_url:
-                        continue
-                    m_nom = marche.get("nom", t_nom)
-                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=8)
-                    if not raw_c:
-                        continue
-
-                    rows = parser_page_universel(raw_c, sport_name, m_nom)
-                    if not rows:
-                        continue
-
-                    grouped_events: Dict[str, Dict[str, Any]] = {}
-                    for r in rows:
-                        ev_name = r.get("Tournoi") or m_nom
-                        p_name = r.get("Participant", "").strip()
-                        c_dec = r.get("Cote_Decimale")
-
-                        if not p_name or not c_dec or float(c_dec) <= 1.0 or p_name in ["Inconnu", "Oui", "Non"]:
-                            continue
-
-                        if ev_name not in grouped_events:
-                            if " v " in ev_name:
-                                h_team, a_team = [x.strip() for x in ev_name.split(" v ", 1)]
-                            elif " vs " in ev_name:
-                                h_team, a_team = [x.strip() for x in ev_name.split(" vs ", 1)]
-                            else:
-                                h_team = ev_name
-                                a_team = ""
-
-                            grouped_events[ev_name] = {
-                                "competition": t_nom,
-                                "home": h_team,
-                                "away": a_team,
-                                "odds": {}
-                            }
-
-                        grouped_events[ev_name]["odds"][p_name] = f"{float(c_dec):.2f}"
-
-                    for ev_name, ev_info in grouped_events.items():
-                        odds_map = ev_info["odds"]
-                        if not odds_map:
-                            continue
-
-                        match_id = str(abs(hash(f"{sport_name}_{ev_name}")) % 100000000)
-                        h_t = ev_info["home"]
-                        a_t = ev_info["away"]
-
-                        if a_t:
-                            if any(k in ["Nul", "Draw", "X"] for k in odds_map):
-                                m_mkts = {
-                                    "Full Time Result": {
-                                        "1": odds_map.get(h_t, list(odds_map.values())[0]),
-                                        "X": odds_map.get("Draw") or odds_map.get("Nul") or "3.50",
-                                        "2": odds_map.get(a_t, list(odds_map.values())[-1])
-                                    }
-                                }
-                            else:
-                                m_mkts = {
-                                    "Match Winner": {
-                                        "1": odds_map.get(h_t, list(odds_map.values())[0]),
-                                        "2": odds_map.get(a_t, list(odds_map.values())[-1])
-                                    }
-                                }
-                        else:
-                            m_mkts = {
-                                "To Win Outright": dict(sorted(odds_map.items(), key=lambda x: float(x[1])))
-                            }
-
-                        matches_out.append({
-                            "id": match_id,
-                            "date": today_str,
-                            "kickoff": kickoff_str,
-                            "competition": ev_info["competition"],
-                            "home": h_t,
-                            "away": a_t,
-                            "markets": m_mkts
-                        })
+            found = extract_dom_coupon_matches(page, sport_name, sport_name)
+            for m in found:
+                if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
+                    matches_out.append(m)
 
             if matches_out:
-                print(f"  + [{sport_name}] Captured {len(matches_out)} live events via Bet365 CDP")
+                print(f"  + [{sport_name}] Captured {len(matches_out)} matches via Bet365 CDP")
 
     except BaseException as e:
         pass
 
     return matches_out
+
+
 
