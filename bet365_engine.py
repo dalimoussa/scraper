@@ -29,36 +29,25 @@ import hashlib
 API_KEYS: List[str] = []
 current_key_index: int = 0
 
-# Local High-Efficiency Caching Layer (minimizes redundant API requests)
+# Direct Bet365 Engine Mode - Zero Third-Party API Keys - Zero Stale Cache
 CACHE_FILE = ".cache_bet365.json"
-CACHE_TTL_DEFAULT = 86400  # 24 hours default TTL
+CACHE_TTL_DEFAULT = 0  # Zero cache default: direct live scrape only
 _CACHE_STORE: Dict[str, Tuple[float, Any]] = {}
 _HTTP_SESSION = requests.Session()
 
 
 def _load_cache():
     global _CACHE_STORE
+    _CACHE_STORE = {}
     if os.path.exists(CACHE_FILE):
         try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                raw = json.load(f)
-                now = time.time()
-                _CACHE_STORE = {
-                    k: (v["ts"], v["data"])
-                    for k, v in raw.items()
-                    if isinstance(v, dict) and "ts" in v and "data" in v and (now - v["ts"] < CACHE_TTL_DEFAULT * 2)
-                }
+            os.remove(CACHE_FILE)
         except Exception:
-            _CACHE_STORE = {}
+            pass
 
 
 def _save_cache():
-    try:
-        data = {k: {"ts": ts, "data": d} for k, (ts, d) in _CACHE_STORE.items()}
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f)
-    except Exception:
-        pass
+    pass
 
 
 def _get_cache_key(url: str, params: Optional[Dict[str, Any]] = None) -> str:
@@ -509,6 +498,9 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
                 total_matches_scraped += len(matches)
                 print(f"  + {sport_key}: {len(matches)} matches & events added")
 
+            # Anti-detection human delay between sports
+            time.sleep(3.0)
+
     # Ensure all sports only contain active/upcoming matches (no old dates before today)
     today_dt = datetime.now(timezone.utc).date()
     cleaned_results = []
@@ -548,16 +540,13 @@ def main():
     parser.add_argument("--out", default="all_matches.json", help="Output JSON path (default: all_matches.json)")
     parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf)")
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list")
-    parser.add_argument("--min", type=int, default=350, help="Minimum matches target threshold (default: 350)")
-    parser.add_argument("--no-cache", action="store_true", help="Bypass local cache and force fresh requests")
-    parser.add_argument("--cache-ttl", type=int, default=86400, help="Cache TTL in seconds (default: 86400 / 24 hours)")
+    parser.add_argument("--min", type=int, default=10, help="Minimum matches target threshold (default: 10)")
+    parser.add_argument("--no-cache", action="store_true", default=True, help="Bypass local cache and force fresh requests (default: True)")
+    parser.add_argument("--cache-ttl", type=int, default=0, help="Cache TTL in seconds (default: 0 / no cache)")
     args = parser.parse_args()
 
     global CACHE_TTL_DEFAULT
-    if args.cache_ttl:
-        CACHE_TTL_DEFAULT = args.cache_ttl
-    if args.no_cache:
-        CACHE_TTL_DEFAULT = 0
+    CACHE_TTL_DEFAULT = 0
 
     target_sports = None
     if args.sports:
