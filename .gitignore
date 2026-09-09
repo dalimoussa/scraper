@@ -14,3 +14,4 @@ ENV/
 .chrome_profile/
 test_*.json
 
+tabs.json
