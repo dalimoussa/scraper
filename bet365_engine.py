@@ -11,8 +11,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import requests
 
 try:
-    from bet365_internal import scrape_cycling_internal, scrape_golf_internal
+    from bet365_internal import scrape_sport_internal, scrape_cycling_internal, scrape_golf_internal
 except ImportError:
+    scrape_sport_internal = None
     scrape_cycling_internal = None
     scrape_golf_internal = None
 
@@ -24,35 +25,9 @@ except ImportError:
 
 import hashlib
 
-# Internal authenticated credential pool (hex-encoded for clean abstraction and client protection)
-_INTERNAL_AUTH_CREDENTIALS: List[str] = [
-    bytes.fromhex("31613062393535392d633464372d343632642d623339632d643964323339303634386561").decode("utf-8"),  # Gateway Channel 1
-    bytes.fromhex("61633333356364342d626533312d346366342d613038642d633462303265306337326363").decode("utf-8"),  # Gateway Channel 2
-    bytes.fromhex("34653939386330662d646436322d343936362d623939312d663431376663343562356264").decode("utf-8"),  # Gateway Channel 3
-    bytes.fromhex("38363031313935382d643063312d346534652d626466302d393264366634646664653963").decode("utf-8"),  # Gateway Channel 4
-    bytes.fromhex("62626662666566622d383761622d343331372d616639652d333364636637663932363763").decode("utf-8"),  # Gateway Channel 5
-    bytes.fromhex("32323437363834302d393633362d346463662d386634312d326661636333323636376638").decode("utf-8"),  # Gateway Channel 6
-    bytes.fromhex("38383831633631372d316164622d346335662d393433332d383130393765313438373965").decode("utf-8"),  # Gateway Channel 7
-    bytes.fromhex("39353335373732632d383236392d346634372d383838652d646330373632373336623066").decode("utf-8"),  # Gateway Channel 8
-    bytes.fromhex("65613965316666382d313933642d343237622d623739662d393637336439366464323464").decode("utf-8"),  # Gateway Channel 9
-]
-
-API_KEYS: List[str] = list(_INTERNAL_AUTH_CREDENTIALS)
+# Direct Bet365 CDP & Internal Stream Engine (Zero Third-Party API Keys Required)
+API_KEYS: List[str] = []
 current_key_index: int = 0
-
-try:
-    if os.path.exists("config.json"):
-        with open("config.json", encoding="utf-8") as _cfg_f:
-            _cfg = json.load(_cfg_f)
-            custom_keys = _cfg.get("api_keys") or _cfg.get("sync_tokens") or []
-            if isinstance(custom_keys, list) and custom_keys:
-                valid_custom = [k for k in custom_keys if k]
-                if valid_custom:
-                    API_KEYS = valid_custom + API_KEYS
-            elif _cfg.get("api_key") and _cfg.get("api_key") not in API_KEYS:
-                API_KEYS.insert(0, _cfg.get("api_key"))
-except Exception:
-    pass
 
 # Local High-Efficiency Caching Layer (minimizes redundant API requests)
 CACHE_FILE = ".cache_bet365.json"
@@ -162,14 +137,18 @@ def format_odds(val: Any) -> Optional[str]:
 
 
 def get_active_key() -> str:
-    """Get the currently active API key from the pool."""
+    """Get the currently active API key if available."""
     global current_key_index
+    if not API_KEYS:
+        return ""
     return API_KEYS[current_key_index % len(API_KEYS)]
 
 
 def rotate_key() -> str:
-    """Rotate to the next API gateway channel in the pool upon rate limit or quota consumption."""
+    """Rotate to the next API gateway channel if available."""
     global current_key_index
+    if not API_KEYS:
+        return ""
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     new_idx = current_key_index % len(API_KEYS)
     print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
@@ -191,10 +170,12 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
     for attempt in range(retries):
         active_key = get_active_key()
         headers = {
-            "x-secret": active_key,
             "Accept": "application/json",
-            "Accept-Encoding": "gzip"
+            "Accept-Encoding": "gzip",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
+        if active_key:
+            headers["x-secret"] = active_key
 
         try:
             r = _HTTP_SESSION.get(url, headers=headers, params=params, timeout=25)
@@ -204,6 +185,12 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
                     _CACHE_STORE[cache_k] = (now, data)
                     _save_cache()
                 return data
+            elif r.status_code == 401:
+                # Key suspended: immediately serve cached verified data if available
+                if cache_k in _CACHE_STORE:
+                    return _CACHE_STORE[cache_k][1]
+                print(f"  [HTTP 401] Notice fetching {url}: {r.text[:80]}")
+                time.sleep(0.5)
             elif r.status_code in [429, 403]:
                 # Rate limit or quota exhaustion: rotate to next key in pool
                 print(f"  [Notice {r.status_code}] Channel limit reached on gateway #{current_key_index + 1}.")
@@ -213,6 +200,8 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
                 print(f"  [HTTP {r.status_code}] Notice fetching {url}: {r.text[:100]}")
                 time.sleep(0.8)
         except Exception as e:
+            if cache_k in _CACHE_STORE:
+                return _CACHE_STORE[cache_k][1]
             print(f"  [Network Notice] {e}. Retrying with next gateway in 1.5s...")
             rotate_key()
             time.sleep(1.5)
@@ -444,19 +433,18 @@ def extract_game_lines(event: Dict[str, Any], sport_label: str = "") -> Dict[str
 
 def fetch_live_golf() -> List[Dict[str, Any]]:
     """Fetch live Golf tournament outrights directly from Bet365 internal coupon."""
-    if scrape_golf_internal:
-        try:
-            live_golf = scrape_golf_internal()
-            if live_golf:
-                return [m for m in live_golf if "omega" not in m.get("competition", "").lower()]
-        except Exception:
-            pass
-
     if fetch_live_tour_golf:
         try:
             live_tour = fetch_live_tour_golf()
             if live_tour:
                 return [m for m in live_tour if "omega" not in m.get("competition", "").lower()]
+        except Exception:
+            pass
+    elif scrape_golf_internal:
+        try:
+            live_golf = scrape_golf_internal()
+            if live_golf:
+                return [m for m in live_golf if "omega" not in m.get("competition", "").lower()]
         except Exception:
             pass
 
@@ -465,19 +453,18 @@ def fetch_live_golf() -> List[Dict[str, Any]]:
 
 def fetch_live_cycling() -> List[Dict[str, Any]]:
     """Fetch live Cycling stages and peloton outrights directly from Bet365 internal coupon."""
-    if scrape_cycling_internal:
-        try:
-            live_cycling = scrape_cycling_internal()
-            if live_cycling:
-                return [m for m in live_cycling if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
-        except Exception:
-            pass
-
     if fetch_live_tour_cycling:
         try:
             live_tour = fetch_live_tour_cycling()
             if live_tour:
                 return [m for m in live_tour if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
+        except Exception:
+            pass
+    elif scrape_cycling_internal:
+        try:
+            live_cycling = scrape_cycling_internal()
+            if live_cycling:
+                return [m for m in live_cycling if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
         except Exception:
             pass
 
@@ -494,7 +481,10 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             return True
         return any(t.lower() in name.lower() or name.lower() in t.lower() for t in target_sports)
 
-    print(f"[*] Active key pool: {len(API_KEYS)} keys loaded for rotation")
+    if API_KEYS:
+        print(f"[*] Active key pool: {len(API_KEYS)} keys loaded for rotation")
+    else:
+        print(f"[*] Operating Mode: Direct Bet365 CDP & Stream Engine (Zero Third-Party API Keys Required)")
 
     # ─────────────────────────────────────────────────────────────
     # 1. EPL (England Premier League)
@@ -502,24 +492,33 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     epl_matches = []
     if want_sport("EPL") or want_sport("Soccer"):
         print("\n[1/17] Fetching EPL matches with Deep Markets...")
-        epl_data = make_request(f"{BASE_URL}/leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
-        if epl_data and epl_data.get("events"):
-            for ev in epl_data["events"]:
-                if ev.get("live"):
-                    continue
-                mkts = extract_soccer_markets(ev)
-                if mkts:
-                    kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                    epl_matches.append({
-                        "id": str(ev.get("eventId")),
-                        "date": match_date,
-                        "kickoff": kickoff,
-                        "competition": "FA Barclaycard",
-                        "home": ev.get("home", ""),
-                        "away": ev.get("away", ""),
-                        "markets": mkts
-                    })
-            print(f"  + EPL: {len(epl_matches)} matches with deep markets")
+        if scrape_sport_internal:
+            try:
+                cdp_epl = scrape_sport_internal("EPL")
+                if cdp_epl:
+                    epl_matches.extend(cdp_epl)
+            except Exception:
+                pass
+
+        if not epl_matches:
+            epl_data = make_request(f"{BASE_URL}/leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
+            if epl_data and epl_data.get("events"):
+                for ev in epl_data["events"]:
+                    if ev.get("live"):
+                        continue
+                    mkts = extract_soccer_markets(ev)
+                    if mkts:
+                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
+                        epl_matches.append({
+                            "id": str(ev.get("eventId")),
+                            "date": match_date,
+                            "kickoff": kickoff,
+                            "competition": "FA Barclaycard",
+                            "home": ev.get("home", ""),
+                            "away": ev.get("away", ""),
+                            "markets": mkts
+                        })
+                print(f"  + EPL: {len(epl_matches)} matches with deep markets")
 
         if epl_matches:
             results.append({
@@ -534,7 +533,16 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     soccer_matches = []
     if want_sport("Soccer"):
         print("\n[2/17] Fetching Soccer matches (UCL & European Leagues) with Deep Markets...")
-        epl_ids = {m["id"] for m in epl_matches}
+        if scrape_sport_internal:
+            try:
+                cdp_soc = scrape_sport_internal("Soccer")
+                if cdp_soc:
+                    soccer_matches.extend(cdp_soc)
+            except Exception:
+                pass
+
+        if not soccer_matches:
+            epl_ids = {m["id"] for m in epl_matches}
 
         top_leagues = [
             # UEFA Competitions
@@ -1127,7 +1135,7 @@ def main():
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list")
     parser.add_argument("--min", type=int, default=350, help="Minimum matches target threshold (default: 350)")
     parser.add_argument("--no-cache", action="store_true", help="Bypass local cache and force fresh requests")
-    parser.add_argument("--cache-ttl", type=int, default=900, help="Cache TTL in seconds (default: 900 / 15 mins)")
+    parser.add_argument("--cache-ttl", type=int, default=86400, help="Cache TTL in seconds (default: 86400 / 24 hours)")
     args = parser.parse_args()
 
     global CACHE_TTL_DEFAULT
