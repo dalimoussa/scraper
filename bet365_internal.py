@@ -653,6 +653,44 @@ def parse_bc_datetime(bc_str: str) -> Tuple[str, str]:
     return now.strftime("%d/%m/%Y 18:00:00"), now.strftime("%d/%m/%Y")
 
 
+import random
+
+
+def _dismiss_cookie_banner(page):
+    """Dismiss cookie banner if present to avoid session blockages and UI obstruction."""
+    try:
+        cookie_btn = (
+            page.query_selector('text="Accepter tous"') or
+            page.query_selector('text="Accept all"') or
+            page.query_selector('text="Accept All"') or
+            page.query_selector('button:has-text("Accepter")') or
+            page.query_selector('button:has-text("Accept")')
+        )
+        if cookie_btn:
+            page.evaluate("el => el.click()", cookie_btn)
+            time.sleep(1.0)
+    except Exception:
+        pass
+
+
+def _human_delay(min_s: float = 2.0, max_s: float = 3.5):
+    """Paced delay between actions to avoid rate limiting and SPA disconnects."""
+    time.sleep(random.uniform(min_s, max_s))
+
+
+def _check_and_recover_page(page, domain: str):
+    """Detect 'Impossible d'afficher ce contenu' or 'Paris fermés' and recover smoothly."""
+    try:
+        txt = page.evaluate("() => document.body.innerText || ''")
+        if "Impossible d'afficher" in txt or "fermes ou indisponibles" in txt or "fermés ou indisponibles" in txt:
+            _dismiss_cookie_banner(page)
+            # Click root or go back to main sports
+            page.goto(f"{domain}/#/AS/B1/", wait_until="commit")
+            time.sleep(2.5)
+    except Exception:
+        pass
+
+
 _CHROME_PROC = None
 
 def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
@@ -829,6 +867,9 @@ def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dic
                 return []
 
             domain = _detect_bet365_domain(context)
+            _dismiss_cookie_banner(page)
+            _check_and_recover_page(page, domain)
+            _human_delay(1.5, 2.5)
 
             # ─────────────────────────────────────────────────────────
             # 1. EPL (England Premier League) Matches

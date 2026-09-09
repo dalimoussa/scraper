@@ -408,16 +408,20 @@ def fetch_live_golf() -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # Fallback to verified Bet365 golf matches in all_matches.json
-    try:
-        if os.path.exists("all_matches.json"):
-            with open("all_matches.json", "r", encoding="utf-8") as f:
-                old_data = json.load(f)
-            for s in old_data:
-                if s.get("sport") == "Golf" and s.get("matches"):
-                    return s["matches"]
-    except Exception:
-        pass
+    # Fallback to verified Bet365 golf matches in tour_baseline.json or all_matches.json
+    for fpath in ["tour_baseline.json", "all_matches.json"]:
+        try:
+            if os.path.exists(fpath):
+                with open(fpath, "r", encoding="utf-8") as f:
+                    b_data = json.load(f)
+                if isinstance(b_data, dict) and b_data.get("Golf"):
+                    return b_data["Golf"]
+                elif isinstance(b_data, list):
+                    for s in b_data:
+                        if s.get("sport") == "Golf" and s.get("matches"):
+                            return s["matches"]
+        except Exception:
+            pass
 
     return []
 
@@ -439,16 +443,20 @@ def fetch_live_cycling() -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # Fallback to verified Bet365 cycling matches in all_matches.json
-    try:
-        if os.path.exists("all_matches.json"):
-            with open("all_matches.json", "r", encoding="utf-8") as f:
-                old_data = json.load(f)
-            for s in old_data:
-                if s.get("sport") == "Cycling" and s.get("matches"):
-                    return s["matches"]
-    except Exception:
-        pass
+    # Fallback to verified Bet365 cycling matches in tour_baseline.json or all_matches.json
+    for fpath in ["tour_baseline.json", "all_matches.json"]:
+        try:
+            if os.path.exists(fpath):
+                with open(fpath, "r", encoding="utf-8") as f:
+                    b_data = json.load(f)
+                if isinstance(b_data, dict) and b_data.get("Cycling"):
+                    return b_data["Cycling"]
+                elif isinstance(b_data, list):
+                    for s in b_data:
+                        if s.get("sport") == "Cycling" and s.get("matches"):
+                            return s["matches"]
+        except Exception:
+            pass
 
     return []
 
@@ -1269,6 +1277,31 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     return results
 
 
+LOCK_FILE = ".scrape.lock"
+
+def _acquire_lock() -> bool:
+    if os.path.exists(LOCK_FILE):
+        try:
+            mtime = os.path.getmtime(LOCK_FILE)
+            if time.time() - mtime < 300:
+                return False
+        except Exception:
+            pass
+    try:
+        with open(LOCK_FILE, "w") as f:
+            f.write(str(os.getpid()))
+        return True
+    except Exception:
+        return True
+
+def _release_lock():
+    try:
+        if os.path.exists(LOCK_FILE):
+            os.remove(LOCK_FILE)
+    except Exception:
+        pass
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Bet365 Multi-Sport Scraper")
@@ -1286,30 +1319,37 @@ def main():
     if args.no_cache:
         CACHE_TTL_DEFAULT = 0
 
-    target_sports = None
-    if args.sports:
-        target_sports = [s.strip() for s in args.sports.split(",") if s.strip()]
-    elif args.sport:
-        target_sports = [args.sport.strip()]
-
-    print(f"Starting Bet365 Engine -> {args.out}")
-    if target_sports:
-        print(f"Targeting sports: {', '.join(target_sports)}")
-
-    data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
-    total_m = sum(len(s["matches"]) for s in data) if data else 0
-
-    if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
-        print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
+    if not _acquire_lock():
+        print("\n[Notice] Another scrape instance is already active on port 9222. Please wait for it to finish.")
         return
 
-    # Write output atomically
-    tmp_file = f"{args.out}.tmp"
-    with open(tmp_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        target_sports = None
+        if args.sports:
+            target_sports = [s.strip() for s in args.sports.split(",") if s.strip()]
+        elif args.sport:
+            target_sports = [args.sport.strip()]
 
-    os.replace(tmp_file, args.out)
-    print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
+        print(f"Starting Bet365 Engine -> {args.out}")
+        if target_sports:
+            print(f"Targeting sports: {', '.join(target_sports)}")
+
+        data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
+        total_m = sum(len(s["matches"]) for s in data) if data else 0
+
+        if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
+            print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
+            return
+
+        # Write output atomically
+        tmp_file = f"{args.out}.tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        os.replace(tmp_file, args.out)
+        print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
+    finally:
+        _release_lock()
 
 
 if __name__ == "__main__":
