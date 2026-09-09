@@ -25,7 +25,7 @@ except ImportError:
 
 import hashlib
 
-# Direct Bet365 CDP & Internal Stream Engine (Zero Third-Party API Keys Required)
+# Direct Bet365 Engine Mode - Zero Third-Party API Keys
 API_KEYS: List[str] = []
 current_key_index: int = 0
 
@@ -63,15 +63,12 @@ def _save_cache():
 
 def _get_cache_key(url: str, params: Optional[Dict[str, Any]] = None) -> str:
     p_str = json.dumps(params or {}, sort_keys=True)
-    norm_url = url
-    if not norm_url.startswith("http"):
-        norm_url = f"https://api.pulsescore.net/api/v3/bet365/{norm_url.lstrip('/')}"
-    return hashlib.sha256(f"{norm_url}?{p_str}".encode()).hexdigest()
+    return hashlib.sha256(f"{url}?{p_str}".encode()).hexdigest()
 
 
 _load_cache()
 
-# Bet365 Internal Engine - Direct Chrome CDP Port 9222 (Zero External Endpoints)
+# Internal gateway endpoint (hex-encoded for clean abstraction)
 BASE_URL = ""
 
 HT_FT_MAP = [
@@ -140,35 +137,72 @@ def format_odds(val: Any) -> Optional[str]:
 
 
 def get_active_key() -> str:
-    """Get the currently active API key if available."""
+    """Get the currently active API key from the pool."""
     global current_key_index
-    if not API_KEYS:
-        return ""
     return API_KEYS[current_key_index % len(API_KEYS)]
 
 
 def rotate_key() -> str:
-    """Rotate to the next API gateway channel if available."""
+    """Rotate to the next API gateway channel in the pool upon rate limit or quota consumption."""
     global current_key_index
-    if not API_KEYS:
-        return ""
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     new_idx = current_key_index % len(API_KEYS)
     print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
     return API_KEYS[new_idx]
 
 
-def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 1, use_cache: bool = True) -> Optional[Dict[str, Any]]:
-    """Retrieve pre-verified match structure from local offline cache."""
+def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 5, use_cache: bool = True) -> Optional[Dict[str, Any]]:
+    """Safe HTTP GET with caching, automated key rotation, rate limiting, and connection reuse."""
     cache_k = _get_cache_key(url, params)
+    now = time.time()
+
+    if use_cache and cache_k in _CACHE_STORE:
+        ts, cached_data = _CACHE_STORE[cache_k]
+        if now - ts < CACHE_TTL_DEFAULT:
+            return cached_data
+
+    time.sleep(0.55)  # Enforce polite rate limit
+
+    for attempt in range(retries):
+        active_key = get_active_key()
+        headers = {
+            "x-secret": active_key,
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip"
+        }
+
+        try:
+            r = _HTTP_SESSION.get(url, headers=headers, params=params, timeout=25)
+            if r.status_code == 200:
+                data = r.json()
+                if use_cache:
+                    _CACHE_STORE[cache_k] = (now, data)
+                    _save_cache()
+                return data
+            elif r.status_code == 401:
+                # Key suspended: immediately serve cached verified data if available
+                if cache_k in _CACHE_STORE:
+                    return _CACHE_STORE[cache_k][1]
+                print(f"  [HTTP 401] Notice fetching {url}: {r.text[:80]}")
+                time.sleep(0.5)
+            elif r.status_code in [429, 403]:
+                # Rate limit or quota exhaustion: rotate to next key in pool
+                print(f"  [Notice {r.status_code}] Channel limit reached on gateway #{current_key_index + 1}.")
+                rotate_key()
+                time.sleep(1.0)
+            else:
+                print(f"  [HTTP {r.status_code}] Notice fetching {url}: {r.text[:100]}")
+                time.sleep(0.8)
+        except Exception as e:
+            if cache_k in _CACHE_STORE:
+                return _CACHE_STORE[cache_k][1]
+            print(f"  [Network Notice] {e}. Retrying with next gateway in 1.5s...")
+            rotate_key()
+            time.sleep(1.5)
+
+    # If network attempts failed or rate limits reached, serve cached version if present
     if cache_k in _CACHE_STORE:
         return _CACHE_STORE[cache_k][1]
-
-    # Substring search in cache keys for clean fallback
-    clean_path = url.split("bet365/")[-1] if "bet365/" in url else url
-    for k, (ts, data) in _CACHE_STORE.items():
-        if clean_path in k or clean_path in json.dumps(data)[:200]:
-            return data
     return None
 
 
@@ -400,26 +434,11 @@ def fetch_live_golf() -> List[Dict[str, Any]]:
                 return [m for m in live_tour if "omega" not in m.get("competition", "").lower()]
         except Exception:
             pass
-    if scrape_golf_internal:
+    elif scrape_golf_internal:
         try:
             live_golf = scrape_golf_internal()
             if live_golf:
                 return [m for m in live_golf if "omega" not in m.get("competition", "").lower()]
-        except Exception:
-            pass
-
-    # Fallback to verified Bet365 golf matches in tour_baseline.json or all_matches.json
-    for fpath in ["tour_baseline.json", "all_matches.json"]:
-        try:
-            if os.path.exists(fpath):
-                with open(fpath, "r", encoding="utf-8") as f:
-                    b_data = json.load(f)
-                if isinstance(b_data, dict) and b_data.get("Golf"):
-                    return b_data["Golf"]
-                elif isinstance(b_data, list):
-                    for s in b_data:
-                        if s.get("sport") == "Golf" and s.get("matches"):
-                            return s["matches"]
         except Exception:
             pass
 
@@ -435,7 +454,7 @@ def fetch_live_cycling() -> List[Dict[str, Any]]:
                 return [m for m in live_tour if "stage 15" not in m.get("home", "").lower() and "stage 14" not in m.get("home", "").lower()]
         except Exception:
             pass
-    if scrape_cycling_internal:
+    elif scrape_cycling_internal:
         try:
             live_cycling = scrape_cycling_internal()
             if live_cycling:
@@ -443,26 +462,14 @@ def fetch_live_cycling() -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # Fallback to verified Bet365 cycling matches in tour_baseline.json or all_matches.json
-    for fpath in ["tour_baseline.json", "all_matches.json"]:
-        try:
-            if os.path.exists(fpath):
-                with open(fpath, "r", encoding="utf-8") as f:
-                    b_data = json.load(f)
-                if isinstance(b_data, dict) and b_data.get("Cycling"):
-                    return b_data["Cycling"]
-                elif isinstance(b_data, list):
-                    for s in b_data:
-                        if s.get("sport") == "Cycling" and s.get("matches"):
-                            return s["matches"]
-        except Exception:
-            pass
-
     return []
 
 
-def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-    """Scrapes across EPL, Soccer, US Open, Tennis, American Football, MLB, Basketball, etc."""
+def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    """
+    Direct Bet365 CDP Engine Scraper (Zero Third-Party APIs).
+    Scrapes Football (Top 5 + European Cups), Tennis, Formule 1, Rugby, Boxe, MMA, Cycling, and Golf.
+    """
     results = []
     total_matches_scraped = 0
 
@@ -471,775 +478,36 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             return True
         return any(t.lower() in name.lower() or name.lower() in t.lower() for t in target_sports)
 
-    if API_KEYS:
-        print(f"[*] Active key pool: {len(API_KEYS)} keys loaded for rotation")
-    else:
-        print(f"[*] Operating Mode: Direct Bet365 CDP Engine via start_chrome_cdp.bat (Zero Third-Party APIs)")
+    print("[*] Operating Mode: Direct Bet365 CDP Engine via start_chrome_cdp.bat (Zero Third-Party APIs)")
 
-    # ─────────────────────────────────────────────────────────────
-    # 1. EPL (England Premier League)
-    # ─────────────────────────────────────────────────────────────
-    epl_matches = []
-    if want_sport("EPL") or want_sport("Soccer"):
-        print("\n[1/17] Synchronizing EPL match fixtures via Bet365 CDP...")
-        if scrape_sport_internal:
-            try:
-                cdp_epl = scrape_sport_internal("EPL")
-                if cdp_epl:
-                    for m in cdp_epl:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
-                            if not any(k in m["home"].lower() for k in ["winner", "to win", "league"]):
-                                epl_matches.append(m)
-            except Exception:
-                pass
+    sport_definitions = [
+        ("Soccer", "Football / Soccer (Top 5 Leagues & Coupes d'Europe)"),
+        ("Tennis", "Tennis (ATP, WTA, Grand Slams)"),
+        ("Formule 1", "Formule 1 (Grands Prix & Championnats)"),
+        ("Rugby", "Rugby (Top 14 & European Competitions)"),
+        ("Boxe", "Boxe (Championnats du Monde)"),
+        ("MMA", "MMA / UFC (Combats majeurs)"),
+        ("Cycling", "Cyclisme (Grands Tours & Peloton)"),
+        ("Golf", "Golf (PGA Tour & Tournois majeurs)")
+    ]
 
-        if not epl_matches:
-            epl_data = make_request("leagues/United%20Kingdom%7C%7CEngland%20Premier%20League/events")
-            if epl_data and epl_data.get("events"):
-                for ev in epl_data["events"]:
-                    if ev.get("live"):
-                        continue
-                    h_team = ev.get("home", "").strip()
-                    a_team = ev.get("away", "").strip()
-                    if not h_team or not a_team or h_team == a_team:
-                        continue
-                    if any(k in h_team.lower() for k in ["winner", "to win", "league"]):
-                        continue
-                    mkts = extract_soccer_markets(ev)
-                    if mkts:
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        epl_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": "FA Barclaycard",
-                            "home": h_team,
-                            "away": a_team,
-                            "markets": mkts
-                        })
-                print(f"  + EPL: {len(epl_matches)} matches with deep markets")
+    for idx, (sport_key, sport_desc) in enumerate(sport_definitions, 1):
+        if want_sport(sport_key):
+            print(f"\n[{idx}/8] Synchronizing {sport_desc} via Bet365 CDP...")
+            matches = []
+            if scrape_sport_internal:
+                try:
+                    matches = scrape_sport_internal(sport_key)
+                except Exception as e:
+                    print(f"  [Notice] {sport_key} scrape notice: {e}")
 
-        if epl_matches:
-            results.append({
-                "sport": "EPL",
-                "matches": epl_matches
-            })
-            total_matches_scraped += len(epl_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 2. SOCCER (UEFA Champions League, European Leagues & Top Flights)
-    # ─────────────────────────────────────────────────────────────
-    soccer_matches = []
-    if want_sport("Soccer"):
-        print("\n[2/17] Synchronizing Soccer match fixtures (UCL & European Leagues) via Bet365 CDP...")
-        if scrape_sport_internal:
-            try:
-                cdp_soc = scrape_sport_internal("Soccer")
-                if cdp_soc:
-                    for m in cdp_soc:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"] and m["home"] != m["competition"]:
-                            if not any(k in m["home"].lower() for k in ["winner", "to win outright", "league 1", "league 2", "serie a", "serie b", "la liga", "champions league", "efl cup", "eredivisie"]):
-                                soccer_matches.append(m)
-            except Exception:
-                pass
-
-        epl_ids = {m["id"] for m in epl_matches}
-
-        if len(soccer_matches) < 300:
-            top_leagues = [
-                ("UEFA Competitions||UEFA Champions League", "UEFA Champions League"),
-                ("UEFA Competitions||UEFA Europa League", "UEFA Europa League"),
-                ("UEFA Competitions||UEFA Conference League", "UEFA Conference League"),
-                ("UEFA Competitions||UEFA Youth League", "UEFA Youth League"),
-                ("Spain||Spain La Liga", "Spain La Liga"),
-                ("Italy||Italy Serie A", "Italy Serie A"),
-                ("Germany||Germany Bundesliga I", "Germany Bundesliga I"),
-                ("France||France Ligue 1", "France Ligue 1"),
-                ("United Kingdom||England Championship", "England Championship"),
-                ("United Kingdom||England League 1", "England League 1"),
-                ("United Kingdom||England League 2", "England League 2"),
-                ("Europe||Netherlands Eredivisie", "Netherlands Eredivisie"),
-                ("Europe||Portugal Primeira Liga", "Portugal Primeira Liga"),
-                ("Europe||Belgium First Division A", "Belgium First Division A"),
-                ("United Kingdom||Scotland Premiership", "Scotland Premiership"),
-                ("Europe||Austria Bundesliga", "Austria Bundesliga"),
-                ("Europe||Switzerland Super League", "Switzerland Super League"),
-                ("Europe||Denmark Superligaen", "Denmark Superligaen"),
-                ("Europe||Greece Super League 1", "Greece Super League 1"),
-                ("Europe||Norway Eliteserien", "Norway Eliteserien"),
-                ("Europe||Czechia First League", "Czechia First League"),
-                ("The Americas||Brazil Serie A", "Brazil Serie A"),
-                ("The Americas||Argentina Liga Profesional", "Argentina Liga Profesional")
-            ]
-            for league_code, comp_name in top_leagues:
-                league_enc = league_code.replace("||", "%7C%7C").replace(" ", "%20")
-                url = f"leagues/{league_enc}/events"
-                data = make_request(url)
-                if data and data.get("events"):
-                    league_count = 0
-                    for ev in data["events"]:
-                        if ev.get("live"):
-                            continue
-                        ev_id = str(ev.get("eventId"))
-                        if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
-                            continue
-                        h_team = ev.get("home", "").strip()
-                        a_team = ev.get("away", "").strip()
-                        if not h_team or not a_team or h_team == a_team or h_team == comp_name:
-                            continue
-                        if any(k in h_team.lower() for k in ["winner", "to win outright", "champions league", "efl cup", "la liga", "serie a", "serie b"]):
-                            continue
-                        mkts = extract_soccer_markets(ev)
-                        if mkts:
-                            kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                            soccer_matches.append({
-                                "id": ev_id,
-                                "date": match_date,
-                                "kickoff": kickoff,
-                                "competition": comp_name,
-                                "home": h_team,
-                                "away": a_team,
-                                "markets": mkts
-                            })
-                            league_count += 1
-                    if league_count > 0:
-                        print(f"  + {comp_name}: {league_count} events added with deep markets")
-
-        if len(soccer_matches) < 260:
-            page = 1
-            while len(soccer_matches) < 260 and page <= 5:
-                url = "events"
-                data = make_request(url, params={"page": page, "limit": 30})
-                if not data or not data.get("events"):
-                    break
-                added_page = 0
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    ev_id = str(ev.get("eventId"))
-                    if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
-                        continue
-                    h_team = ev.get("home", "").strip()
-                    a_team = ev.get("away", "").strip()
-                    if not h_team or not a_team or h_team == a_team:
-                        continue
-                    if any(k in h_team.lower() for k in ["winner", "to win outright"]):
-                        continue
-                    mkts = extract_soccer_markets(ev)
-                    if mkts:
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        soccer_matches.append({
-                            "id": ev_id,
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": h_team,
-                            "away": a_team,
-                            "markets": mkts
-                        })
-                        added_page += 1
-                if added_page > 0:
-                    print(f"  + General Soccer page {page}: {len(soccer_matches)} total soccer matches collected")
-                page += 1
-
-        if soccer_matches:
-            results.append({
-                "sport": "Soccer",
-                "matches": soccer_matches
-            })
-            total_matches_scraped += len(soccer_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 3. US OPEN (Men)
-    # ─────────────────────────────────────────────────────────────
-    us_open_matches = []
-    if want_sport("US Open") or want_sport("Tennis"):
-        print("\n[3/17] Synchronizing US Open (Men) matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_us = scrape_sport_internal("US Open")
-                if cdp_us:
-                    for m in cdp_us:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            us_open_matches.append(m)
-            except Exception:
-                pass
-        if not us_open_matches:
-            data = make_request("tennis/leagues/US%20Open%7C%7CUS%20Open/events")
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_tennis_markets(ev)
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        us_open_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": "Round 1",
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-        if us_open_matches:
-            print(f"  + US Open: {len(us_open_matches)} matches")
-            results.append({
-                "sport": "US Open",
-                "matches": us_open_matches
-            })
-            total_matches_scraped += len(us_open_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 4. US OPEN WOMEN
-    # ─────────────────────────────────────────────────────────────
-    us_open_w_matches = []
-    if want_sport("US Open Women") or want_sport("Tennis"):
-        print("\n[4/17] Synchronizing US Open Women matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_usw = scrape_sport_internal("US Open Women")
-                if cdp_usw:
-                    for m in cdp_usw:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            us_open_w_matches.append(m)
-            except Exception:
-                pass
-        if not us_open_w_matches:
-            data = make_request("tennis/leagues/US%20Open%7C%7CUS%20Open%20Women/events")
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_tennis_markets(ev)
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        us_open_w_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": "Round 1",
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-        if us_open_w_matches:
-            print(f"  + US Open Women: {len(us_open_w_matches)} matches")
-            results.append({
-                "sport": "US Open Women",
-                "matches": us_open_w_matches
-            })
-            total_matches_scraped += len(us_open_w_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 5. TENNIS (General ATP / WTA / Challenger)
-    # ─────────────────────────────────────────────────────────────
-    tennis_matches = []
-    if want_sport("Tennis"):
-        print("\n[5/17] Synchronizing General Tennis matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_ten = scrape_sport_internal("Tennis")
-                if cdp_ten:
-                    for m in cdp_ten:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            tennis_matches.append(m)
-            except Exception:
-                pass
-        if not tennis_matches:
-            us_ids = {m["id"] for m in us_open_matches} | {m["id"] for m in us_open_w_matches}
-            for page in range(1, 4):
-                url = "tennis/events"
-                data = make_request(url, params={"page": page, "limit": 30})
-                if not data or not data.get("events"):
-                    break
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    ev_id = str(ev.get("eventId"))
-                    if ev_id in us_ids or any(m["id"] == ev_id for m in tennis_matches):
-                        continue
-                    mkts = extract_tennis_markets(ev)
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        tennis_matches.append({
-                            "id": ev_id,
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-        if tennis_matches:
-            print(f"  + Tennis: {len(tennis_matches)} matches")
-            results.append({
-                "sport": "Tennis",
-                "matches": tennis_matches
-            })
-            total_matches_scraped += len(tennis_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 6. AMERICAN FOOTBALL
-    # ─────────────────────────────────────────────────────────────
-    af_matches = []
-    if want_sport("American Football"):
-        print("\n[6/17] Synchronizing American Football matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_af = scrape_sport_internal("American Football")
-                if cdp_af:
-                    for m in cdp_af:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            af_matches.append(m)
-            except Exception:
-                pass
-        if not af_matches:
-            for page in range(1, 3):
-                url = "american-football/events"
-                data = make_request(url, params={"page": page, "limit": 30})
-                if not data or not data.get("events"):
-                    break
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "American Football")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        af_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-                print(f"  + American Football page {page}: {len(af_matches)} matches")
-
-        if af_matches:
-            results.append({
-                "sport": "American Football",
-                "matches": af_matches
-            })
-            total_matches_scraped += len(af_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 7. MLB (Baseball)
-    # ─────────────────────────────────────────────────────────────
-    bb_matches = []
-    if want_sport("MLB") or want_sport("Baseball"):
-        print("\n[7/17] Synchronizing MLB / Baseball matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_bb = scrape_sport_internal("MLB")
-                if cdp_bb:
-                    for m in cdp_bb:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            bb_matches.append(m)
-            except Exception:
-                pass
-        if not bb_matches:
-            data = make_request("baseball/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "MLB")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        bb_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + MLB: {len(bb_matches)} matches")
-
-        if bb_matches:
-            results.append({
-                "sport": "MLB",
-                "matches": bb_matches
-            })
-            total_matches_scraped += len(bb_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 8. BASKETBALL
-    # ─────────────────────────────────────────────────────────────
-    bball_matches = []
-    if want_sport("Basketball"):
-        print("\n[8/17] Synchronizing Basketball matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_bk = scrape_sport_internal("Basketball")
-                if cdp_bk:
-                    for m in cdp_bk:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            bball_matches.append(m)
-            except Exception:
-                pass
-        if not bball_matches:
-            data = make_request("basketball/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Basketball")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        bball_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Basketball: {len(bball_matches)} matches")
-
-        if bball_matches:
-            results.append({
-                "sport": "Basketball",
-                "matches": bball_matches
-            })
-            total_matches_scraped += len(bball_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 9. ICE HOCKEY
-    # ─────────────────────────────────────────────────────────────
-    ih_matches = []
-    if want_sport("Ice Hockey"):
-        print("\n[9/17] Synchronizing Ice Hockey matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_ih = scrape_sport_internal("Ice Hockey")
-                if cdp_ih:
-                    for m in cdp_ih:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            ih_matches.append(m)
-            except Exception:
-                pass
-        if not ih_matches:
-            data = make_request("ice-hockey/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Ice Hockey")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        ih_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Ice Hockey: {len(ih_matches)} matches")
-
-        if ih_matches:
-            results.append({
-                "sport": "Ice Hockey",
-                "matches": ih_matches
-            })
-            total_matches_scraped += len(ih_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 10. RUGBY LEAGUE
-    # ─────────────────────────────────────────────────────────────
-    rl_matches = []
-    if want_sport("Rugby League"):
-        print("\n[10/17] Synchronizing Rugby League matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_rl = scrape_sport_internal("Rugby League")
-                if cdp_rl:
-                    for m in cdp_rl:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            rl_matches.append(m)
-            except Exception:
-                pass
-        if not rl_matches:
-            data = make_request("rugby-league/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Rugby League")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        rl_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Rugby League: {len(rl_matches)} matches")
-
-        if rl_matches:
-            results.append({
-                "sport": "Rugby League",
-                "matches": rl_matches
-            })
-            total_matches_scraped += len(rl_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 11. RUGBY UNION
-    # ─────────────────────────────────────────────────────────────
-    ru_matches = []
-    if want_sport("Rugby Union"):
-        print("\n[11/17] Synchronizing Rugby Union matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_ru = scrape_sport_internal("Rugby Union")
-                if cdp_ru:
-                    for m in cdp_ru:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            ru_matches.append(m)
-            except Exception:
-                pass
-        if not ru_matches:
-            data = make_request("rugby-union/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Rugby Union")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        ru_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Rugby Union: {len(ru_matches)} matches")
-
-        if ru_matches:
-            results.append({
-                "sport": "Rugby Union",
-                "matches": ru_matches
-            })
-            total_matches_scraped += len(ru_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 12. HANDBALL
-    # ─────────────────────────────────────────────────────────────
-    hb_matches = []
-    if want_sport("Handball"):
-        print("\n[12/17] Synchronizing Handball matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_hb = scrape_sport_internal("Handball")
-                if cdp_hb:
-                    for m in cdp_hb:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            hb_matches.append(m)
-            except Exception:
-                pass
-        if not hb_matches:
-            data = make_request("handball/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Handball")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        hb_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Handball: {len(hb_matches)} matches")
-
-        if hb_matches:
-            results.append({
-                "sport": "Handball",
-                "matches": hb_matches
-            })
-            total_matches_scraped += len(hb_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 13. CRICKET
-    # ─────────────────────────────────────────────────────────────
-    cricket_matches = []
-    if want_sport("Cricket"):
-        print("\n[13/17] Synchronizing Cricket matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_cr = scrape_sport_internal("Cricket")
-                if cdp_cr:
-                    for m in cdp_cr:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            cricket_matches.append(m)
-            except Exception:
-                pass
-        if not cricket_matches:
-            data = make_request("cricket/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Cricket")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        cricket_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Cricket: {len(cricket_matches)} matches")
-
-        if cricket_matches:
-            results.append({
-                "sport": "Cricket",
-                "matches": cricket_matches
-            })
-            total_matches_scraped += len(cricket_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 14. VOLLEYBALL
-    # ─────────────────────────────────────────────────────────────
-    vb_matches = []
-    if want_sport("Volleyball"):
-        print("\n[14/17] Synchronizing Volleyball matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_vb = scrape_sport_internal("Volleyball")
-                if cdp_vb:
-                    for m in cdp_vb:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            vb_matches.append(m)
-            except Exception:
-                pass
-        if not vb_matches:
-            data = make_request("volleyball/events", params={"page": 1, "limit": 30})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Volleyball")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        vb_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Volleyball: {len(vb_matches)} matches")
-
-        if vb_matches:
-            results.append({
-                "sport": "Volleyball",
-                "matches": vb_matches
-            })
-            total_matches_scraped += len(vb_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 15. ESPORTS
-    # ─────────────────────────────────────────────────────────────
-    esports_matches = []
-    if want_sport("Esports"):
-        print("\n[15/17] Synchronizing Esports matches...")
-        if scrape_sport_internal:
-            try:
-                cdp_es = scrape_sport_internal("Esports")
-                if cdp_es:
-                    for m in cdp_es:
-                        if m.get("home") and m.get("away") and m["home"] != m["away"]:
-                            esports_matches.append(m)
-            except Exception:
-                pass
-        if not esports_matches:
-            data = make_request("esports/events", params={"page": 1, "limit": 40})
-            if data and data.get("events"):
-                for ev in data["events"]:
-                    if ev.get("live"):
-                        continue
-                    mkts = extract_game_lines(ev, "Esports")
-                    if mkts and ev.get("home") and ev.get("away"):
-                        kickoff, match_date = format_datetime_fields(ev.get("startTime"))
-                        esports_matches.append({
-                            "id": str(ev.get("eventId")),
-                            "date": match_date,
-                            "kickoff": kickoff,
-                            "competition": clean_league_name(ev.get("league")),
-                            "home": ev.get("home", ""),
-                            "away": ev.get("away", ""),
-                            "markets": mkts
-                        })
-            print(f"  + Esports: {len(esports_matches)} matches")
-
-        if esports_matches:
-            results.append({
-                "sport": "Esports",
-                "matches": esports_matches
-            })
-            total_matches_scraped += len(esports_matches)
-
-    # ─────────────────────────────────────────────────────────────
-    # 16. CYCLING (Grand Tours & Stage Matchups)
-    # ─────────────────────────────────────────────────────────────
-    if want_sport("Cycling"):
-        print("\n[16/17] Synchronizing Cycling Grand Tours & Outrights...")
-        cycling_matches = fetch_live_cycling()
-        if cycling_matches:
-            results.append({
-                "sport": "Cycling",
-                "matches": cycling_matches
-            })
-            total_matches_scraped += len(cycling_matches)
-            print(f"  + Cycling: {len(cycling_matches)} active tournament events")
-
-    # ─────────────────────────────────────────────────────────────
-    # 17. GOLF (Live Matches & Outrights)
-    # ─────────────────────────────────────────────────────────────
-    if want_sport("Golf"):
-        print("\n[17/17] Synchronizing Golf Tournaments & Outrights...")
-        golf_matches = fetch_live_golf()
-        if golf_matches:
-            results.append({
-                "sport": "Golf",
-                "matches": golf_matches
-            })
-            total_matches_scraped += len(golf_matches)
-            print(f"  + Golf: {len(golf_matches)} active tournament events")
-
-    # Final strict audit: ensure Soccer and EPL strictly contain 0 outrights and 0 empty away teams
-    for group in results:
-        if group.get("sport") in ("EPL", "Soccer"):
-            group["matches"] = [
-                m for m in group.get("matches", [])
-                if m.get("home") and m.get("away")
-                and m["home"].strip() != m["away"].strip()
-                and m["home"].strip().lower() != m.get("competition", "").strip().lower()
-                and not any(k in m["home"].lower() for k in ["winner", "to win outright", "league 1", "league 2", "serie a", "serie b", "la liga", "champions league", "efl cup", "eredivisie"])
-            ]
+            if matches:
+                results.append({
+                    "sport": sport_key,
+                    "matches": matches
+                })
+                total_matches_scraped += len(matches)
+                print(f"  + {sport_key}: {len(matches)} matches & events added")
 
     # Ensure all sports only contain active/upcoming matches (no old dates before today)
     today_dt = datetime.now(timezone.utc).date()
@@ -1255,10 +523,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                     if len(parts) == 3:
                         m_date = datetime(parts[2], parts[1], parts[0]).date()
                         if m_date < today_dt:
-                            # If match is from ongoing tournament round, roll forward to today
-                            m["date"] = today_dt.strftime("%d/%m/%Y")
-                            if m.get("kickoff") and len(m["kickoff"]) >= 10:
-                                m["kickoff"] = today_dt.strftime("%d/%m/%Y") + m["kickoff"][10:]
+                            continue
                 except Exception:
                     pass
             valid_matches.append(m)
@@ -1271,35 +536,10 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     results = cleaned_results
     total_matches_scraped = total_valid
 
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f"TOTAL MATCHES COLLECTED: {total_matches_scraped}")
-    print(f"=======================================================")
+    print("=======================================================")
     return results
-
-
-LOCK_FILE = ".scrape.lock"
-
-def _acquire_lock() -> bool:
-    if os.path.exists(LOCK_FILE):
-        try:
-            mtime = os.path.getmtime(LOCK_FILE)
-            if time.time() - mtime < 300:
-                return False
-        except Exception:
-            pass
-    try:
-        with open(LOCK_FILE, "w") as f:
-            f.write(str(os.getpid()))
-        return True
-    except Exception:
-        return True
-
-def _release_lock():
-    try:
-        if os.path.exists(LOCK_FILE):
-            os.remove(LOCK_FILE)
-    except Exception:
-        pass
 
 
 def main():
@@ -1319,37 +559,30 @@ def main():
     if args.no_cache:
         CACHE_TTL_DEFAULT = 0
 
-    if not _acquire_lock():
-        print("\n[Notice] Another scrape instance is already active on port 9222. Please wait for it to finish.")
+    target_sports = None
+    if args.sports:
+        target_sports = [s.strip() for s in args.sports.split(",") if s.strip()]
+    elif args.sport:
+        target_sports = [args.sport.strip()]
+
+    print(f"Starting Bet365 Engine -> {args.out}")
+    if target_sports:
+        print(f"Targeting sports: {', '.join(target_sports)}")
+
+    data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
+    total_m = sum(len(s["matches"]) for s in data) if data else 0
+
+    if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
+        print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
         return
 
-    try:
-        target_sports = None
-        if args.sports:
-            target_sports = [s.strip() for s in args.sports.split(",") if s.strip()]
-        elif args.sport:
-            target_sports = [args.sport.strip()]
+    # Write output atomically
+    tmp_file = f"{args.out}.tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"Starting Bet365 Engine -> {args.out}")
-        if target_sports:
-            print(f"Targeting sports: {', '.join(target_sports)}")
-
-        data = scrape_all_sports(min_target=args.min, target_sports=target_sports)
-        total_m = sum(len(s["matches"]) for s in data) if data else 0
-
-        if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
-            print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
-            return
-
-        # Write output atomically
-        tmp_file = f"{args.out}.tmp"
-        with open(tmp_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        os.replace(tmp_file, args.out)
-        print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
-    finally:
-        _release_lock()
+    os.replace(tmp_file, args.out)
+    print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
 
 
 if __name__ == "__main__":
