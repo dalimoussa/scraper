@@ -467,7 +467,7 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
             return True
         return any(t.lower() in name.lower() or name.lower() in t.lower() for t in target_sports)
 
-    print("[*] Operating Mode: Direct Bet365 CDP Engine via start_chrome_cdp.bat (Zero Third-Party APIs)")
+    print("[*] Operating Mode: Direct Bet365 CDP Engine via start_chrome_cdp.bat (Zero Third-Party APIs)", flush=True)
 
     sport_definitions = [
         ("Soccer", "Football / Soccer (Top 5 Leagues & Coupes d'Europe)"),
@@ -482,13 +482,13 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
 
     for idx, (sport_key, sport_desc) in enumerate(sport_definitions, 1):
         if want_sport(sport_key):
-            print(f"\n[{idx}/8] Synchronizing {sport_desc} via Bet365 CDP...")
+            print(f"\n[{idx}/8] Synchronizing {sport_desc} via Bet365 CDP...", flush=True)
             matches = []
             if scrape_sport_internal:
                 try:
                     matches = scrape_sport_internal(sport_key)
                 except Exception as e:
-                    print(f"  [Notice] {sport_key} scrape notice: {e}")
+                    print(f"  [Notice] {sport_key} scrape notice: {e}", flush=True)
 
             if matches:
                 results.append({
@@ -496,7 +496,7 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
                     "matches": matches
                 })
                 total_matches_scraped += len(matches)
-                print(f"  + {sport_key}: {len(matches)} matches & events added")
+                print(f"  + {sport_key}: {len(matches)} matches & events added", flush=True)
 
             # Anti-detection human delay between sports
             time.sleep(3.0)

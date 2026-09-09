@@ -30,7 +30,7 @@ CDP_PORT = 9222
 TIMEOUT_S = 14
 FAST_MODE = True
 BLOCK_HEAVY_RESOURCES = True
-DEFAULT_DOMAIN = "https://www.bet365.com"
+DEFAULT_DOMAIN = "https://www.bet365.fr"
 
 # Chart 7 extrait de PV_CHARTS pour le profil Bet365
 PV_DEFAULT_CHART_7 = [
@@ -528,16 +528,13 @@ def _get_active_bet365_page(context):
 
 
 def _reset_to_home(page):
-    """Cleanly resets Bet365's Remix Hash Router back to #/HO/ to avoid route blockers and 'Impossible d'afficher ce contenu'."""
+    """Resets Bet365's hash router to #/HO/ without triggering a full page reload (avoids domcontentloaded hang on SPAs)."""
     try:
-        page.goto("https://www.bet365.com/#/HO/", wait_until="domcontentloaded", timeout=8000)
-        time.sleep(2.5)
+        # Use hash-only navigation — never triggers a full network request on SPAs
+        page.evaluate("window.location.hash = '#/HO/'")
+        page.wait_for_timeout(1500)
     except Exception:
-        try:
-            page.evaluate("window.location.hash = '#/HO/'")
-            time.sleep(2.0)
-        except Exception:
-            pass
+        pass
 
 
 def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_code: str, timeout_s: int = TIMEOUT_S) -> Optional[str]:
@@ -584,12 +581,11 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
         pass
 
     try:
-        page.goto(target_url, wait_until="commit", timeout=timeout_s * 1000)
+        # Hash-only navigation: no full reload on SPA, never hangs on domcontentloaded
+        page.evaluate(f"window.location.href = '{target_url}'")
+        page.wait_for_timeout(1000)
     except Exception:
-        try:
-            page.evaluate(f"window.location.href = '{target_url}'")
-        except Exception:
-            pass
+        pass
 
     deadline = time.time() + timeout_s
     while time.time() < deadline:
@@ -634,12 +630,11 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
         pass
 
     try:
-        page.goto(url, wait_until="commit", timeout=timeout_s * 1000)
+        # Hash-only navigation on SPA — avoids blocking on domcontentloaded/commit
+        page.evaluate(f"window.location.href = '{url}'")
+        page.wait_for_timeout(800)
     except Exception:
-        try:
-            page.evaluate(f"window.location.href = '{url}'")
-        except Exception:
-            pass
+        pass
 
     deadline = time.time() + timeout_s
     while time.time() < deadline:
@@ -856,27 +851,27 @@ def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dic
     s_clean = sport_name.strip().lower()
 
     mapping = {
-        "soccer": ("Football", "B1", "https://www.bet365.com/#/AS/B1/K^5/"),
-        "football": ("Football", "B1", "https://www.bet365.com/#/AS/B1/K^5/"),
-        "epl": ("Football", "B1", "https://www.bet365.com/#/AS/B1/K^5/"),
-        "tennis": ("Tennis", "B13", "https://www.bet365.com/#/AS/B13/K^5/"),
-        "formule 1": ("Sports mécaniques", "B10", "https://www.bet365.com/#/AS/B10/"),
-        "f1": ("Sports mécaniques", "B10", "https://www.bet365.com/#/AS/B10/"),
-        "rugby": ("Rugby à XV", "B8", "https://www.bet365.com/#/AS/B8/K^5/"),
-        "rugby union": ("Rugby à XV", "B8", "https://www.bet365.com/#/AS/B8/K^5/"),
-        "rugby league": ("Rugby à XIII", "B19", "https://www.bet365.com/#/AS/B19/K^5/"),
-        "boxe": ("Boxe", "B9", "https://www.bet365.com/#/AS/B9/"),
-        "boxing": ("Boxe", "B9", "https://www.bet365.com/#/AS/B9/"),
-        "mma": ("MMA", "B162", "https://www.bet365.com/#/AS/B162/"),
-        "ufc": ("MMA", "B162", "https://www.bet365.com/#/AS/B162/"),
-        "cycling": ("Cyclisme", "B38", "https://www.bet365.com/#/AS/B38/"),
-        "cyclisme": ("Cyclisme", "B38", "https://www.bet365.com/#/AS/B38/"),
-        "golf": ("Golf", "B7", "https://www.bet365.com/#/AS/B7/"),
+        "soccer": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
+        "football": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
+        "epl": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
+        "tennis": ("Tennis", "B13", "https://www.bet365.fr/#/AS/B13/K^5/"),
+        "formule 1": ("Sports mécaniques", "B10", "https://www.bet365.fr/#/AS/B10/"),
+        "f1": ("Sports mécaniques", "B10", "https://www.bet365.fr/#/AS/B10/"),
+        "rugby": ("Rugby à XV", "B8", "https://www.bet365.fr/#/AS/B8/K^5/"),
+        "rugby union": ("Rugby à XV", "B8", "https://www.bet365.fr/#/AS/B8/K^5/"),
+        "rugby league": ("Rugby à XIII", "B19", "https://www.bet365.fr/#/AS/B19/K^5/"),
+        "boxe": ("Boxe", "B9", "https://www.bet365.fr/#/AS/B9/"),
+        "boxing": ("Boxe", "B9", "https://www.bet365.fr/#/AS/B9/"),
+        "mma": ("MMA", "B162", "https://www.bet365.fr/#/AS/B162/"),
+        "ufc": ("MMA", "B162", "https://www.bet365.fr/#/AS/B162/"),
+        "cycling": ("Cyclisme", "B38", "https://www.bet365.fr/#/AS/B38/"),
+        "cyclisme": ("Cyclisme", "B38", "https://www.bet365.fr/#/AS/B38/"),
+        "golf": ("Golf", "B7", "https://www.bet365.fr/#/AS/B7/"),
     }
 
     info = mapping.get(s_clean)
     if not info:
-        info = (sport_name, "B1", "https://www.bet365.com/#/AS/B1/K^5/")
+        info = (sport_name, "B1", "https://www.bet365.fr/#/AS/B1/K^5/")
 
     disp_name, sport_code, target_url = info
     matches_out: List[Dict[str, Any]] = []
@@ -907,7 +902,7 @@ def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dic
             # Clean reset to #/HO/ to avoid Remix Router route blockers and error boundary
             _reset_to_home(page)
 
-            print(f"  [CDP {sport_name}] Intercepting {disp_name} discovery from {domain} (Sport {sport_code})...")
+            print(f"  [CDP {sport_name}] Intercepting {disp_name} discovery from {domain} (Sport {sport_code})...", flush=True)
             raw_splash = _intercepter_donnees_sport(page, target_url, disp_name, sport_code, timeout_s=12)
             if not raw_splash:
                 print(f"  [Notice] {sport_name} splash stream response empty.")
