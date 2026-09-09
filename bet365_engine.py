@@ -505,9 +505,29 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
     today_dt = datetime.now(timezone.utc).date()
     cleaned_results = []
     total_valid = 0
+    h2h_sports = {"soccer", "football", "tennis", "rugby", "boxe", "boxing", "mma", "ufc"}
+
     for sport_group in results:
+        s_name = sport_group.get("sport", "").lower()
+        is_h2h = any(k in s_name for k in h2h_sports)
         valid_matches = []
         for m in sport_group.get("matches", []):
+            # In H2H sports, both home and away must be present
+            if is_h2h and (not m.get("home") or not m.get("away")):
+                continue
+
+            # Ensure markets exist and don't contain binary Yes/No props
+            mkts = m.get("markets", {})
+            if not mkts:
+                continue
+            has_invalid_prop = False
+            for mkt_name, odds in mkts.items():
+                if any(k.lower() in ("yes", "no", "oui", "non") for k in odds.keys()):
+                    has_invalid_prop = True
+                    break
+            if has_invalid_prop:
+                continue
+
             d_str = m.get("date")
             if d_str:
                 try:
@@ -519,6 +539,7 @@ def scrape_all_sports(min_target: int = 100, target_sports: Optional[List[str]] 
                 except Exception:
                     pass
             valid_matches.append(m)
+
         if valid_matches:
             cleaned_results.append({
                 "sport": sport_group.get("sport"),

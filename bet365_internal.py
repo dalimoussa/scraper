@@ -432,10 +432,14 @@ def parse_bet365_stream_to_matches(raw_str: str, sport_name: str, default_comp: 
 
         if results:
             return results
+        return []
 
     # ─────────────────────────────────────────────────────────────
-    # Outright / Field Winner Market (Cycling, Golf, F1, or Outright coupons)
+    # Outright / Field Winner Market (Cycling, Golf, F1 only)
     # ─────────────────────────────────────────────────────────────
+    if is_head_to_head_sport:
+        return []
+
     odds_dict = {}
     cur_tournoi = default_comp
     for b in blocks:
@@ -448,7 +452,10 @@ def parse_bet365_stream_to_matches(raw_str: str, sport_name: str, default_comp: 
         elif t == 'PA':
             na = b.get('NA', '').strip()
             od = b.get('OD', '').strip()
-            if na and od and na not in ('Inconnu', 'Oui', 'Non', 'Draw', 'Nul'):
+            if na and od:
+                na_clean = na.strip().lower()
+                if na_clean in ('inconnu', 'oui', 'non', 'draw', 'nul', 'yes', 'no', 'tie'):
+                    continue
                 dec = fraction_to_decimal(od)
                 row = {
                     "Cote_Decimale_Brute": dec,
@@ -461,7 +468,8 @@ def parse_bet365_stream_to_matches(raw_str: str, sport_name: str, default_comp: 
                 if float(c_val) > 1.0:
                     odds_dict[na] = c_val
 
-    if odds_dict:
+    # Legitimate field/peloton outrights have multiple contestants (riders/golfers/drivers)
+    if len(odds_dict) >= 3:
         sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%d/%m/%Y")
