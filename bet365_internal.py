@@ -32,74 +32,34 @@ FAST_MODE = True
 BLOCK_HEAVY_RESOURCES = True
 DEFAULT_DOMAIN = "https://www.bet365.com"
 
-# Chart 7 extrait de PV_CHARTS pour le profil Bet365
-PV_DEFAULT_CHART_7 = [
-    (1.0, 1.001, 0.0), (1.001, 1.002, 0.0), (1.002, 1.003, 0.001),
-    (1.003, 1.004, 0.0015), (1.004, 1.006, 0.002), (1.006, 1.008, 0.003),
-    (1.008, 1.01, 0.004), (1.01, 1.015, 0.005), (1.015, 1.02, 0.0075),
-    (1.02, 1.025, 0.01), (1.025, 1.03, 0.015), (1.03, 1.04, 0.017),
-    (1.04, 1.05, 0.02), (1.05, 1.06, 0.025), (1.06, 1.08, 0.03),
-    (1.08, 1.1, 0.04), (1.1, 1.12, 0.04), (1.12, 1.15, 0.04),
-    (1.15, 1.2, 0.05), (1.2, 1.25, 0.05), (1.25, 1.3, 0.05),
-    (1.3, 1.35, 0.05), (1.35, 1.4, 0.05), (1.4, 1.45, 0.05),
-    (1.45, 1.5, 0.05), (1.5, 1.55, 0.06), (1.55, 1.6, 0.06),
-    (1.6, 1.7, 0.06), (1.7, 1.8, 0.06), (1.8, 1.9, 0.06),
-    (1.9, 2.0, 0.06), (2.0, 2.1, 0.06), (2.1, 2.2, 0.07),
-    (2.2, 2.3, 0.07), (2.3, 2.4, 0.07), (2.4, 2.5, 0.07),
-    (2.5, 2.6, 0.08), (2.6, 2.7, 0.08), (2.7, 2.8, 0.08),
-    (2.8, 2.9, 0.1), (2.9, 3.0, 0.1), (3.0, 3.2, 0.1),
-    (3.2, 3.4, 0.15), (3.4, 3.6, 0.15), (3.6, 3.8, 0.15),
-    (3.8, 4.0, 0.15), (4.0, 4.5, 0.2), (4.5, 5.0, 0.2),
-    (5.0, 5.5, 0.25), (5.5, 6.0, 0.3), (6.0, 6.5, 0.4),
-    (6.5, 7.0, 0.5), (7.0, 8.0, 0.7), (8.0, 9.0, 0.8),
-    (9.0, 11.0, 1.0), (11.0, 13.0, 1.5), (13.0, 15.0, 2.0),
-    (15.0, 17.0, 2.5), (17.0, 19.0, 3.0), (19.0, 21.0, 3.5),
-    (21.0, 26.0, 4.0), (26.0, 31.0, 4.5), (31.0, 41.0, 5.0),
-    (41.0, 51.0, 5.5), (51.0, 61.0, 6.0), (61.0, 71.0, 7.0),
-    (71.0, 81.0, 8.0), (81.0, 91.0, 9.0), (91.0, 101.0, 10.0),
-    (101.0, 121.0, 12.0), (121.0, 151.0, 14.0), (151.0, 201.0, 16.0),
-    (201.0, 351.0, 18.0), (351.0, 501.0, 20.0), (501.0, 751.0, 25.0),
-    (751.0, 1001.0, 35.0), (1001.0, 10001.0, 50.0),
-]
-
-
 def fraction_to_decimal(s: str) -> float:
-    """Convert fraction (e.g. '13/10', '9/2') or decimal string to float."""
+    """Convert Bet365 fraction (e.g. '1/12', '10/1', '13/10', '9/2') or decimal string to float."""
     try:
         s = str(s).strip()
         if "/" in s:
             n, d = s.split("/", 1)
-            return round(int(n) / int(d) + 1.0, 2)
-        return float(s) if s else 0.0
+            raw_val = int(n) / int(d) + 1.0
+            val_3 = round(raw_val, 3)
+            val_2 = round(raw_val, 2)
+            if abs(val_3 - val_2) > 0.002:
+                return val_3
+            return val_2
+        return round(float(s), 2) if s else 0.0
     except Exception:
         return 0.0
 
 
-def appliquer_pv_fallback(row: Dict[str, Any]) -> bool:
-    """Applique le chart 7 Price Variance lorsque le moteur JS n'est pas initialise."""
-    brute = row.get("Cote_Decimale_Brute")
-    fraction_brute = row.get("Cote_Fraction_Brute") or row.get("Cote_Fraction") or ""
+def format_odd_str(val: Any) -> str:
+    """Format decimal odds with authentic Bet365 precision (e.g. '1.083' or '11.00')."""
     try:
-        if "/" in str(fraction_brute):
-            n, d = str(fraction_brute).split("/", 1)
-            valeur_exacte = int(n) / int(d) + 1.0
-        else:
-            valeur_exacte = float(brute)
+        f_val = float(val)
+        val_3 = round(f_val, 3)
+        val_2 = round(f_val, 2)
+        if abs(val_3 - val_2) > 0.002:
+            return f"{val_3:.3f}"
+        return f"{val_2:.2f}"
     except Exception:
-        valeur_exacte = float(brute or 0)
-    if not valeur_exacte:
-        return False
-    for borne_basse, borne_haute, ajustement in PV_DEFAULT_CHART_7:
-        if borne_basse <= valeur_exacte < borne_haute:
-            ajustee = int((valeur_exacte - ajustement + 1e-12) * 100) / 100
-            fractionnelle = Fraction(max(ajustee - 1.0, 0)).limit_denominator(1000)
-            fraction = f"{fractionnelle.numerator}/{fractionnelle.denominator}"
-            row["Cote_Fraction"] = fraction
-            row["Cote_Decimale"] = ajustee
-            row["Cote_PV_Applique"] = True
-            row["Source_Cote"] = "price_variance_chart_7"
-            return True
-    return False
+        return str(val)
 
 
 def parse_bet365(raw: str) -> List[Dict[str, str]]:
@@ -270,7 +230,6 @@ def parser_page_universel(raw: str, nom_sport: str, nom_event_fallback: str = "C
                     "Cote_Decimale": cote_brute,
                     "Cote_PV_Applique": False,
                 }
-                appliquer_pv_fallback(row)
                 resultats.append(row)
                 row_index += 1
 
@@ -330,8 +289,8 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
             if not txt or "|" not in txt:
                 return
 
-            if any(k in u for k in ["splashcontentapi/splash", "othersportsmatch", "coupon", "markets"]):
-                if sport_code in u:
+            if any(k in u for k in ["splashcontentapi/splash", "othersportsmatch", "coupon", "markets", "sport"]):
+                if sport_code in u or sport_code.lstrip("B") in u or ("EV;" in txt and "PA;" in txt):
                     raw[0] = txt
                     ok[0] = True
                     return
@@ -351,7 +310,6 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
     # Try 1: Click the sport link in the sidebar if present (most reliable for Bet365 SPA)
     navigated_by_click = False
     try:
-        # Look for the sport text in French or English
         terms = [sport_name]
         if sport_name.lower() == "cyclisme":
             terms.append("Cycling")
@@ -499,7 +457,7 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                         p_name = r.get("Participant", "").strip()
                         c_dec = r.get("Cote_Decimale")
                         if p_name and c_dec and float(c_dec) > 1.0 and p_name not in ["Inconnu", "Oui", "Non"]:
-                            odds_dict[p_name] = f"{float(c_dec):.2f}"
+                            odds_dict[p_name] = format_odd_str(c_dec)
 
                     if odds_dict:
                         sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
@@ -587,7 +545,7 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                         p_name = r.get("Participant", "").strip()
                         c_dec = r.get("Cote_Decimale")
                         if p_name and c_dec and float(c_dec) > 1.0 and p_name not in ["Inconnu", "Oui", "Non"]:
-                            odds_dict[p_name] = f"{float(c_dec):.2f}"
+                            odds_dict[p_name] = format_odd_str(c_dec)
 
                     if odds_dict:
                         sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
