@@ -144,6 +144,38 @@ def parser_splash(raw: str, domain: str = DEFAULT_DOMAIN) -> List[Dict[str, Any]
     return [t for t in tournois if t.get("marches")]
 
 
+def parser_golf_splash(raw: str, domain: str = DEFAULT_DOMAIN) -> Dict[str, List[Dict[str, Any]]]:
+    """Extrait tous les tournois de Golf et leurs marches depuis le flux splash Bet365."""
+    parsed = parse_bet365(raw)
+    tournaments: Dict[str, List[Dict[str, Any]]] = {}
+    current_tourney = None
+    current_cat = None
+
+    for b in parsed:
+        t = b.get("_type")
+        if t == "MG":
+            na = b.get("NA", "").strip()
+            if na and na not in ("In-Play", "Coupons", "Offers", "Tips") and not b.get("SY", "") in ("pbb", "sib"):
+                current_tourney = na
+                if current_tourney not in tournaments:
+                    tournaments[current_tourney] = []
+        elif t == "MA" and current_tourney:
+            current_cat = b.get("NA", "").strip()
+        elif t == "PA" and current_tourney:
+            pd = b.get("PD", "").strip()
+            m_name = b.get("NA", "").strip()
+            if pd and m_name and "#AVR#" not in pd and "#P" not in pd:
+                if "#AC#" in pd or "#IP#" in pd:
+                    tournaments[current_tourney].append({
+                        "category": current_cat,
+                        "market": m_name,
+                        "url": pd_vers_url(pd, domain),
+                        "pd": pd
+                    })
+
+    return {k: v for k, v in tournaments.items() if v and "Virtual" not in k}
+
+
 def parser_page_universel(raw: str, nom_sport: str, nom_event_fallback: str = "Compétition") -> List[Dict[str, Any]]:
     """Super-parseur universel structure extrait selections, participants et cotes."""
     blocs = parse_bet365(raw)
@@ -312,23 +344,47 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
     try:
         terms = [sport_name]
         if sport_name.lower() == "cyclisme":
-            terms.append("Cycling")
+            terms.extend(["Cyclisme", "Cycling"])
         elif sport_name.lower() == "golf":
             terms.append("Golf")
 
-        for term in terms:
-            el = page.query_selector(f'text="{term}"')
-            if el:
-                el.click()
-                navigated_by_click = True
-                break
+        clicked = page.evaluate("""(terms) => {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            let node;
+            while (node = walker.nextNode()) {
+                const val = (node.nodeValue || '').trim();
+                for (const term of terms) {
+                    if (val === term) {
+                        const p = node.parentElement;
+                        if (p && (p.className.includes('lhs') || p.closest('.lhs-2d') || p.closest('.wn-Classification'))) {
+                            (p.closest('.lhs-2d') || p.closest('.wn-Classification') || p).click();
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }""", terms)
+        if clicked:
+            navigated_by_click = True
+        else:
+            for term in terms:
+                el = page.query_selector(f'text="{term}"')
+                if el:
+                    el.click()
+                    navigated_by_click = True
+                    break
     except Exception:
         pass
 
     # Try 2: If click was not possible, navigate to target_url
     if not navigated_by_click:
         try:
-            page.goto(target_url, wait_until="commit", timeout=timeout_s * 1000)
+            target_hash = target_url.split("bet365.com/")[-1] if "bet365.com/" in target_url else target_url
+            page.evaluate(f"window.location.hash = '{target_hash}';")
+            page.wait_for_timeout(600)
+            if not ok[0]:
+                page.goto(target_url, wait_until="commit", timeout=timeout_s * 1000)
         except Exception:
             try:
                 page.evaluate(f"window.location.href = '{target_url}'")
@@ -351,8 +407,8 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
     return raw[0]
 
 
-def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]:
-    """Intercepte un coupon individuel via l'onglet actif."""
+def _intercepter_coupon_url(page, url: str, timeout_s: int = 6) -> Optional[str]:
+    """Intercepte un coupon individuel via l'onglet actif avec gestion propre des listeners."""
     raw = [None]
     ok = [False]
 
@@ -361,7 +417,7 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
             return
         try:
             txt = response.text()
-            if txt and "|" in txt and ("PA;" in txt or "OD=" in txt):
+            if txt and "|" in txt and ("PA;" in txt or "OD=" in txt) and len(txt) < 500000:
                 raw[0] = txt
                 ok[0] = True
         except Exception:
@@ -373,18 +429,31 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
         pass
 
     try:
-        page.goto(url, wait_until="commit", timeout=timeout_s * 1000)
-    except Exception:
-        pass
-
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        if ok[0] and raw[0]:
-            break
+        target_hash = url.split("bet365.com/")[-1] if "bet365.com/" in url else url
         try:
-            page.wait_for_timeout(150)
+            page.evaluate(f"window.location.hash = '{target_hash}';")
         except Exception:
-            break
+            pass
+        page.wait_for_timeout(500)
+        if not ok[0]:
+            try:
+                page.goto(url, wait_until="commit", timeout=timeout_s * 1000)
+            except Exception:
+                pass
+
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            if ok[0] and raw[0]:
+                break
+            try:
+                page.wait_for_timeout(100)
+            except Exception:
+                break
+    finally:
+        try:
+            page.remove_listener("response", handler)
+        except Exception:
+            pass
 
     return raw[0]
 
@@ -428,49 +497,73 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 print("  [Notice] Golf stream response empty.")
                 return []
 
-            tournois = parser_splash(raw_splash, domain)
-            if not tournois:
+            tournaments = parser_golf_splash(raw_splash, domain)
+            if not tournaments:
                 print("  [Notice] No active Golf tournaments found in splash stream.")
                 return []
 
             today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
             kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 08:00:00")
 
-            for i, tournoi in enumerate(tournois[:3]):
-                t_nom = tournoi.get("nom", "Golf Tournament")
-                marches = tournoi.get("marches", [])
-                for j, marche in enumerate(marches[:3]):
-                    m_url = marche.get("url")
-                    if not m_url:
+            PRIORITY_MARKETS = [
+                "To Win Outright", "Outright Markets", "To Lift Trophy",
+                "Top Finishes", "Top Finishes (Including Ties)", "1st Round Leader",
+                "Top Combined Points Scorer", "Top Team Points Scorer"
+            ]
+
+            for tourney_name, markets in tournaments.items():
+                selected_markets = []
+                outrights = [m for m in markets if m["market"] in ("To Win Outright", "Outright Markets")]
+                if outrights:
+                    selected_markets.append(outrights[0])
+
+                for pm in PRIORITY_MARKETS:
+                    if pm in ("To Win Outright", "Outright Markets"):
                         continue
-                    m_nom = marche.get("nom", t_nom)
-                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=8)
+                    for m in markets:
+                        if m["market"] == pm and m not in selected_markets and len(selected_markets) < 3:
+                            selected_markets.append(m)
+
+                if not selected_markets and markets:
+                    selected_markets.append(markets[0])
+
+                for m in selected_markets:
+                    m_name = m["market"]
+                    m_url = m["url"]
+                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=6)
                     if not raw_c:
                         continue
 
-                    rows = parser_page_universel(raw_c, "Golf", m_nom)
-                    if not rows:
-                        continue
-
+                    rows = parser_page_universel(raw_c, "Golf", f"{tourney_name} - {m_name}")
                     odds_dict = {}
                     for r in rows:
                         p_name = r.get("Participant", "").strip()
                         c_dec = r.get("Cote_Decimale")
-                        if p_name and c_dec and float(c_dec) > 1.0 and p_name not in ["Inconnu", "Oui", "Non"]:
-                            odds_dict[p_name] = format_odd_str(c_dec)
+                        if not p_name or not c_dec:
+                            continue
+                        # Exclude non-golfer items (digits only, yes/no, unknown)
+                        if p_name.isdigit() or p_name in ["Inconnu", "Oui", "Non", "N/A"] or len(p_name) < 2:
+                            continue
+                        try:
+                            f_dec = float(c_dec)
+                            if f_dec > 1.0:
+                                odds_dict[p_name] = format_odd_str(c_dec)
+                        except Exception:
+                            pass
 
                     if odds_dict:
                         sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
-                        comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
+                        comp_title = f"{tourney_name} - {m_name}" if m_name != tourney_name else tourney_name
                         match_id = str(abs(hash(comp_title)) % 100000000)
                         matches_out.append({
                             "id": match_id,
                             "date": today_str,
                             "kickoff": kickoff_str,
                             "competition": comp_title,
-                            "home": f"{comp_title} - To Win Outright",
+                            "home": f"{comp_title} - To Win",
                             "away": "",
                             "markets": {
+                                "To Win": sorted_odds,
                                 "To Win Outright": sorted_odds
                             }
                         })
