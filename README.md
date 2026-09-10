@@ -14,7 +14,7 @@ A high-performance automated tool that collects **upcoming sports fixtures and o
   * Scraped directly from Bet365 via Chrome DevTools Protocol.
   * Discovers 22+ active tournaments (Amgen Irish Open, Sanford International, Solheim Cup, Presidents Cup, US Masters, PGA Championship, US Open, The Open Championship, Ryder Cup) with full field selections and authentic odds.
   * Automatically executes `start_chrome_cdp.bat` if Chrome CDP (port 9222) is not active.
-* 🔄 **Other Sports (API Key Rotation Pool)**:
+* 🔄 **Other Sports**:
   * Fetches EPL, Soccer, Tennis, NFL, MLB, NBA, NHL, Rugby, Cricket, Volleyball, and Esports using automated key rotation across your API key pool.
   * Load keys directly into `config.json` (`"api_keys": ["..."]`) or pass them via `--api-key` / `--api-keys`.
   * Built-in verified repository fallback guarantees `all_matches.json` retains all 17 sports even during gateway maintenance.
