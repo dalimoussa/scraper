@@ -30,7 +30,7 @@ CDP_PORT = 9222
 TIMEOUT_S = 14
 FAST_MODE = True
 BLOCK_HEAVY_RESOURCES = True
-DEFAULT_DOMAIN = "https://www.bet365.fr"
+DEFAULT_DOMAIN = "https://www.bet365.com"
 
 # Chart 7 extrait de PV_CHARTS pour le profil Bet365
 PV_DEFAULT_CHART_7 = [
@@ -277,221 +277,6 @@ def parser_page_universel(raw: str, nom_sport: str, nom_event_fallback: str = "C
     return resultats
 
 
-def parse_bet365_stream_to_matches(raw_str: str, sport_name: str, default_comp: str) -> List[Dict[str, Any]]:
-    """
-    Universally parses Bet365 coupon responses into either:
-    1. Individual head-to-head matches (home vs away with 1X2 or 2-way odds) for Soccer, Tennis, Rugby, MMA, Boxe.
-    2. Comprehensive outright winner markets with all riders/golfers/drivers for Cycling, Golf, and F1.
-    """
-    if not raw_str or "|" not in raw_str:
-        return []
-
-    blocks = parse_bet365(raw_str)
-    s_lower = sport_name.lower()
-    is_head_to_head_sport = any(k in s_lower for k in ("soccer", "football", "tennis", "rugby", "mma", "boxe", "boxing", "ufc"))
-
-    # Check for Head-to-Head match declarations (FD has " v " or " vs ")
-    has_match_fixtures = any(
-        b.get('_type') == 'PA' and b.get('FD') and (' v ' in b.get('FD') or ' vs ' in b.get('FD'))
-        for b in blocks
-    )
-
-    if is_head_to_head_sport and has_match_fixtures:
-        fixtures_by_key: Dict[str, Dict[str, Any]] = {}
-        fixtures_order: List[Dict[str, Any]] = []
-        current_col = None
-        current_ma_name = ""
-        current_two_way_order: List[str] = []
-
-        # 1. First pass: Collect all fixtures and their IDs
-        for b in blocks:
-            t = b.get('_type')
-            if t == 'PA':
-                fd = b.get('FD', '').strip()
-                na = b.get('NA', '').strip()
-                n2 = b.get('N2', '').strip()
-                fi = b.get('FI')
-                bc = b.get('BC', '').strip()
-                pz = b.get('PZ') or b.get('OI')
-                raw_id = b.get('ID', '').replace('PC', '')
-
-                if fd and (' v ' in fd or ' vs ' in fd):
-                    parts = fd.split(' v ', 1) if ' v ' in fd else fd.split(' vs ', 1)
-                    home = na or parts[0].strip()
-                    away = n2 or parts[1].strip()
-
-                    kickoff = ""
-                    date_str = ""
-                    if bc and len(bc) >= 12:
-                        try:
-                            yr = bc[0:4]
-                            mo = bc[4:6]
-                            day = bc[6:8]
-                            hr = bc[8:10]
-                            mn = bc[10:12]
-                            sc = bc[12:14] if len(bc) >= 14 else "00"
-                            date_str = f"{day}/{mo}/{yr}"
-                            kickoff = f"{day}/{mo}/{yr} {hr}:{mn}:{sc}"
-                        except Exception:
-                            pass
-                    if not kickoff:
-                        now = datetime.now(timezone.utc)
-                        date_str = now.strftime("%d/%m/%Y")
-                        kickoff = now.strftime("%d/%m/%Y 12:00:00")
-
-                    m_id = fi or raw_id or str(abs(hash(home + away + kickoff)) % 100000000)
-
-                    fix_data = {
-                        "id": m_id,
-                        "date": date_str,
-                        "kickoff": kickoff,
-                        "competition": default_comp,
-                        "home": home,
-                        "away": away,
-                        "odds": {}
-                    }
-                    if fi:
-                        fixtures_by_key[f"fi_{fi}"] = fix_data
-                    if raw_id:
-                        fixtures_by_key[f"id_{raw_id}"] = fix_data
-                    if pz:
-                        fixtures_by_key[f"pz_{pz}"] = fix_data
-                    fixtures_order.append(fix_data)
-
-        # 2. Second pass: Collect Odds
-        for b in blocks:
-            t = b.get('_type')
-            if t == 'MA':
-                current_ma_name = b.get('NA', '').strip()
-                if current_ma_name in ('1', 'X', '2', 'Nul', 'Draw'):
-                    current_col = 'X' if current_ma_name in ('X', 'Nul', 'Draw') else current_ma_name
-                else:
-                    current_col = None
-            elif t == 'PA':
-                od = b.get('OD', '').strip()
-                if not od:
-                    continue
-                fi = b.get('FI')
-                pz = b.get('PZ') or b.get('OI')
-                raw_id = b.get('ID', '').replace('PC', '')
-
-                dec = fraction_to_decimal(od)
-                row = {
-                    "Cote_Decimale_Brute": dec,
-                    "Cote_Fraction_Brute": od,
-                    "Cote_Fraction": od,
-                    "Cote_Decimale": dec
-                }
-                appliquer_pv_fallback(row)
-                c_val = f"{float(row.get('Cote_Decimale', dec)):.2f}"
-                if float(c_val) <= 1.0:
-                    continue
-
-                target = None
-                if fi and f"fi_{fi}" in fixtures_by_key:
-                    target = fixtures_by_key[f"fi_{fi}"]
-                elif raw_id and f"id_{raw_id}" in fixtures_by_key:
-                    target = fixtures_by_key[f"id_{raw_id}"]
-                elif pz and f"pz_{pz}" in fixtures_by_key:
-                    target = fixtures_by_key[f"pz_{pz}"]
-
-                if target and current_col:
-                    target["odds"][current_col] = c_val
-                elif any(k in current_ma_name for k in ("To Win", "Fight", "Winner")):
-                    current_two_way_order.append(c_val)
-
-        # Assign sequential odds if column-based didn't populate
-        if current_two_way_order and not any(f["odds"] for f in fixtures_order):
-            pair_idx = 0
-            for fix in fixtures_order:
-                if pair_idx + 1 < len(current_two_way_order):
-                    fix["odds"]["1"] = current_two_way_order[pair_idx]
-                    fix["odds"]["2"] = current_two_way_order[pair_idx + 1]
-                    pair_idx += 2
-
-        # Format output
-        results = []
-        is_fight = any(k in s_lower for k in ("mma", "boxe", "boxing", "ufc"))
-        is_tennis = "tennis" in s_lower
-
-        for fix in fixtures_order:
-            odds = fix.pop("odds")
-            if not odds:
-                continue
-
-            if is_fight:
-                mkt_title = "To Win Fight"
-            elif is_tennis:
-                mkt_title = "Match Winner"
-            else:
-                mkt_title = "Match Result"
-
-            fix["markets"] = {mkt_title: odds}
-            if not any(x["id"] == fix["id"] for x in results):
-                results.append(fix)
-
-        if results:
-            return results
-        return []
-
-    # ─────────────────────────────────────────────────────────────
-    # Outright / Field Winner Market (Cycling, Golf, F1 only)
-    # ─────────────────────────────────────────────────────────────
-    if is_head_to_head_sport:
-        return []
-
-    odds_dict = {}
-    cur_tournoi = default_comp
-    for b in blocks:
-        t = b.get('_type')
-        if t == 'EV':
-            tb = b.get('TB', '')
-            if '¬' in tb:
-                parts = tb.split('¬')
-                cur_tournoi = parts[1].split(',')[0].strip() if len(parts) >= 2 else cur_tournoi
-        elif t == 'PA':
-            na = b.get('NA', '').strip()
-            od = b.get('OD', '').strip()
-            if na and od:
-                na_clean = na.strip().lower()
-                if na_clean in ('inconnu', 'oui', 'non', 'draw', 'nul', 'yes', 'no', 'tie'):
-                    continue
-                dec = fraction_to_decimal(od)
-                row = {
-                    "Cote_Decimale_Brute": dec,
-                    "Cote_Fraction_Brute": od,
-                    "Cote_Fraction": od,
-                    "Cote_Decimale": dec
-                }
-                appliquer_pv_fallback(row)
-                c_val = f"{float(row.get('Cote_Decimale', dec)):.2f}"
-                if float(c_val) > 1.0:
-                    odds_dict[na] = c_val
-
-    # Legitimate field/peloton outrights have multiple contestants (riders/golfers/drivers)
-    if len(odds_dict) >= 3:
-        sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
-        now = datetime.now(timezone.utc)
-        date_str = now.strftime("%d/%m/%Y")
-        kickoff_str = now.strftime("%d/%m/%Y 12:00:00")
-        match_id = str(abs(hash(cur_tournoi + str(len(sorted_odds)))) % 100000000)
-
-        mkt_name = "To Win Outright" if "golf" in s_lower or "cycling" in s_lower else "To Win"
-        return [{
-            "id": match_id,
-            "date": date_str,
-            "kickoff": kickoff_str,
-            "competition": cur_tournoi,
-            "home": f"{cur_tournoi} - {mkt_name}",
-            "away": "",
-            "markets": {
-                mkt_name: sorted_odds
-            }
-        }]
-
-    return []
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # CDP Network Interception
 # ─────────────────────────────────────────────────────────────────────────────
@@ -527,25 +312,14 @@ def _get_active_bet365_page(context):
         return None
 
 
-def _reset_to_home(page):
-    """Resets Bet365's hash router to #/HO/ without triggering a full page reload (avoids domcontentloaded hang on SPAs)."""
-    try:
-        # Use hash-only navigation — never triggers a full network request on SPAs
-        page.evaluate("window.location.hash = '#/HO/'")
-        page.wait_for_timeout(1500)
-    except Exception:
-        pass
-
-
 def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_code: str, timeout_s: int = TIMEOUT_S) -> Optional[str]:
     """
     Navigates to the sport page on Bet365 and intercepts the splash/coupon data.
-    Uses in-page link clicking or hash navigation on the active tab with strict sport code isolation.
+    Uses in-page link clicking or hash navigation on the active tab.
     """
     raw = [None]
     raw_secours = []
     ok = [False]
-    numeric_id = sport_code.replace("B", "")
 
     def handler(response):
         if response.request.resource_type not in ("fetch", "xhr"):
@@ -554,12 +328,6 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
             u = response.url
             txt = response.text()
             if not txt or "|" not in txt:
-                return
-
-            # Strict sport classification isolation
-            if f"CL;ID={numeric_id};" in txt or f"IT=#AS#{sport_code}#" in txt or (sport_code in u and "splash" in u):
-                raw[0] = txt
-                ok[0] = True
                 return
 
             if any(k in u for k in ["splashcontentapi/splash", "othersportsmatch", "coupon", "markets"]):
@@ -580,26 +348,43 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
     except Exception:
         pass
 
+    # Try 1: Click the sport link in the sidebar if present (most reliable for Bet365 SPA)
+    navigated_by_click = False
     try:
-        # Hash-only navigation: no full reload on SPA, never hangs on domcontentloaded
-        page.evaluate(f"window.location.href = '{target_url}'")
-        page.wait_for_timeout(1000)
+        # Look for the sport text in French or English
+        terms = [sport_name]
+        if sport_name.lower() == "cyclisme":
+            terms.append("Cycling")
+        elif sport_name.lower() == "golf":
+            terms.append("Golf")
+
+        for term in terms:
+            el = page.query_selector(f'text="{term}"')
+            if el:
+                el.click()
+                navigated_by_click = True
+                break
     except Exception:
         pass
 
+    # Try 2: If click was not possible, navigate to target_url
+    if not navigated_by_click:
+        try:
+            page.goto(target_url, wait_until="commit", timeout=timeout_s * 1000)
+        except Exception:
+            try:
+                page.evaluate(f"window.location.href = '{target_url}'")
+            except Exception:
+                pass
+
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        if FAST_MODE and ok[0] and raw[0] and ("PA;" in raw[0] or "EV;" in raw[0] or "CL;" in raw[0]):
+        if FAST_MODE and ok[0] and raw[0] and ("PA;" in raw[0] or "EV;" in raw[0]):
             break
         try:
             page.wait_for_timeout(200)
         except Exception:
             break
-
-    try:
-        page.remove_listener("response", handler)
-    except Exception:
-        pass
 
     if not ok[0] and raw_secours:
         # Fallback to the largest captured Bet365 data frame
@@ -609,7 +394,7 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
 
 
 def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]:
-    """Intercepte un coupon individuel via l'onglet actif avec anti-detection human pacing."""
+    """Intercepte un coupon individuel via l'onglet actif."""
     raw = [None]
     ok = [False]
 
@@ -618,7 +403,7 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
             return
         try:
             txt = response.text()
-            if txt and "|" in txt and ("PA;" in txt or "OD=" in txt or "EV;" in txt):
+            if txt and "|" in txt and ("PA;" in txt or "OD=" in txt):
                 raw[0] = txt
                 ok[0] = True
         except Exception:
@@ -630,9 +415,7 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
         pass
 
     try:
-        # Hash-only navigation on SPA — avoids blocking on domcontentloaded/commit
-        page.evaluate(f"window.location.href = '{url}'")
-        page.wait_for_timeout(800)
+        page.goto(url, wait_until="commit", timeout=timeout_s * 1000)
     except Exception:
         pass
 
@@ -645,14 +428,6 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
         except Exception:
             break
 
-    try:
-        page.remove_listener("response", handler)
-    except Exception:
-        pass
-
-    # Human-like delay after each coupon to prevent rate-limiting/detection
-    time.sleep(1.5)
-
     return raw[0]
 
 
@@ -663,300 +438,175 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 8) -> Optional[str]
 def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
     """
     Scrapes live Golf tournaments (Sport B7) directly from Bet365 via CDP.
-    Zero third-party API keys, zero cache, direct live scrape only.
+    Supports both bet365.com and bet365.fr.
+    Returns structured list of matches adhering to all_matches.json schema.
     """
-    return scrape_sport_internal("Golf", cdp_port)
-
-
-def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
-    """
-    Scrapes live Cycling outrights & stages (Sport B38) directly from Bet365 via CDP.
-    Zero third-party API keys, zero cache, direct live scrape only.
-    """
-    return scrape_sport_internal("Cycling", cdp_port)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Universal Sport Baseline & CDP Routing
-# ─────────────────────────────────────────────────────────────────────────────
-
-SPORT_CODE_MAP: Dict[str, Tuple[str, str]] = {
-    "soccer": ("Football", "B1"),
-    "football": ("Football", "B1"),
-    "epl": ("Football", "B1"),
-    "tennis": ("Tennis", "B13"),
-    "formule 1": ("Sports mécaniques", "B10"),
-    "f1": ("Sports mécaniques", "B10"),
-    "rugby": ("Rugby à XV", "B8"),
-    "rugby union": ("Rugby à XV", "B8"),
-    "rugby league": ("Rugby à XIII", "B19"),
-    "boxe": ("Boxe", "B9"),
-    "boxing": ("Boxe", "B9"),
-    "mma": ("MMA", "B9"),
-    "ufc": ("MMA", "B9"),
-    "cycling": ("Cyclisme", "B38"),
-    "cyclisme": ("Cyclisme", "B38"),
-    "golf": ("Golf", "B7"),
-}
-
-
-def load_sport_baseline(sport_name: str) -> List[Dict[str, Any]]:
-    """Loads authentic Bet365 baseline data for any sport when live coupons are offline."""
-    s_clean = sport_name.strip().lower()
-    mapping = {
-        "soccer": "Soccer",
-        "football": "Soccer",
-        "epl": "Soccer",
-        "tennis": "Tennis",
-        "cycling": "Cycling",
-        "cyclisme": "Cycling",
-        "golf": "Golf",
-        "formule 1": "Formule 1",
-        "f1": "Formule 1",
-        "rugby": "Rugby",
-        "boxe": "Boxe",
-        "boxing": "Boxe",
-        "mma": "MMA",
-        "ufc": "MMA",
-    }
-    target = mapping.get(s_clean, sport_name)
-    baseline_path = os.path.join(os.path.dirname(__file__), "tour_baseline.json")
-    if os.path.exists(baseline_path):
-        try:
-            with open(baseline_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return data.get(target, [])
-        except Exception:
-            pass
-    return []
-
-
-def _dismiss_cookie_banner(page):
-    """Automatically dismisses any Bet365 cookie/regulatory banner."""
-    try:
-        banner_btn = page.query_selector('text="Accepter"') or page.query_selector('text="Accept"') or page.query_selector('.ccm-CookieConsentPopup_Accept')
-        if banner_btn:
-            banner_btn.click()
-            time.sleep(0.5)
-    except Exception:
-        pass
-
-
-def extract_dom_coupon_matches(page, competition_name: str, sport_name: str) -> List[Dict[str, Any]]:
-    """Extracts matches and 1X2 / 2-way odds directly from Bet365 DOM coupon tables."""
-    try:
-        return page.evaluate("""([comp, sport]) => {
-            const results = [];
-            let currentDate = '';
-            const today = new Date();
-            const year = today.getFullYear();
-            const monthMap = {
-                'janv': '01', 'fevr': '02', 'févr': '02', 'mars': '03', 'avr': '04',
-                'mai': '05', 'juin': '06', 'juil': '07', 'aout': '08', 'août': '08',
-                'sept': '09', 'oct': '10', 'nov': '11', 'dec': '12', 'déc': '12',
-                'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05',
-                'jun': '06', 'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10',
-                'nov': '11', 'dec': '12'
-            };
-
-            const elements = Array.from(document.querySelectorAll('div'));
-            for (const el of elements) {
-                const text = el.innerText ? el.innerText.trim() : '';
-                const dm = text.match(/(\\d{1,2})\\s*([a-zéû]+)/i);
-                if (el.children.length === 0 && dm && (text.length < 20)) {
-                    const day = dm[1].padStart(2, '0');
-                    const mStr = dm[2].toLowerCase().slice(0, 4);
-                    const month = monthMap[mStr] || '09';
-                    currentDate = `${day}/${month}/${year}`;
-                }
-
-                if (el.className && el.className.includes('rrc-9') && el.innerText) {
-                    const lines = el.innerText.split('\\n').map(l => l.trim()).filter(Boolean);
-                    if (lines.length >= 4) {
-                        const timeMatch = lines[0].match(/^(\\d{1,2}:\\d{2})$/);
-                        if (timeMatch) {
-                            const timeStr = timeMatch[1] + ':00';
-                            let idx = 1;
-                            if (idx < lines.length && /^\\d+$/.test(lines[idx])) {
-                                idx++;
-                            }
-                            const home = lines[idx++];
-                            const away = lines[idx++];
-                            const odds = lines.slice(idx).filter(l => /^\\d+\\.\\d+$/.test(l) || /^\\d+\\/\\d+$/.test(l));
-
-                            if (!home || !away || home === away || home === comp) continue;
-                            if (home.toLowerCase().includes('winner') || away.toLowerCase().includes('winner')) continue;
-
-                            const mDate = currentDate || `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${year}`;
-                            const kickoff = `${mDate} ${timeStr}`;
-                            const mId = Math.abs((home + away + kickoff).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0)).toString();
-
-                            if (odds.length >= 3) {
-                                results.push({
-                                    id: mId,
-                                    date: mDate,
-                                    kickoff: kickoff,
-                                    competition: comp,
-                                    home: home,
-                                    away: away,
-                                    markets: {
-                                        "Match Result": {
-                                            "1": odds[0],
-                                            "X": odds[1],
-                                            "2": odds[2]
-                                        }
-                                    }
-                                });
-                            } else if (odds.length === 2) {
-                                const mktName = (sport.toLowerCase().includes('soccer') || sport.toLowerCase().includes('football')) ? "Match Result" : "Match Winner";
-                                results.push({
-                                    id: mId,
-                                    date: mDate,
-                                    kickoff: kickoff,
-                                    competition: comp,
-                                    home: home,
-                                    away: away,
-                                    markets: {
-                                        [mktName]: {
-                                            "1": odds[0],
-                                            "2": odds[1]
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            return results;
-        }""", [competition_name, sport_name])
-    except Exception:
-        return []
-
-
-def scrape_sport_internal(sport_name: str, cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
-    """
-    Direct Bet365 CDP Scraper for all requested sports:
-    - Soccer (Top 5 European Leagues + UEFA Champions League, Europa League, Conference League)
-    - Tennis (ATP, WTA, Grand Slams)
-    - Formule 1 (Drivers, Constructors, Grand Prix)
-    - Rugby (Top 14, Premiership, Champions Cup)
-    - Boxe (World Title Fights)
-    - MMA (UFC & Fight Night)
-    - Cycling (Grand Tours & Classics with full peloton)
-    - Golf (PGA Tour, DP World Tour, Majors)
-    Direct live Bet365 scraping via Chrome CDP with anti-detection human pacing.
-    Zero third-party API keys required. Zero cache.
-    """
-    s_clean = sport_name.strip().lower()
-
-    mapping = {
-        "soccer": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
-        "football": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
-        "epl": ("Football", "B1", "https://www.bet365.fr/#/AS/B1/K^5/"),
-        "tennis": ("Tennis", "B13", "https://www.bet365.fr/#/AS/B13/K^5/"),
-        "formule 1": ("Sports mécaniques", "B10", "https://www.bet365.fr/#/AS/B10/"),
-        "f1": ("Sports mécaniques", "B10", "https://www.bet365.fr/#/AS/B10/"),
-        "rugby": ("Rugby à XV", "B8", "https://www.bet365.fr/#/AS/B8/K^5/"),
-        "rugby union": ("Rugby à XV", "B8", "https://www.bet365.fr/#/AS/B8/K^5/"),
-        "rugby league": ("Rugby à XIII", "B19", "https://www.bet365.fr/#/AS/B19/K^5/"),
-        "boxe": ("Boxe", "B9", "https://www.bet365.fr/#/AS/B9/"),
-        "boxing": ("Boxe", "B9", "https://www.bet365.fr/#/AS/B9/"),
-        "mma": ("MMA", "B162", "https://www.bet365.fr/#/AS/B162/"),
-        "ufc": ("MMA", "B162", "https://www.bet365.fr/#/AS/B162/"),
-        "cycling": ("Cyclisme", "B38", "https://www.bet365.fr/#/AS/B38/"),
-        "cyclisme": ("Cyclisme", "B38", "https://www.bet365.fr/#/AS/B38/"),
-        "golf": ("Golf", "B7", "https://www.bet365.fr/#/AS/B7/"),
-    }
-
-    info = mapping.get(s_clean)
-    if not info:
-        info = (sport_name, "B1", "https://www.bet365.fr/#/AS/B1/K^5/")
-
-    disp_name, sport_code, target_url = info
-    matches_out: List[Dict[str, Any]] = []
-
     if not HAS_PLAYWRIGHT:
         return []
+
+    matches_out: List[Dict[str, Any]] = []
 
     try:
         with sync_playwright() as p:
             try:
+                # Explicit IPv4 address 127.0.0.1 to avoid Windows IPv6 resolution issues
                 browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
-                context = browser.contexts[0] if browser.contexts else browser.new_context()
-                page = _get_active_bet365_page(context)
             except Exception:
-                page = None
-
-            if not page:
                 print(f"  [Notice] Chrome CDP (port {cdp_port}) is not active. (Run start_chrome_cdp.bat to enable)")
-                fallback = load_sport_baseline(sport_name)
-                if fallback:
-                    print(f"  + [{sport_name}] Using {len(fallback)} verified matches from authentic Bet365 baseline")
-                    return fallback
+                return []
+
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = _get_active_bet365_page(context)
+            if not page:
+                print("  [Notice] No usable browser page found in CDP.")
                 return []
 
             domain = _detect_bet365_domain(context)
-            _dismiss_cookie_banner(page)
+            sport_url = f"{domain}/#/AS/B7/"
+            print(f"  [CDP Golf] Intercepting Golf discovery from {domain} (Sport B7)...")
 
-            # Clean reset to #/HO/ to avoid Remix Router route blockers and error boundary
-            _reset_to_home(page)
-
-            print(f"  [CDP {sport_name}] Intercepting {disp_name} discovery from {domain} (Sport {sport_code})...", flush=True)
-            raw_splash = _intercepter_donnees_sport(page, target_url, disp_name, sport_code, timeout_s=12)
+            raw_splash = _intercepter_donnees_sport(page, sport_url, "Golf", "B7", timeout_s=12)
             if not raw_splash:
-                print(f"  [Notice] {sport_name} splash stream response empty.")
-                fallback = load_sport_baseline(sport_name)
-                if fallback:
-                    print(f"  + [{sport_name}] Using {len(fallback)} verified matches from authentic Bet365 baseline")
-                    return fallback
+                print("  [Notice] Golf stream response empty.")
                 return []
 
             tournois = parser_splash(raw_splash, domain)
             if not tournois:
-                print(f"  [Notice] No active {sport_name} tournaments found in splash stream.")
-                fallback = load_sport_baseline(sport_name)
-                if fallback:
-                    print(f"  + [{sport_name}] Using {len(fallback)} verified matches from authentic Bet365 baseline")
-                    return fallback
+                print("  [Notice] No active Golf tournaments found in splash stream.")
                 return []
 
             today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 12:00:00")
+            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 08:00:00")
 
-            max_tournois = 8 if s_clean in ["soccer", "football", "epl", "tennis"] else 5
-            for i, tournoi in enumerate(tournois[:max_tournois]):
-                t_nom = tournoi.get("nom", sport_name)
+            for i, tournoi in enumerate(tournois[:3]):
+                t_nom = tournoi.get("nom", "Golf Tournament")
                 marches = tournoi.get("marches", [])
-                for j, marche in enumerate(marches[:4]):
+                for j, marche in enumerate(marches[:3]):
                     m_url = marche.get("url")
                     if not m_url:
                         continue
                     m_nom = marche.get("nom", t_nom)
                     raw_c = _intercepter_coupon_url(page, m_url, timeout_s=8)
-
                     if not raw_c:
                         continue
 
-                    comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
-                    parsed_matches = parse_bet365_stream_to_matches(raw_c, sport_name, comp_title)
-                    new_added = 0
-                    for m in parsed_matches:
-                        m_id = m.get("id")
-                        if not any(x["id"] == m_id for x in matches_out):
-                            matches_out.append(m)
-                            new_added += 1
+                    rows = parser_page_universel(raw_c, "Golf", m_nom)
+                    if not rows:
+                        continue
 
-                    if new_added:
-                        print(f"  + [{sport_name}] Captured {new_added} matches/events for {comp_title}")
+                    odds_dict = {}
+                    for r in rows:
+                        p_name = r.get("Participant", "").strip()
+                        c_dec = r.get("Cote_Decimale")
+                        if p_name and c_dec and float(c_dec) > 1.0 and p_name not in ["Inconnu", "Oui", "Non"]:
+                            odds_dict[p_name] = f"{float(c_dec):.2f}"
+
+                    if odds_dict:
+                        sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
+                        comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
+                        match_id = str(abs(hash(comp_title)) % 100000000)
+                        matches_out.append({
+                            "id": match_id,
+                            "date": today_str,
+                            "kickoff": kickoff_str,
+                            "competition": comp_title,
+                            "home": f"{comp_title} - To Win Outright",
+                            "away": "",
+                            "markets": {
+                                "To Win Outright": sorted_odds
+                            }
+                        })
+                        print(f"  + [Golf] Captured {len(sorted_odds)} selections for {comp_title}")
 
     except BaseException as e:
-        print(f"  [{sport_name} CDP Notice] {e}")
+        print(f"  [Golf CDP Notice] {e}")
 
-    if not matches_out:
-        fallback = load_sport_baseline(sport_name)
-        if fallback:
-            print(f"  + [{sport_name}] Using {len(fallback)} verified matches from authentic Bet365 baseline")
-            return fallback
+    return matches_out
+
+
+def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
+    """
+    Scrapes live Cycling outrights & stages (Sport B38) directly from Bet365 via CDP.
+    Supports both bet365.com and bet365.fr.
+    Returns structured list of matches adhering to all_matches.json schema.
+    """
+    if not HAS_PLAYWRIGHT:
+        return []
+
+    matches_out: List[Dict[str, Any]] = []
+
+    try:
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
+            except Exception:
+                print(f"  [Notice] Chrome CDP (port {cdp_port}) is not active. (Run start_chrome_cdp.bat to enable)")
+                return []
+
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = _get_active_bet365_page(context)
+            if not page:
+                print("  [Notice] No usable browser page found in CDP.")
+                return []
+
+            domain = _detect_bet365_domain(context)
+            sport_url = f"{domain}/#/AS/B38/"
+            print(f"  [CDP Cycling] Intercepting Cycling discovery from {domain} (Sport B38)...")
+
+            raw_splash = _intercepter_donnees_sport(page, sport_url, "Cyclisme", "B38", timeout_s=12)
+            if not raw_splash:
+                print("  [Notice] Cycling stream response empty.")
+                return []
+
+            tournois = parser_splash(raw_splash, domain)
+            if not tournois:
+                print("  [Notice] No active Cycling events found in splash stream.")
+                return []
+
+            today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 12:00:00")
+
+            for i, tournoi in enumerate(tournois[:3]):
+                t_nom = tournoi.get("nom", "Cycling Event")
+                marches = tournoi.get("marches", [])
+                for j, marche in enumerate(marches[:3]):
+                    m_url = marche.get("url")
+                    if not m_url:
+                        continue
+                    m_nom = marche.get("nom", t_nom)
+                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=8)
+                    if not raw_c:
+                        continue
+
+                    rows = parser_page_universel(raw_c, "Cyclisme", m_nom)
+                    if not rows:
+                        continue
+
+                    odds_dict = {}
+                    for r in rows:
+                        p_name = r.get("Participant", "").strip()
+                        c_dec = r.get("Cote_Decimale")
+                        if p_name and c_dec and float(c_dec) > 1.0 and p_name not in ["Inconnu", "Oui", "Non"]:
+                            odds_dict[p_name] = f"{float(c_dec):.2f}"
+
+                    if odds_dict:
+                        sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
+                        comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
+                        match_id = str(abs(hash(comp_title)) % 100000000)
+                        matches_out.append({
+                            "id": match_id,
+                            "date": today_str,
+                            "kickoff": kickoff_str,
+                            "competition": comp_title,
+                            "home": f"{comp_title} - To Win",
+                            "away": "",
+                            "markets": {
+                                "To Win": sorted_odds
+                            }
+                        })
+                        print(f"  + [Cycling] Captured {len(sorted_odds)} riders for {comp_title}")
+
+    except BaseException as e:
+        print(f"  [Cycling CDP Notice] {e}")
 
     return matches_out
