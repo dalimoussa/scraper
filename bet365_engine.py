@@ -20,15 +20,8 @@ import hashlib
 
 # Internal authenticated credential pool (hex-encoded for clean abstraction and client protection)
 _INTERNAL_AUTH_CREDENTIALS: List[str] = [
-    bytes.fromhex("31613062393535392d633464372d343632642d623339632d643964323339303634386561").decode("utf-8"),  # Gateway Channel 1
-    bytes.fromhex("61633333356364342d626533312d346366342d613038642d633462303265306337326363").decode("utf-8"),  # Gateway Channel 2
-    bytes.fromhex("34653939386330662d646436322d343936362d623939312d663431376663343562356264").decode("utf-8"),  # Gateway Channel 3
-    bytes.fromhex("38363031313935382d643063312d346534652d626466302d393264366634646664653963").decode("utf-8"),  # Gateway Channel 4
-    bytes.fromhex("62626662666566622d383761622d343331372d616639652d333364636637663932363763").decode("utf-8"),  # Gateway Channel 5
-    bytes.fromhex("32323437363834302d393633362d346463662d386634312d326661636333323636376638").decode("utf-8"),  # Gateway Channel 6
-    bytes.fromhex("38383831633631372d316164622d346335662d393433332d383130393765313438373965").decode("utf-8"),  # Gateway Channel 7
-    bytes.fromhex("39353335373732632d383236392d346634372d383838652d646330373632373336623066").decode("utf-8"),  # Gateway Channel 8
-    bytes.fromhex("65613965316666382d313933642d343237622d623739662d393637336439366464323464").decode("utf-8"),  # Gateway Channel 9
+    bytes.fromhex("33616236633031612d346335612d346565352d383835622d383761616538666635643135").decode("utf-8"),  # Gateway Channel 1
+    bytes.fromhex("63323835326361382d343931372d346639642d626366322d383338306138633335636263").decode("utf-8"),  # Gateway Channel 2
 ]
 
 API_KEYS: List[str] = list(_INTERNAL_AUTH_CREDENTIALS)
@@ -42,7 +35,7 @@ try:
             if isinstance(custom_keys, list) and custom_keys:
                 valid_custom = [k for k in custom_keys if k]
                 if valid_custom:
-                    API_KEYS = valid_custom + API_KEYS
+                    API_KEYS = list(dict.fromkeys(valid_custom + API_KEYS))
             elif _cfg.get("api_key") and _cfg.get("api_key") not in API_KEYS:
                 API_KEYS.insert(0, _cfg.get("api_key"))
 except Exception:
