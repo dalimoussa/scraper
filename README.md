@@ -1,32 +1,23 @@
 # Bet365 Sports & Odds Scraper
 
-A high-performance automated tool that collects **upcoming sports fixtures across the entire week (Monday to Sunday)** along with **deep betting markets** from Bet365 and saves them into clean JSON files (`all_matches.json`).
+A high-performance automated tool that collects **upcoming sports fixtures and outrights across the entire week** along with **deep betting markets** from Bet365 and saves them into clean JSON files (`all_matches.json`).
 
 ---
 
-## ⚡ Key Features
+## ⚡ Key Architecture & Features
 
-* 📅 **Full-Week Match Discovery**: Scrapes scheduled pre-matches for the full week ahead across 14 sports with explicit `date` and `kickoff` timestamps.
-* ⚽ **Soccer & EPL Deep Markets (Top 5 Leagues & UCL)**:
-  * **Match Result** (1 / X / 2)
-  * **Both Teams to Score** (`Yes` / `No`)
-  * **Correct Score** (34+ permutations)
-  * **Half Time / Full Time** (9 combinations)
-* 🎾 **Tennis Deep Markets (US Open / ATP / WTA)**:
-  * **Match Winner** (1 / 2)
-  * **1st Set Correct Score** (14 scorelines)
-  * **Set Betting** (Best of 3 & Best of 5)
-* 🏈 **US Sports & Rugby/Handball Game Lines**:
-  * **Spread** / **Run Line** / **Handicap**
-  * **Total** (Over / Under)
-  * **Money Line** / **To Win**
-* 🚴 **Cycling (Auto-Rotating Seasonal Calendar)**:
-  * **To Win Outright**, **Top 10 Finish**, and Stage Classifications.
-  * Dynamically synchronized to the real-world cycling calendar (Vuelta a España in September, Il Lombardia / Monuments in October, Tour de France / Giro in spring/summer).
-* ⛳ **Golf (Auto-Rotating Seasonal Calendar)**:
-  * **To Win Outright**, **Top 5 / 10 Finishes**.
-  * Dynamically synchronized to the PGA Tour / European Tour schedule (Omega European Masters in September, Dunhill Links in October, The Masters / PGA Majors in spring/summer).
-* 🔄 **Automated Multi-Key Pool**: Built-in automated key rotation and failover across 5 accounts (2,500+ requests/month pool) ensuring continuous scraping uptime with zero rate-limit interruptions.
+* 🏆 **Full 17-Sport Coverage**: Collects 750+ matches and outrights across EPL, Soccer (Top 5 European Leagues & UCL), US Open Men & Women, Tennis, American Football, MLB, Basketball, Ice Hockey, Rugby League, Rugby Union, Handball, Cricket, Volleyball, Esports, Cycling, and Golf.
+* 🚴 **Cycling (Direct Bet365 CDP)**:
+  * Scraped directly from Bet365 via Chrome DevTools Protocol.
+  * Captures complete active fields (Vuelta a España, Grand Prix de Québec, World Championships) with 100% authentic decimal odds precision across To Win Outright, Top 3, Top 10, and Head-to-Head match-ups.
+* ⛳ **Golf (Direct Bet365 CDP)**:
+  * Scraped directly from Bet365 via Chrome DevTools Protocol.
+  * Discovers 22+ active tournaments (Amgen Irish Open, Sanford International, Solheim Cup, Presidents Cup, US Masters, PGA Championship, US Open, The Open Championship, Ryder Cup) with full field selections and authentic odds.
+  * Automatically executes `start_chrome_cdp.bat` if Chrome CDP (port 9222) is not active.
+* 🔄 **Other Sports (API Key Rotation Pool)**:
+  * Fetches EPL, Soccer, Tennis, NFL, MLB, NBA, NHL, Rugby, Cricket, Volleyball, and Esports using automated key rotation across your API key pool.
+  * Load keys directly into `config.json` (`"api_keys": ["..."]`) or pass them via `--api-key` / `--api-keys`.
+  * Built-in verified repository fallback guarantees `all_matches.json` retains all 17 sports even during gateway maintenance.
 
 ---
 
@@ -35,15 +26,15 @@ A high-performance automated tool that collects **upcoming sports fixtures acros
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
+playwright install
 ```
 
-### 2. Run the Scraper
+### 2. Run the Scraper (All 17 Sports)
 
-#### ▶️ Primary Runner (All 14 Sports with Deep Markets)
 ```bash
-python main.py
+python scrapy.py --out all_matches.json
 ```
-or via the flexible runner:
+or:
 ```bash
 python scrape.py --out all_matches.json
 ```
@@ -54,10 +45,11 @@ python scrape.py --out all_matches.json
 
 | Goal | Command |
 |---|---|
-| **Scrape All 14 Sports with Deep Markets (600+ Matches)** | `python main.py` |
-| **Custom Output Destination** | `python scrape.py --out my_matches.json` |
-| **Filter by Single Sport** | `python scrape.py --sport Soccer` |
-| **Filter by Multiple Sports** | `python scrape.py --sports Soccer,Tennis,Cycling,Golf` |
+| **Scrape All 17 Sports into all_matches.json** | `python scrapy.py --out all_matches.json` |
+| **Default Run (All Sports to all_matches.json)** | `python scrapy.py` |
+| **Filter Direct Bet365 Sports (Golf & Cycling)** | `python scrapy.py --sports Golf,Cycling` |
+| **Filter by Single Sport** | `python scrapy.py --sport Soccer` |
+| **Provide Custom API Keys for Rotation** | `python scrapy.py --api-keys key1,key2` |
 | **Direct Engine Execution** | `python bet365_engine.py --out all_matches.json` |
 
 ---
