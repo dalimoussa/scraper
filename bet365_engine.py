@@ -155,19 +155,28 @@ def format_odds(val: Any) -> Optional[str]:
         return None
 
 
-def get_active_key() -> str:
-    """Get the currently active API key from the pool."""
+_SUSPENDED_KEYS = set()
+
+
+def get_active_key() -> Optional[str]:
+    """Get the currently active valid API key from the pool."""
     global current_key_index
-    return API_KEYS[current_key_index % len(API_KEYS)]
+    available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+    if not available:
+        return None
+    return available[current_key_index % len(available)]
 
 
-def rotate_key() -> str:
+def rotate_key() -> Optional[str]:
     """Rotate to the next API gateway channel in the pool upon rate limit or quota consumption."""
     global current_key_index
-    current_key_index = (current_key_index + 1) % len(API_KEYS)
-    new_idx = current_key_index % len(API_KEYS)
+    available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+    if not available:
+        return None
+    current_key_index = (current_key_index + 1) % len(available)
+    new_idx = current_key_index % len(available)
     print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
-    return API_KEYS[new_idx]
+    return available[new_idx]
 
 
 def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 5, use_cache: bool = True) -> Optional[Dict[str, Any]]:
@@ -182,8 +191,17 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
 
     time.sleep(0.55)  # Enforce polite rate limit
 
-    for attempt in range(retries):
+    available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+    if not available:
+        if cache_k in _CACHE_STORE:
+            return _CACHE_STORE[cache_k][1]
+        return None
+
+    max_attempts = min(retries, len(available))
+    for attempt in range(max_attempts):
         active_key = get_active_key()
+        if not active_key:
+            break
         headers = {
             "x-secret": active_key,
             "Accept": "application/json",
@@ -199,10 +217,15 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
                     _save_cache()
                 return data
             elif r.status_code == 401:
-                # Key suspended / unauthorized: rotate to next key in pool
+                _SUSPENDED_KEYS.add(active_key)
                 if cache_k in _CACHE_STORE:
                     return _CACHE_STORE[cache_k][1]
-                print(f"  [HTTP 401] Key #{current_key_index + 1} notice: {r.text[:80]}")
+                print(f"  [HTTP 401] Key notice: {r.text[:80]}")
+                available_now = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+                if not available_now:
+                    print("  [Notice] All API gateway keys in rotation pool are currently suspended or unauthorized.")
+                    print("  [*] Tip: Add your active keys to config.json or pass --api-key / --api-keys to scrape API sports.")
+                    return None
                 rotate_key()
                 time.sleep(0.3)
             elif r.status_code in [429, 403]:

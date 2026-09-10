@@ -13,7 +13,10 @@ Derived from test_sports_complet_final.py architecture:
 import json
 import os
 import re
+import socket
+import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from fractions import Fraction
@@ -31,6 +34,62 @@ TIMEOUT_S = 14
 FAST_MODE = True
 BLOCK_HEAVY_RESOURCES = True
 DEFAULT_DOMAIN = "https://www.bet365.com"
+
+
+def is_port_in_use(port: int = CDP_PORT) -> bool:
+    """Check if Chrome CDP port is already open and accepting connections."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
+    """Ensure Google Chrome CDP is running; automatically executes start_chrome_cdp.bat if not active."""
+    if is_port_in_use(cdp_port):
+        return True
+
+    print(f"  [*] Chrome CDP (port {cdp_port}) not active. Automatically executing start_chrome_cdp.bat...")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    bat_path = os.path.join(base_dir, "start_chrome_cdp.bat")
+
+    if os.path.exists(bat_path):
+        try:
+            subprocess.Popen(f'start "" "{bat_path}"', shell=True)
+        except Exception as e:
+            print(f"  [Notice] Failed to launch {bat_path}: {e}")
+    else:
+        chrome_candidates = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        ]
+        chrome_bin = next((c for c in chrome_candidates if os.path.exists(c)), None)
+        if chrome_bin:
+            profile_dir = os.path.join(tempfile.gettempdir(), "bet365_cdp_profile")
+            cmd = [
+                chrome_bin,
+                f"--remote-debugging-port={cdp_port}",
+                f"--user-data-dir={profile_dir}",
+                "--no-first-run",
+                "--no-default-browser-check",
+                DEFAULT_DOMAIN
+            ]
+            try:
+                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
+
+    # Poll for CDP port activation (up to 15 seconds)
+    for _ in range(30):
+        time.sleep(0.5)
+        if is_port_in_use(cdp_port):
+            print(f"  [*] Chrome CDP successfully initialized on port {cdp_port}.")
+            time.sleep(2.0)
+            return True
+
+    print(f"  [Notice] Could not verify Chrome CDP port {cdp_port} after auto-launch.")
+    return False
+
 
 def fraction_to_decimal(s: str) -> float:
     """Convert Bet365 fraction (e.g. '1/12', '10/1', '13/10', '9/2') or decimal string to float."""
@@ -475,11 +534,12 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
 
     try:
         with sync_playwright() as p:
+            ensure_chrome_cdp(cdp_port)
             try:
                 # Explicit IPv4 address 127.0.0.1 to avoid Windows IPv6 resolution issues
                 browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
             except Exception:
-                print(f"  [Notice] Chrome CDP (port {cdp_port}) is not active. (Run start_chrome_cdp.bat to enable)")
+                print(f"  [Notice] Chrome CDP (port {cdp_port}) could not be connected.")
                 return []
 
             context = browser.contexts[0] if browser.contexts else browser.new_context()
@@ -588,10 +648,11 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
 
     try:
         with sync_playwright() as p:
+            ensure_chrome_cdp(cdp_port)
             try:
                 browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
             except Exception:
-                print(f"  [Notice] Chrome CDP (port {cdp_port}) is not active. (Run start_chrome_cdp.bat to enable)")
+                print(f"  [Notice] Chrome CDP (port {cdp_port}) could not be connected.")
                 return []
 
             context = browser.contexts[0] if browser.contexts else browser.new_context()
