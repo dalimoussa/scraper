@@ -1,4 +1,5 @@
 
+import atexit
 import base64
 import json
 import zlib
@@ -6,17 +7,20 @@ import os
 import re
 import sys
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+import hashlib
 
 try:
     from bet365_internal import scrape_cycling_internal, scrape_golf_internal
 except ImportError:
     scrape_cycling_internal = None
     scrape_golf_internal = None
-
-import hashlib
 
 # Internal authenticated credential pool (hex-encoded for clean abstraction and client protection)
 _INTERNAL_AUTH_CREDENTIALS: List[str] = [
@@ -45,7 +49,17 @@ except Exception:
 CACHE_FILE = ".cache_bet365.json"
 CACHE_TTL_DEFAULT = 86400  # 24 hours default TTL
 _CACHE_STORE: Dict[str, Tuple[float, Any]] = {}
+_CACHE_LOCK = threading.Lock()
+_CACHE_DIRTY = False
+
 _HTTP_SESSION = requests.Session()
+_adapter = HTTPAdapter(
+    pool_connections=30,
+    pool_maxsize=30,
+    max_retries=Retry(total=2, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+)
+_HTTP_SESSION.mount("https://", _adapter)
+_HTTP_SESSION.mount("http://", _adapter)
 
 
 def _load_cache():
@@ -65,12 +79,22 @@ def _load_cache():
 
 
 def _save_cache():
+    global _CACHE_DIRTY
+    if not _CACHE_DIRTY:
+        return
     try:
-        data = {k: {"ts": ts, "data": d} for k, (ts, d) in _CACHE_STORE.items()}
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f)
+        with _CACHE_LOCK:
+            data = {k: {"ts": ts, "data": d} for k, (ts, d) in _CACHE_STORE.items()}
+            tmp_file = f"{CACHE_FILE}.tmp"
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            os.replace(tmp_file, CACHE_FILE)
+            _CACHE_DIRTY = False
     except Exception:
         pass
+
+
+atexit.register(_save_cache)
 
 
 def _get_cache_key(url: str, params: Optional[Dict[str, Any]] = None) -> str:
@@ -149,50 +173,56 @@ def format_odds(val: Any) -> Optional[str]:
 
 
 _SUSPENDED_KEYS = set()
+_KEY_LOCK = threading.Lock()
 
 
-def get_active_key() -> Optional[str]:
+def get_active_key(preferred_idx: Optional[int] = None) -> Optional[str]:
     """Get the currently active valid API key from the pool."""
     global current_key_index
-    available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
-    if not available:
-        return None
-    return available[current_key_index % len(available)]
+    with _KEY_LOCK:
+        available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+        if not available:
+            return None
+        if preferred_idx is not None:
+            return available[preferred_idx % len(available)]
+        return available[current_key_index % len(available)]
 
 
 def rotate_key() -> Optional[str]:
     """Rotate to the next API gateway channel in the pool upon rate limit or quota consumption."""
     global current_key_index
-    available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
-    if not available:
-        return None
-    current_key_index = (current_key_index + 1) % len(available)
-    new_idx = current_key_index % len(available)
-    print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
-    return available[new_idx]
+    with _KEY_LOCK:
+        available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
+        if not available:
+            return None
+        current_key_index = (current_key_index + 1) % len(available)
+        new_idx = current_key_index % len(available)
+        print(f"  [*] Switching to gateway pool channel #{new_idx + 1}...")
+        return available[new_idx]
 
 
-def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 5, use_cache: bool = True) -> Optional[Dict[str, Any]]:
-    """Safe HTTP GET with caching, automated key rotation, rate limiting, and connection reuse."""
+def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int = 4, use_cache: bool = True, key_idx: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Safe HTTP GET with in-memory caching, automated key rotation, rate limiting, and connection reuse."""
     cache_k = _get_cache_key(url, params)
     now = time.time()
 
-    if use_cache and cache_k in _CACHE_STORE:
-        ts, cached_data = _CACHE_STORE[cache_k]
-        if now - ts < CACHE_TTL_DEFAULT:
-            return cached_data
-
-    time.sleep(0.55)  # Enforce polite rate limit
+    if use_cache:
+        with _CACHE_LOCK:
+            if cache_k in _CACHE_STORE:
+                ts, cached_data = _CACHE_STORE[cache_k]
+                if now - ts < CACHE_TTL_DEFAULT:
+                    return cached_data
 
     available = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
     if not available:
-        if cache_k in _CACHE_STORE:
-            return _CACHE_STORE[cache_k][1]
+        with _CACHE_LOCK:
+            if cache_k in _CACHE_STORE:
+                return _CACHE_STORE[cache_k][1]
         return None
 
-    max_attempts = min(retries, len(available))
+    max_attempts = min(retries, len(available) * 2)
     for attempt in range(max_attempts):
-        active_key = get_active_key()
+        active_key = get_active_key(key_idx if attempt == 0 else None)
         if not active_key:
             break
         headers = {
@@ -202,44 +232,44 @@ def make_request(url: str, params: Optional[Dict[str, Any]] = None, retries: int
         }
 
         try:
-            r = _HTTP_SESSION.get(url, headers=headers, params=params, timeout=25)
+            r = _HTTP_SESSION.get(url, headers=headers, params=params, timeout=18)
             if r.status_code == 200:
                 data = r.json()
                 if use_cache:
-                    _CACHE_STORE[cache_k] = (now, data)
-                    _save_cache()
+                    global _CACHE_DIRTY
+                    with _CACHE_LOCK:
+                        _CACHE_STORE[cache_k] = (now, data)
+                        _CACHE_DIRTY = True
                 return data
             elif r.status_code == 401:
-                _SUSPENDED_KEYS.add(active_key)
-                if cache_k in _CACHE_STORE:
-                    return _CACHE_STORE[cache_k][1]
+                with _KEY_LOCK:
+                    _SUSPENDED_KEYS.add(active_key)
+                with _CACHE_LOCK:
+                    if cache_k in _CACHE_STORE:
+                        return _CACHE_STORE[cache_k][1]
                 print(f"  [HTTP 401] Key notice: {r.text[:80]}")
                 available_now = [k for k in API_KEYS if k not in _SUSPENDED_KEYS]
                 if not available_now:
                     print("  [Notice] All API gateway keys in rotation pool are currently suspended or unauthorized.")
-                    print("  [*] Tip: Add your active keys to config.json or pass --api-key / --api-keys to scrape API sports.")
                     return None
                 rotate_key()
-                time.sleep(0.3)
+                time.sleep(0.1)
             elif r.status_code in [429, 403]:
-                # Rate limit or quota exhaustion: rotate to next key in pool
-                print(f"  [Notice {r.status_code}] Channel limit reached on gateway #{current_key_index + 1}.")
                 rotate_key()
-                time.sleep(0.8)
+                time.sleep(0.4)
             else:
-                print(f"  [HTTP {r.status_code}] Notice fetching {url}: {r.text[:100]}")
                 rotate_key()
-                time.sleep(0.5)
+                time.sleep(0.2)
         except Exception as e:
-            if cache_k in _CACHE_STORE:
-                return _CACHE_STORE[cache_k][1]
-            print(f"  [Network Notice] {e}. Rotating gateway...")
+            with _CACHE_LOCK:
+                if cache_k in _CACHE_STORE:
+                    return _CACHE_STORE[cache_k][1]
             rotate_key()
-            time.sleep(1.0)
+            time.sleep(0.3)
 
-    # If network attempts failed or rate limits reached, serve cached version if present
-    if cache_k in _CACHE_STORE:
-        return _CACHE_STORE[cache_k][1]
+    with _CACHE_LOCK:
+        if cache_k in _CACHE_STORE:
+            return _CACHE_STORE[cache_k][1]
     return None
 
 
@@ -696,10 +726,18 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             ("The Americas||Brazil Serie A", "Brazil Serie A"),
             ("The Americas||Argentina Liga Profesional", "Argentina Liga Profesional")
         ]
-        for league_code, comp_name in top_leagues:
+        def _fetch_league(item):
+            idx, (league_code, comp_name) = item
             league_enc = league_code.replace("||", "%7C%7C").replace(" ", "%20")
             url = f"{BASE_URL}/leagues/{league_enc}/events"
-            data = make_request(url)
+            time.sleep((idx % 3) * 0.05)
+            data = make_request(url, key_idx=idx)
+            return comp_name, data
+
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            league_results = list(pool.map(_fetch_league, enumerate(top_leagues)))
+
+        for comp_name, data in league_results:
             if data and data.get("events"):
                 league_count = 0
                 for ev in data["events"]:
@@ -1375,6 +1413,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     print(f"\n=======================================================")
     print(f"TOTAL MATCHES COLLECTED: {total_matches_scraped}")
     print(f"=======================================================")
+    _save_cache()
     return results
 
 

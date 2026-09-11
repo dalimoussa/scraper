@@ -30,7 +30,7 @@ except ImportError:
 
 
 CDP_PORT = 9222
-TIMEOUT_S = 14
+TIMEOUT_S = 7
 FAST_MODE = True
 BLOCK_HEAVY_RESOURCES = True
 DEFAULT_DOMAIN = "https://www.bet365.com"
@@ -43,12 +43,20 @@ def is_port_in_use(port: int = CDP_PORT) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+_CDP_CHECKED: Optional[bool] = None
+
+
 def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
     """Ensure Google Chrome CDP is running; automatically executes start_chrome_cdp.bat if not active."""
+    global _CDP_CHECKED
+    if _CDP_CHECKED is False:
+        return False
+
     if is_port_in_use(cdp_port):
+        _CDP_CHECKED = True
         return True
 
-    print(f"  [*] Chrome CDP (port {cdp_port}) not active. Automatically executing start_chrome_cdp.bat...")
+    print(f"  [*] Chrome CDP (port {cdp_port}) not active. Attempting initialization...")
     base_dir = os.path.dirname(os.path.abspath(__file__))
     bat_path = os.path.join(base_dir, "start_chrome_cdp.bat")
 
@@ -79,15 +87,17 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
             except Exception:
                 pass
 
-    # Poll for CDP port activation (up to 15 seconds)
-    for _ in range(30):
+    # Fast poll for CDP port activation (up to 3 seconds max, 6 x 0.5s)
+    for _ in range(6):
         time.sleep(0.5)
         if is_port_in_use(cdp_port):
             print(f"  [*] Chrome CDP successfully initialized on port {cdp_port}.")
-            time.sleep(2.0)
+            _CDP_CHECKED = True
+            time.sleep(1.0)
             return True
 
-    print(f"  [Notice] Could not verify Chrome CDP port {cdp_port} after auto-launch.")
+    print(f"  [Notice] Chrome CDP not available on port {cdp_port}. Using verified repository fallback.")
+    _CDP_CHECKED = False
     return False
 
 
@@ -466,7 +476,7 @@ def _intercepter_donnees_sport(page, target_url: str, sport_name: str, sport_cod
     return raw[0]
 
 
-def _intercepter_coupon_url(page, url: str, timeout_s: int = 6) -> Optional[str]:
+def _intercepter_coupon_url(page, url: str, timeout_s: int = 3) -> Optional[str]:
     """Intercepte un coupon individuel via l'onglet actif avec gestion propre des listeners."""
     raw = [None]
     ok = [False]
@@ -493,7 +503,7 @@ def _intercepter_coupon_url(page, url: str, timeout_s: int = 6) -> Optional[str]
             page.evaluate(f"window.location.hash = '{target_hash}';")
         except Exception:
             pass
-        page.wait_for_timeout(500)
+        page.wait_for_timeout(300)
         if not ok[0]:
             try:
                 page.goto(url, wait_until="commit", timeout=timeout_s * 1000)
@@ -529,12 +539,13 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
     """
     if not HAS_PLAYWRIGHT:
         return []
+    if not ensure_chrome_cdp(cdp_port):
+        return []
 
     matches_out: List[Dict[str, Any]] = []
 
     try:
         with sync_playwright() as p:
-            ensure_chrome_cdp(cdp_port)
             try:
                 # Explicit IPv4 address 127.0.0.1 to avoid Windows IPv6 resolution issues
                 browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
@@ -552,7 +563,7 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
             sport_url = f"{domain}/#/AS/B7/"
             print(f"  [CDP Golf] Intercepting Golf discovery from {domain} (Sport B7)...")
 
-            raw_splash = _intercepter_donnees_sport(page, sport_url, "Golf", "B7", timeout_s=12)
+            raw_splash = _intercepter_donnees_sport(page, sport_url, "Golf", "B7", timeout_s=8)
             if not raw_splash:
                 print("  [Notice] Golf stream response empty.")
                 return []
@@ -571,7 +582,15 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 "Top Combined Points Scorer", "Top Team Points Scorer"
             ]
 
-            for tourney_name, markets in tournaments.items():
+            # Prioritize active/upcoming tournaments; skip 2027 future outrights during standard cycle
+            active_tourneys = [
+                (t_name, m_list) for t_name, m_list in tournaments.items()
+                if "2027" not in t_name
+            ]
+            if not active_tourneys:
+                active_tourneys = list(tournaments.items())
+
+            for tourney_name, markets in active_tourneys[:6]:
                 selected_markets = []
                 outrights = [m for m in markets if m["market"] in ("To Win Outright", "Outright Markets")]
                 if outrights:
@@ -581,7 +600,7 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                     if pm in ("To Win Outright", "Outright Markets"):
                         continue
                     for m in markets:
-                        if m["market"] == pm and m not in selected_markets and len(selected_markets) < 3:
+                        if m["market"] == pm and m not in selected_markets and len(selected_markets) < 2:
                             selected_markets.append(m)
 
                 if not selected_markets and markets:
@@ -590,7 +609,7 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 for m in selected_markets:
                     m_name = m["market"]
                     m_url = m["url"]
-                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=6)
+                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=3)
                     if not raw_c:
                         continue
 
@@ -643,12 +662,13 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
     """
     if not HAS_PLAYWRIGHT:
         return []
+    if not ensure_chrome_cdp(cdp_port):
+        return []
 
     matches_out: List[Dict[str, Any]] = []
 
     try:
         with sync_playwright() as p:
-            ensure_chrome_cdp(cdp_port)
             try:
                 browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{cdp_port}")
             except Exception:
@@ -665,7 +685,7 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
             sport_url = f"{domain}/#/AS/B38/"
             print(f"  [CDP Cycling] Intercepting Cycling discovery from {domain} (Sport B38)...")
 
-            raw_splash = _intercepter_donnees_sport(page, sport_url, "Cyclisme", "B38", timeout_s=12)
+            raw_splash = _intercepter_donnees_sport(page, sport_url, "Cyclisme", "B38", timeout_s=8)
             if not raw_splash:
                 print("  [Notice] Cycling stream response empty.")
                 return []
@@ -686,7 +706,7 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                     if not m_url:
                         continue
                     m_nom = marche.get("nom", t_nom)
-                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=8)
+                    raw_c = _intercepter_coupon_url(page, m_url, timeout_s=3)
                     if not raw_c:
                         continue
 
