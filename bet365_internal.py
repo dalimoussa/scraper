@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, time as dt_time
 from fractions import Fraction
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -573,8 +573,13 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 print("  [Notice] No active Golf tournaments found in splash stream.")
                 return []
 
-            today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 08:00:00")
+            now_utc = datetime.now(timezone.utc)
+            if now_utc.time() >= dt_time(8, 0, 0):
+                golf_dt = now_utc + timedelta(days=1)
+            else:
+                golf_dt = now_utc
+            today_str = golf_dt.strftime("%d/%m/%Y")
+            kickoff_str = golf_dt.strftime("%d/%m/%Y 08:00:00")
 
             PRIORITY_MARKETS = [
                 "To Win Outright", "Outright Markets", "To Lift Trophy",
@@ -695,8 +700,13 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 print("  [Notice] No active Cycling events found in splash stream.")
                 return []
 
-            today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-            kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 12:00:00")
+            now_utc = datetime.now(timezone.utc)
+            if now_utc.time() >= dt_time(12, 0, 0):
+                cycling_dt = now_utc + timedelta(days=1)
+            else:
+                cycling_dt = now_utc
+            today_str = cycling_dt.strftime("%d/%m/%Y")
+            kickoff_str = cycling_dt.strftime("%d/%m/%Y 12:00:00")
 
             for i, tournoi in enumerate(tournois[:3]):
                 t_nom = tournoi.get("nom", "Cycling Event")

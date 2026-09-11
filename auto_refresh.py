@@ -22,7 +22,7 @@ from datetime import datetime
 
 # ── Import the scrape engine ───────────────────────────────────────────────────
 try:
-    from bet365_engine import scrape_all_sports
+    from bet365_engine import scrape_all_sports, is_future_match
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_engine: {exc}")
     sys.exit(1)
@@ -48,8 +48,22 @@ def _write_atomic(data, out_path: str) -> None:
 
 
 def _preserve_existing(out_path: str) -> None:
-    """Print a notice when we keep the previous file unchanged."""
+    """Purge arrived/expired matches from previous file if scrape returned 0 matches."""
     if os.path.exists(out_path):
+        try:
+            with open(out_path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            cleaned = []
+            for sp in existing:
+                vm = [m for m in sp.get("matches", []) if is_future_match(m)]
+                if vm:
+                    cleaned.append({"sport": sp.get("sport"), "matches": vm})
+            _write_atomic(cleaned, out_path)
+            total = sum(len(s.get("matches", [])) for s in cleaned)
+            print(f"  [Notice] Purged arrived/expired matches from previous file — {total} future matches active.")
+            return
+        except Exception:
+            pass
         size_kb = os.path.getsize(out_path) / 1024
         print(f"  [Notice] Keeping previous file ({size_kb:.1f} KB) — scrape returned 0 matches.")
 

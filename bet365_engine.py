@@ -129,16 +129,66 @@ def format_datetime_fields(iso_str: Optional[str]) -> Tuple[str, str]:
 
 
 def is_future_kickoff(iso_str: Optional[str]) -> bool:
-    """Check if kickoff timestamp is in the future or within 10 minutes past."""
+    """Check if kickoff timestamp is strictly in the future."""
     if not iso_str:
         return True
     try:
         clean_str = iso_str.replace("Z", "+00:00")
         dt = datetime.fromisoformat(clean_str)
-        now = datetime.now(timezone.utc)
-        return dt >= now
+        now_utc = datetime.now(timezone.utc)
+        if dt <= now_utc:
+            return False
+        local_dt = dt.astimezone().replace(tzinfo=None)
+        if local_dt <= datetime.now():
+            return False
+        return True
     except Exception:
         return True
+
+
+def is_future_match(m: Dict[str, Any]) -> bool:
+    """
+    Check if a match kickoff is strictly in the future.
+    Matches that arrive at or have passed their scheduled kickoff date/time are excluded/deleted.
+    """
+    k_str = m.get("kickoff")
+    d_str = m.get("date")
+
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_local = datetime.now()
+
+    if k_str:
+        try:
+            k_dt = None
+            if " " in k_str:
+                parts = k_str.split(" ")
+                dp = [int(p) for p in parts[0].split("/")]
+                tp = [int(p) for p in parts[1].split(":")]
+                if len(dp) == 3 and len(tp) >= 2:
+                    sec = tp[2] if len(tp) > 2 else 0
+                    k_dt = datetime(dp[2], dp[1], dp[0], tp[0], tp[1], sec)
+            elif "T" in k_str:
+                clean = k_str.replace("Z", "+00:00")
+                k_dt = datetime.fromisoformat(clean).replace(tzinfo=None)
+
+            if k_dt:
+                if k_dt <= now_utc or k_dt <= now_local:
+                    return False
+                return True
+        except Exception:
+            pass
+
+    if d_str:
+        try:
+            parts = [int(p) for p in d_str.split("/")]
+            if len(parts) == 3:
+                m_date = datetime(parts[2], parts[1], parts[0]).date()
+                if m_date < now_utc.date() or m_date < now_local.date():
+                    return False
+        except Exception:
+            pass
+
+    return True
 
 
 def clean_league_name(league_raw: Optional[str]) -> str:
@@ -552,23 +602,38 @@ def load_cached_api_sport(sport_name: str) -> List[Dict[str, Any]]:
         return []
 
     from datetime import timedelta
-    today_dt = datetime.now(timezone.utc).date()
-    earliest_date = None
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_local = datetime.now()
+    now_ref = max(now_utc, now_local)
+
+    earliest_dt = None
     for m in matches:
-        d_str = m.get("date")
-        if d_str:
+        k = m.get("kickoff")
+        if k:
             try:
-                parts = [int(p) for p in d_str.split("/")]
-                if len(parts) == 3:
-                    d = datetime(parts[2], parts[1], parts[0]).date()
-                    if earliest_date is None or d < earliest_date:
-                        earliest_date = d
+                parts = k.split(" ")
+                dp = [int(p) for p in parts[0].split("/")]
+                tp = [int(p) for p in parts[1].split(":")]
+                dt = datetime(dp[2], dp[1], dp[0], tp[0], tp[1], tp[2] if len(tp) > 2 else 0)
+                if earliest_dt is None or dt < earliest_dt:
+                    earliest_dt = dt
+            except Exception:
+                pass
+        elif m.get("date"):
+            try:
+                dp = [int(p) for p in m["date"].split("/")]
+                if len(dp) == 3:
+                    dt = datetime(dp[2], dp[1], dp[0], 0, 0, 0)
+                    if earliest_dt is None or dt < earliest_dt:
+                        earliest_dt = dt
             except Exception:
                 pass
 
     day_shift = 0
-    if earliest_date and earliest_date < today_dt:
-        day_shift = (today_dt - earliest_date).days
+    if earliest_dt and earliest_dt <= now_ref:
+        day_shift = (now_ref.date() - earliest_dt.date()).days
+        if earliest_dt + timedelta(days=day_shift) <= now_ref:
+            day_shift += 1
 
     adjusted_matches = []
     for m in matches:
@@ -597,7 +662,8 @@ def load_cached_api_sport(sport_name: str) -> List[Dict[str, Any]]:
                         m_copy["kickoff"] = f"{new_d.strftime(fmt)} {time_part}"
                 except Exception:
                     pass
-        adjusted_matches.append(m_copy)
+        if is_future_match(m_copy):
+            adjusted_matches.append(m_copy)
 
     return adjusted_matches
 
@@ -659,6 +725,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if epl_data and epl_data.get("events"):
             for ev in epl_data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_soccer_markets(ev)
                 if mkts:
@@ -743,6 +811,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                 for ev in data["events"]:
                     if ev.get("live"):
                         continue
+                    if not is_future_kickoff(ev.get("startTime")):
+                        continue
                     ev_id = str(ev.get("eventId"))
                     if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
                         continue
@@ -772,6 +842,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             added_page = 0
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 ev_id = str(ev.get("eventId"))
                 if ev_id in epl_ids or any(m["id"] == ev_id for m in soccer_matches):
@@ -819,6 +891,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_tennis_markets(ev)
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -858,6 +932,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_tennis_markets(ev)
                 if mkts:
@@ -903,6 +979,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                 break
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 ev_id = str(ev.get("eventId"))
                 if ev_id in us_ids or any(m["id"] == ev_id for m in tennis_matches):
@@ -950,6 +1028,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_game_lines(ev, "American Football")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -989,6 +1069,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_game_lines(ev, "MLB")
                 if mkts:
@@ -1030,6 +1112,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_game_lines(ev, "Basketball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -1069,6 +1153,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_game_lines(ev, "Ice Hockey")
                 if mkts:
@@ -1110,6 +1196,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_game_lines(ev, "Rugby League")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -1149,6 +1237,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_game_lines(ev, "Rugby Union")
                 if mkts:
@@ -1190,6 +1280,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_game_lines(ev, "Handball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -1229,6 +1321,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_game_lines(ev, "Cricket")
                 if mkts:
@@ -1270,6 +1364,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
+                if not is_future_kickoff(ev.get("startTime")):
+                    continue
                 mkts = extract_game_lines(ev, "Volleyball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
@@ -1309,6 +1405,8 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
         if data and data.get("events"):
             for ev in data["events"]:
                 if ev.get("live"):
+                    continue
+                if not is_future_kickoff(ev.get("startTime")):
                     continue
                 mkts = extract_game_lines(ev, "Esports")
                 if mkts:
@@ -1383,24 +1481,11 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
             total_matches_scraped += len(golf_matches)
             print(f"  + Golf: {len(golf_matches)} active tournament events")
 
-    # Ensure all sports only contain active/upcoming matches (no old dates before today)
-    today_dt = datetime.now(timezone.utc).date()
+    # Ensure all sports strictly contain future matches only (matches that arrive at their date/time are deleted)
     cleaned_results = []
     total_valid = 0
     for sport_group in results:
-        valid_matches = []
-        for m in sport_group.get("matches", []):
-            d_str = m.get("date")
-            if d_str:
-                try:
-                    parts = [int(p) for p in d_str.split("/")]
-                    if len(parts) == 3:
-                        m_date = datetime(parts[2], parts[1], parts[0]).date()
-                        if m_date < today_dt:
-                            continue
-                except Exception:
-                    pass
-            valid_matches.append(m)
+        valid_matches = [m for m in sport_group.get("matches", []) if is_future_match(m)]
         if valid_matches:
             cleaned_results.append({
                 "sport": sport_group.get("sport"),
@@ -1459,6 +1544,23 @@ def main():
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 
     if total_m == 0 and os.path.exists(args.out) and os.path.getsize(args.out) > 500:
+        try:
+            with open(args.out, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            cleaned = []
+            for sp in existing:
+                vm = [m for m in sp.get("matches", []) if is_future_match(m)]
+                if vm:
+                    cleaned.append({"sport": sp.get("sport"), "matches": vm})
+            if cleaned:
+                tmp_file = f"{args.out}.tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(cleaned, f, ensure_ascii=False, indent=2)
+                os.replace(tmp_file, args.out)
+                print(f"\n[Notice] Purged arrived/expired matches from {args.out}: {sum(len(s['matches']) for s in cleaned)} future matches remain.")
+                return
+        except Exception:
+            pass
         print(f"\n[Notice] Preserving existing verified dataset in {args.out}")
         return
 
