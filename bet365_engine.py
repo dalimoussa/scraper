@@ -22,10 +22,10 @@ except ImportError:
     scrape_cycling_internal = None
     scrape_golf_internal = None
 
-# Internal authenticated credential pool (hex-encoded for clean abstraction and client protection)
+# Internal authenticated credential pool (updated with active Bet365 API tokens)
 _INTERNAL_AUTH_CREDENTIALS: List[str] = [
-    bytes.fromhex("33616236633031612d346335612d346565352d383835622d383761616538666635643135").decode("utf-8"),  # Gateway Channel 1
-    bytes.fromhex("63323835326361382d343931372d346639642d626366322d383338306138633335636263").decode("utf-8"),  # Gateway Channel 2
+    "7db89fda-6a7f-4316-b349-d82f4905303d",
+    "4c0ddb04-23d1-46b4-9e90-4e108488d152"
 ]
 
 API_KEYS: List[str] = list(_INTERNAL_AUTH_CREDENTIALS)
@@ -47,7 +47,7 @@ except Exception:
 
 # Local High-Efficiency Caching Layer (minimizes redundant API requests)
 CACHE_FILE = ".cache_bet365.json"
-CACHE_TTL_DEFAULT = 86400  # 24 hours default TTL
+CACHE_TTL_DEFAULT = 300  # 5 minutes TTL for fresh data
 _CACHE_STORE: Dict[str, Tuple[float, Any]] = {}
 _CACHE_LOCK = threading.Lock()
 _CACHE_DIRTY = False
@@ -573,9 +573,8 @@ _API_CACHE_DATA: Optional[List[Dict[str, Any]]] = None
 
 def load_cached_api_sport(sport_name: str) -> List[Dict[str, Any]]:
     """
-    Load verified match fixtures for an API sport when gateway channel
-    is offline or API keys in rotation are suspended/exhausted.
-    Dynamically aligns fixture dates and kickoffs to ensure matches remain active.
+    Load verified match fixtures for an API sport from previous recent sync.
+    Only returns genuinely future matches - NEVER shifts dates or fabricates fixtures.
     """
     global _API_CACHE_DATA
     cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".api_sports_cache.json")
@@ -601,71 +600,8 @@ def load_cached_api_sport(sport_name: str) -> List[Dict[str, Any]]:
     if not matches:
         return []
 
-    from datetime import timedelta
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    now_local = datetime.now()
-    now_ref = max(now_utc, now_local)
-
-    earliest_dt = None
-    for m in matches:
-        k = m.get("kickoff")
-        if k:
-            try:
-                parts = k.split(" ")
-                dp = [int(p) for p in parts[0].split("/")]
-                tp = [int(p) for p in parts[1].split(":")]
-                dt = datetime(dp[2], dp[1], dp[0], tp[0], tp[1], tp[2] if len(tp) > 2 else 0)
-                if earliest_dt is None or dt < earliest_dt:
-                    earliest_dt = dt
-            except Exception:
-                pass
-        elif m.get("date"):
-            try:
-                dp = [int(p) for p in m["date"].split("/")]
-                if len(dp) == 3:
-                    dt = datetime(dp[2], dp[1], dp[0], 0, 0, 0)
-                    if earliest_dt is None or dt < earliest_dt:
-                        earliest_dt = dt
-            except Exception:
-                pass
-
-    day_shift = 0
-    if earliest_dt and earliest_dt <= now_ref:
-        day_shift = (now_ref.date() - earliest_dt.date()).days
-        if earliest_dt + timedelta(days=day_shift) <= now_ref:
-            day_shift += 1
-
-    adjusted_matches = []
-    for m in matches:
-        m_copy = dict(m)
-        if day_shift > 0:
-            d_str = m_copy.get("date")
-            if d_str:
-                try:
-                    parts = [int(p) for p in d_str.split("/")]
-                    if len(parts) == 3:
-                        orig_d = datetime(parts[2], parts[1], parts[0]).date()
-                        new_d = orig_d + timedelta(days=day_shift)
-                        m_copy["date"] = new_d.strftime("%d/%m/%Y")
-                except Exception:
-                    pass
-            k_str = m_copy.get("kickoff")
-            if k_str:
-                try:
-                    k_parts = k_str.split(" ")
-                    d_parts = [int(p) for p in k_parts[0].split("/")]
-                    if len(d_parts) == 3:
-                        orig_d = datetime(d_parts[2], d_parts[1], d_parts[0]).date()
-                        new_d = orig_d + timedelta(days=day_shift)
-                        time_part = k_parts[1] if len(k_parts) > 1 else "12:00:00"
-                        fmt = "%d/%m/%Y"
-                        m_copy["kickoff"] = f"{new_d.strftime(fmt)} {time_part}"
-                except Exception:
-                    pass
-        if is_future_match(m_copy):
-            adjusted_matches.append(m_copy)
-
-    return adjusted_matches
+    # Strictly return only matches that are genuine future events (no date-shifting!)
+    return [m for m in matches if is_future_match(m)]
 
 
 def save_cached_api_sport(sport_name: str, matches: List[Dict[str, Any]]):
@@ -834,7 +770,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
 
         # Fetch additional general soccer pre-matches only if needed to hit target threshold
         page = 1
-        while len(soccer_matches) < 260 and page <= 5:
+        while len(soccer_matches) < 260 and page <= 12:
             url = f"{BASE_URL}/events"
             data = make_request(url, params={"page": page, "limit": 30})
             if not data or not data.get("events"):
@@ -1020,7 +956,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     af_matches = []
     if want_sport("American Football"):
         print("\n[6/17] Fetching American Football matches...")
-        for page in range(1, 3):
+        for page in range(1, 4):
             url = f"{BASE_URL}/american-football/events"
             data = make_request(url, params={"page": page, "limit": 30})
             if not data or not data.get("events"):
@@ -1065,18 +1001,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     bb_matches = []
     if want_sport("MLB") or want_sport("Baseball"):
         print("\n[7/17] Fetching MLB / Baseball matches...")
-        data = make_request(f"{BASE_URL}/baseball/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 4):
+            data = make_request(f"{BASE_URL}/baseball/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in bb_matches):
+                    continue
                 mkts = extract_game_lines(ev, "MLB")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     bb_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1084,7 +1025,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + MLB: {len(bb_matches)} matches")
+        print(f"  + MLB: {len(bb_matches)} matches")
 
         if not bb_matches:
             cached_bb = load_cached_api_sport("MLB")
@@ -1107,18 +1048,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     bball_matches = []
     if want_sport("Basketball"):
         print("\n[8/17] Fetching Basketball matches...")
-        data = make_request(f"{BASE_URL}/basketball/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 4):
+            data = make_request(f"{BASE_URL}/basketball/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in bball_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Basketball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     bball_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1126,7 +1072,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Basketball: {len(bball_matches)} matches")
+        print(f"  + Basketball: {len(bball_matches)} matches")
 
         if not bball_matches:
             cached_bball = load_cached_api_sport("Basketball")
@@ -1149,18 +1095,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     ih_matches = []
     if want_sport("Ice Hockey"):
         print("\n[9/17] Fetching Ice Hockey matches...")
-        data = make_request(f"{BASE_URL}/ice-hockey/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 4):
+            data = make_request(f"{BASE_URL}/ice-hockey/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in ih_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Ice Hockey")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     ih_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1168,7 +1119,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Ice Hockey: {len(ih_matches)} matches")
+        print(f"  + Ice Hockey: {len(ih_matches)} matches")
 
         if not ih_matches:
             cached_ih = load_cached_api_sport("Ice Hockey")
@@ -1191,18 +1142,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     rl_matches = []
     if want_sport("Rugby League"):
         print("\n[10/17] Fetching Rugby League matches...")
-        data = make_request(f"{BASE_URL}/rugby-league/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 3):
+            data = make_request(f"{BASE_URL}/rugby-league/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in rl_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Rugby League")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     rl_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1210,7 +1166,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Rugby League: {len(rl_matches)} matches")
+        print(f"  + Rugby League: {len(rl_matches)} matches")
 
         if not rl_matches:
             cached_rl = load_cached_api_sport("Rugby League")
@@ -1233,18 +1189,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     ru_matches = []
     if want_sport("Rugby Union"):
         print("\n[11/17] Fetching Rugby Union matches...")
-        data = make_request(f"{BASE_URL}/rugby-union/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 3):
+            data = make_request(f"{BASE_URL}/rugby-union/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in ru_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Rugby Union")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     ru_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1252,7 +1213,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Rugby Union: {len(ru_matches)} matches")
+        print(f"  + Rugby Union: {len(ru_matches)} matches")
 
         if not ru_matches:
             cached_ru = load_cached_api_sport("Rugby Union")
@@ -1275,18 +1236,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     hb_matches = []
     if want_sport("Handball"):
         print("\n[12/17] Fetching Handball matches...")
-        data = make_request(f"{BASE_URL}/handball/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 4):
+            data = make_request(f"{BASE_URL}/handball/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in hb_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Handball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     hb_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1294,7 +1260,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Handball: {len(hb_matches)} matches")
+        print(f"  + Handball: {len(hb_matches)} matches")
 
         if not hb_matches:
             cached_hb = load_cached_api_sport("Handball")
@@ -1317,18 +1283,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     cricket_matches = []
     if want_sport("Cricket"):
         print("\n[13/17] Fetching Cricket matches...")
-        data = make_request(f"{BASE_URL}/cricket/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 3):
+            data = make_request(f"{BASE_URL}/cricket/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in cricket_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Cricket")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     cricket_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1336,7 +1307,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Cricket: {len(cricket_matches)} matches")
+        print(f"  + Cricket: {len(cricket_matches)} matches")
 
         if not cricket_matches:
             cached_cricket = load_cached_api_sport("Cricket")
@@ -1359,18 +1330,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     vb_matches = []
     if want_sport("Volleyball"):
         print("\n[14/17] Fetching Volleyball matches...")
-        data = make_request(f"{BASE_URL}/volleyball/events", params={"page": 1, "limit": 30})
-        if data and data.get("events"):
+        for page in range(1, 3):
+            data = make_request(f"{BASE_URL}/volleyball/events", params={"page": page, "limit": 30})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in vb_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Volleyball")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     vb_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1378,7 +1354,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Volleyball: {len(vb_matches)} matches")
+        print(f"  + Volleyball: {len(vb_matches)} matches")
 
         if not vb_matches:
             cached_vb = load_cached_api_sport("Volleyball")
@@ -1401,18 +1377,23 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
     esports_matches = []
     if want_sport("Esports"):
         print("\n[15/17] Fetching Esports matches...")
-        data = make_request(f"{BASE_URL}/esports/events", params={"page": 1, "limit": 40})
-        if data and data.get("events"):
+        for page in range(1, 3):
+            data = make_request(f"{BASE_URL}/esports/events", params={"page": page, "limit": 40})
+            if not data or not data.get("events"):
+                break
             for ev in data["events"]:
                 if ev.get("live"):
                     continue
                 if not is_future_kickoff(ev.get("startTime")):
                     continue
+                ev_id = str(ev.get("eventId"))
+                if any(m["id"] == ev_id for m in esports_matches):
+                    continue
                 mkts = extract_game_lines(ev, "Esports")
                 if mkts:
                     kickoff, match_date = format_datetime_fields(ev.get("startTime"))
                     esports_matches.append({
-                        "id": str(ev.get("eventId")),
+                        "id": ev_id,
                         "date": match_date,
                         "kickoff": kickoff,
                         "competition": clean_league_name(ev.get("league")),
@@ -1420,7 +1401,7 @@ def scrape_all_sports(min_target: int = 350, target_sports: Optional[List[str]] 
                         "away": ev.get("away", ""),
                         "markets": mkts
                     })
-            print(f"  + Esports: {len(esports_matches)} matches")
+        print(f"  + Esports: {len(esports_matches)} matches")
 
         if not esports_matches:
             cached_esports = load_cached_api_sport("Esports")

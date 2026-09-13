@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bet365 Sports Odds Display — Multi-Sport Specification</title>
+  <meta name="description" content="Bet365 Sports Odds Display compliant with data-driven specification. Features sport-specific market layouts for Soccer, Tennis, Basketball, American Football, Cycling, Golf, and more.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <div class="brand-logo" id="brandLogo">
+          bet365<span class="dot">.</span>
+        </div>
+        <div class="brand-subtitle">Sports Odds Display Specification</div>
+      </div>
+
+      <!-- Live Search Bar -->
+      <div class="search-bar-container">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input" 
+          placeholder="Search team, player, competitor, competition..." 
+          autocomplete="off"
+        />
+        <button id="searchClear" class="search-clear" title="Clear search">✕</button>
+      </div>
+
+      <!-- Dataset Counters -->
+      <div class="header-stats">
+        <div class="stat-chip" id="chipSports">
+          <span>Sports:</span>
+          <strong id="totalSportsStat">18</strong>
+        </div>
+        <div class="stat-chip" id="chipEvents">
+          <span>Events:</span>
+          <strong id="totalEventsStat">629</strong>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Horizontal Sports Navigation Pill Bar -->
+  <nav class="sports-nav-wrapper" aria-label="Sports selection">
+    <div class="sports-nav" id="sportsNav">
+      <!-- Dynamic sport tabs injected here -->
+    </div>
+  </nav>
+
+  <!-- Secondary Competition Filter Bar -->
+  <nav class="sub-nav-wrapper" aria-label="Competition selection">
+    <div class="comp-nav" id="compNav">
+      <!-- Dynamic competition chips injected here -->
+    </div>
+  </nav>
+
+  <!-- Main Grid Layout -->
+  <main class="main-container">
+    
+    <!-- Feed Section -->
+    <section class="events-feed-section" aria-labelledby="feedTitle">
+      <div class="feed-header">
+        <h1 class="feed-title" id="feedTitle">
+          <span>All Events</span>
+          <span class="badge">629</span>
+        </h1>
+        <div style="font-size:0.8rem; color:var(--text-dim);">
+          ⚡ Live Bet365 Normalized Feeds
+        </div>
+      </div>
+
+      <!-- Event Cards Feed -->
+      <div class="events-feed" id="eventsFeed">
+        <!-- Event cards injected here -->
+      </div>
+    </section>
+
+    <!-- Interactive Bet Slip Sidebar -->
+    <aside class="betslip-panel" aria-label="Interactive Bet Slip">
+      <div class="betslip-header">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span>🎟️ Bet Slip</span>
+          <span class="count-badge" id="betslipHeaderCount">0</span>
+        </div>
+        <button class="clear-slip-btn" id="clearSlipBtn">Clear</button>
+      </div>
+
+      <div class="betslip-body" id="betslipList">
+        <div class="betslip-empty">
+          <div style="font-size:1.5rem; margin-bottom:0.4rem;">🎟️</div>
+          <div>Your Bet Slip is empty.</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">
+            Click on any odds button to add selections.
+          </div>
+        </div>
+      </div>
+
+      <div class="betslip-footer">
+        <div class="stake-row">
+          <span>Stake ($):</span>
+          <input type="number" id="stakeInput" class="stake-input" value="10" min="1" step="1" />
+        </div>
+
+        <div class="return-row">
+          <span style="color:var(--text-dim);">Combined Odds:</span>
+          <span class="return-val" id="totalOddsVal" style="font-size:0.95rem; color:#fff;">0.00</span>
+        </div>
+
+        <div class="return-row">
+          <span>Est. Return:</span>
+          <span class="return-val" id="potentialReturnVal">$0.00</span>
+        </div>
+
+        <button class="place-bet-btn" id="placeBetBtn" disabled>
+          PLACE BET
+        </button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="normalizer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

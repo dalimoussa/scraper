@@ -574,12 +574,14 @@ def scrape_golf_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 return []
 
             now_utc = datetime.now(timezone.utc)
-            if now_utc.time() >= dt_time(8, 0, 0):
+            if now_utc.time() >= dt_time(21, 0, 0):
                 golf_dt = now_utc + timedelta(days=1)
+                time_str = "08:00:00"
             else:
                 golf_dt = now_utc
+                time_str = "21:00:00"
             today_str = golf_dt.strftime("%d/%m/%Y")
-            kickoff_str = golf_dt.strftime("%d/%m/%Y 08:00:00")
+            kickoff_str = f"{today_str} {time_str}"
 
             PRIORITY_MARKETS = [
                 "To Win Outright", "Outright Markets", "To Lift Trophy",
@@ -701,12 +703,14 @@ def scrape_cycling_internal(cdp_port: int = CDP_PORT) -> List[Dict[str, Any]]:
                 return []
 
             now_utc = datetime.now(timezone.utc)
-            if now_utc.time() >= dt_time(12, 0, 0):
+            if now_utc.time() >= dt_time(18, 0, 0):
                 cycling_dt = now_utc + timedelta(days=1)
+                time_str = "12:00:00"
             else:
                 cycling_dt = now_utc
+                time_str = "18:00:00"
             today_str = cycling_dt.strftime("%d/%m/%Y")
-            kickoff_str = cycling_dt.strftime("%d/%m/%Y 12:00:00")
+            kickoff_str = f"{today_str} {time_str}"
 
             for i, tournoi in enumerate(tournois[:3]):
                 t_nom = tournoi.get("nom", "Cycling Event")
