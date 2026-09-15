@@ -121,6 +121,10 @@ def main():
 
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 
+    if total_m == 0 and os.path.exists(args.out):
+        print(f"\n[Warning] No matches collected. Preserving existing {args.out} to prevent blank overwrite.")
+        return
+
     # Write output atomically to avoid corruption
     tmp_file = f"{args.out}.tmp"
     with open(tmp_file, "w", encoding="utf-8") as f:

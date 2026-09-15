@@ -5671,500 +5671,6 @@
     "sport": "Tennis",
     "matches": [
       {
-        "id": "95500617",
-        "date": "Mar. 15 sept",
-        "kickoff": "20:00",
-        "competition": "WTA Guadalajara",
-        "home": "Cristina Bucsa",
-        "away": "Panna Udvardy",
-        "markets": {
-          "To Win Match": {
-            "1": "1.44",
-            "2": "2.75"
-          },
-          "Match Winner": {
-            "1": "1.44",
-            "2": "2.75"
-          },
-          "Set Betting": {
-            "2-0": "2.76",
-            "2-1": "4.69",
-            "0-2": "5.27",
-            "1-2": "8.97"
-          },
-          "First Set Winner": {
-            "1": "1.70",
-            "2": "2.95"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "11808612",
-        "date": "Mar. 15 sept",
-        "kickoff": "21:30",
-        "competition": "WTA Guadalajara",
-        "home": "Alycia Parks",
-        "away": "Sara Bejlek",
-        "markets": {
-          "To Win Match": {
-            "1": "3.75",
-            "2": "1.28"
-          },
-          "Match Winner": {
-            "1": "3.75",
-            "2": "1.28"
-          },
-          "Set Betting": {
-            "2-0": "7.11",
-            "2-1": "12.11",
-            "0-2": "2.43",
-            "1-2": "4.13"
-          },
-          "First Set Winner": {
-            "1": "3.77",
-            "2": "1.51"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "43367454",
-        "date": "Mer. 16 sept",
-        "kickoff": "00:00",
-        "competition": "WTA Guadalajara",
-        "home": "Diane Parry",
-        "away": "Peyton Stearns",
-        "markets": {
-          "To Win Match": {
-            "1": "2.00",
-            "2": "1.80"
-          },
-          "Match Winner": {
-            "1": "2.00",
-            "2": "1.80"
-          },
-          "Set Betting": {
-            "2-0": "3.82",
-            "2-1": "6.50",
-            "0-2": "3.44",
-            "1-2": "5.85"
-          },
-          "First Set Winner": {
-            "1": "2.26",
-            "2": "2.07"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "15780927",
-        "date": "Mer. 16 sept",
-        "kickoff": "01:30",
-        "competition": "WTA Guadalajara",
-        "home": "Sloane Stephens",
-        "away": "Janice Tjen",
-        "markets": {
-          "To Win Match": {
-            "1": "2.37",
-            "2": "1.57"
-          },
-          "Match Winner": {
-            "1": "2.37",
-            "2": "1.57"
-          },
-          "Set Betting": {
-            "2-0": "4.54",
-            "2-1": "7.73",
-            "0-2": "3.01",
-            "1-2": "5.12"
-          },
-          "First Set Winner": {
-            "1": "2.61",
-            "2": "1.84"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "57060140",
-        "date": "Jeu. 17 sept",
-        "kickoff": "21:00",
-        "competition": "US Open",
-        "home": "Marta Kostyuk",
-        "away": "Taylor Townsend",
-        "markets": {
-          "To Win Match": {
-            "1": "1.33",
-            "2": "3.40"
-          },
-          "Match Winner": {
-            "1": "1.33",
-            "2": "3.40"
-          },
-          "Set Betting": {
-            "2-0": "2.52",
-            "2-1": "4.29",
-            "0-2": "6.44",
-            "1-2": "10.96"
-          },
-          "First Set Winner": {
-            "1": "1.57",
-            "2": "3.48"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "64525777",
-        "date": "Jeu. 17 sept",
-        "kickoff": "21:00",
-        "competition": "WTA Guadalajara",
-        "home": "Kayla Day",
-        "away": "Liudmila Samsonova",
-        "markets": {
-          "To Win Match": {
-            "1": "3.00",
-            "2": "1.40"
-          },
-          "Match Winner": {
-            "1": "3.00",
-            "2": "1.40"
-          },
-          "Set Betting": {
-            "2-0": "5.69",
-            "2-1": "9.68",
-            "0-2": "2.65",
-            "1-2": "4.52"
-          },
-          "First Set Winner": {
-            "1": "3.14",
-            "2": "1.65"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "63344996",
-        "date": "Jeu. 17 sept",
-        "kickoff": "21:00",
-        "competition": "WTA Guadalajara",
-        "home": "Magdalena Frech",
-        "away": "Caroline Dolehide",
-        "markets": {
-          "To Win Match": {
-            "1": "1.50",
-            "2": "2.62"
-          },
-          "Match Winner": {
-            "1": "1.50",
-            "2": "2.62"
-          },
-          "Set Betting": {
-            "2-0": "2.85",
-            "2-1": "4.85",
-            "0-2": "4.97",
-            "1-2": "8.46"
-          },
-          "First Set Winner": {
-            "1": "1.75",
-            "2": "2.82"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "75159249",
-        "date": "Jeu. 17 sept",
-        "kickoff": "21:00",
-        "competition": "WTA Guadalajara",
-        "home": "Zeynep Sonmez",
-        "away": "Iva Jovic",
-        "markets": {
-          "To Win Match": {
-            "1": "4.00",
-            "2": "1.25"
-          },
-          "Match Winner": {
-            "1": "4.00",
-            "2": "1.25"
-          },
-          "Set Betting": {
-            "2-0": "7.60",
-            "2-1": "12.94",
-            "0-2": "2.38",
-            "1-2": "4.04"
-          },
-          "First Set Winner": {
-            "1": "3.98",
-            "2": "1.48"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "57989803",
-        "date": "Mar. 15 sept",
-        "kickoff": "14:30",
-        "competition": "WTA Sao Paulo",
-        "home": "Darja Semenistaja",
-        "away": "Hayu Kinoshita",
-        "markets": {
-          "To Win Match": {
-            "1": "2.10",
-            "2": "1.72"
-          },
-          "Match Winner": {
-            "1": "2.10",
-            "2": "1.72"
-          },
-          "Set Betting": {
-            "2-0": "4.02",
-            "2-1": "6.84",
-            "0-2": "3.29",
-            "1-2": "5.60"
-          },
-          "First Set Winner": {
-            "1": "2.36",
-            "2": "1.99"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "97032848",
-        "date": "Mar. 15 sept",
-        "kickoff": "16:00",
-        "competition": "WTA Sao Paulo",
-        "home": "Xiaodi You",
-        "away": "Alina Charaeva",
-        "markets": {
-          "To Win Match": {
-            "1": "3.00",
-            "2": "1.40"
-          },
-          "Match Winner": {
-            "1": "3.00",
-            "2": "1.40"
-          },
-          "Set Betting": {
-            "2-0": "5.69",
-            "2-1": "9.68",
-            "0-2": "2.65",
-            "1-2": "4.52"
-          },
-          "First Set Winner": {
-            "1": "3.14",
-            "2": "1.65"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "4067029",
-        "date": "Mar. 15 sept",
-        "kickoff": "17:00",
-        "competition": "WTA Sao Paulo",
-        "home": "Eva Lys",
-        "away": "Gabriela Ce",
-        "markets": {
-          "To Win Match": {
-            "1": "1.08",
-            "2": "8.00"
-          },
-          "Match Winner": {
-            "1": "1.08",
-            "2": "8.00"
-          },
-          "Set Betting": {
-            "2-0": "2.05",
-            "2-1": "3.50",
-            "0-2": "15.18",
-            "1-2": "25.84"
-          },
-          "First Set Winner": {
-            "1": "1.28",
-            "2": "6.99"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "89965238",
-        "date": "Mar. 15 sept",
-        "kickoff": "17:30",
-        "competition": "WTA Sao Paulo",
-        "home": "Jessica Bouzas Maneiro",
-        "away": "Dominika Salkova",
-        "markets": {
-          "To Win Match": {
-            "1": "1.30",
-            "2": "3.50"
-          },
-          "Match Winner": {
-            "1": "1.30",
-            "2": "3.50"
-          },
-          "Set Betting": {
-            "2-0": "2.48",
-            "2-1": "4.23",
-            "0-2": "6.68",
-            "1-2": "11.38"
-          },
-          "First Set Winner": {
-            "1": "1.55",
-            "2": "3.59"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "45556897",
-        "date": "Mar. 15 sept",
-        "kickoff": "17:30",
-        "competition": "WTA Sao Paulo",
-        "home": "Cadence Brace",
-        "away": "Solana Sierra",
-        "markets": {
-          "To Win Match": {
-            "1": "2.62",
-            "2": "1.50"
-          },
-          "Match Winner": {
-            "1": "2.62",
-            "2": "1.50"
-          },
-          "Set Betting": {
-            "2-0": "4.97",
-            "2-1": "8.46",
-            "0-2": "2.85",
-            "1-2": "4.85"
-          },
-          "First Set Winner": {
-            "1": "2.82",
-            "2": "1.75"
-          },
-          "Total Games": {
-            "Over": {
-              "line": "21.5",
-              "odds": "1.83"
-            },
-            "Under": {
-              "line": "21.5",
-              "odds": "1.95"
-            }
-          }
-        }
-      },
-      {
         "id": "201151851",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 19:00:00",
@@ -6431,6 +5937,120 @@
         }
       },
       {
+        "id": "201232090",
+        "date": "15/09/2026",
+        "kickoff": "15/09/2026 18:00:00",
+        "competition": "Popular - WTA Guadalajara",
+        "home": "Cristina Bucsa",
+        "away": "Panna Udvardy",
+        "markets": {
+          "Match Winner": {
+            "1": "1.40",
+            "2": "3.00"
+          },
+          "To Win Match": {
+            "1": "1.40",
+            "2": "3.00"
+          },
+          "Set Betting": {
+            "2-0": "2.65",
+            "2-1": "4.52",
+            "0-2": "5.69",
+            "1-2": "9.68"
+          },
+          "First Set Winner": {
+            "1": "1.65",
+            "2": "3.14"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
+        "id": "201221986",
+        "date": "15/09/2026",
+        "kickoff": "15/09/2026 18:00:00",
+        "competition": "Popular - WTA Guadalajara",
+        "home": "Diane Parry",
+        "away": "Peyton Stearns",
+        "markets": {
+          "Match Winner": {
+            "1": "1.80",
+            "2": "2.00"
+          },
+          "To Win Match": {
+            "1": "1.80",
+            "2": "2.00"
+          },
+          "Set Betting": {
+            "2-0": "3.44",
+            "2-1": "5.85",
+            "0-2": "3.82",
+            "1-2": "6.50"
+          },
+          "First Set Winner": {
+            "1": "2.07",
+            "2": "2.26"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
+        "id": "201164333",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 17:00:00",
+        "competition": "Popular - WTA Sao Paulo",
+        "home": "Jessica Bouzas Maneiro",
+        "away": "Dominika Salkova",
+        "markets": {
+          "Match Winner": {
+            "1": "1.29",
+            "2": "3.75"
+          },
+          "To Win Match": {
+            "1": "1.29",
+            "2": "3.75"
+          },
+          "Set Betting": {
+            "2-0": "2.43",
+            "2-1": "4.14",
+            "0-2": "7.09",
+            "1-2": "12.07"
+          },
+          "First Set Winner": {
+            "1": "1.51",
+            "2": "3.76"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
         "id": "201164329",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 17:00:00",
@@ -6455,6 +6075,82 @@
           "First Set Winner": {
             "1": "2.26",
             "2": "2.07"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
+        "id": "201228921",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 18:00:00",
+        "competition": "Popular - WTA Sao Paulo",
+        "home": "Xiaodi You",
+        "away": "Alina Charaeva",
+        "markets": {
+          "Match Winner": {
+            "1": "2.75",
+            "2": "1.44"
+          },
+          "To Win Match": {
+            "1": "2.75",
+            "2": "1.44"
+          },
+          "Set Betting": {
+            "2-0": "5.26",
+            "2-1": "8.95",
+            "0-2": "2.76",
+            "1-2": "4.70"
+          },
+          "First Set Winner": {
+            "1": "2.95",
+            "2": "1.70"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
+        "id": "201228922",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 18:30:00",
+        "competition": "Popular - WTA Sao Paulo",
+        "home": "Cadence Brace",
+        "away": "Solana Sierra",
+        "markets": {
+          "Match Winner": {
+            "1": "2.30",
+            "2": "1.61"
+          },
+          "To Win Match": {
+            "1": "2.30",
+            "2": "1.61"
+          },
+          "Set Betting": {
+            "2-0": "4.39",
+            "2-1": "7.47",
+            "0-2": "3.08",
+            "1-2": "5.24"
+          },
+          "First Set Winner": {
+            "1": "2.54",
+            "2": "1.88"
           },
           "Total Games": {
             "Over": {
@@ -6607,6 +6303,44 @@
           "First Set Winner": {
             "1": "2.16",
             "2": "2.16"
+          },
+          "Total Games": {
+            "Over": {
+              "line": "21.5",
+              "odds": "1.83"
+            },
+            "Under": {
+              "line": "21.5",
+              "odds": "1.95"
+            }
+          }
+        }
+      },
+      {
+        "id": "201164330",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 15:00:00",
+        "competition": "Popular - WTA Sao Paulo",
+        "home": "Eva Lys",
+        "away": "Gabriela Ce",
+        "markets": {
+          "Match Winner": {
+            "1": "1.08",
+            "2": "8.00"
+          },
+          "To Win Match": {
+            "1": "1.08",
+            "2": "8.00"
+          },
+          "Set Betting": {
+            "2-0": "2.05",
+            "2-1": "3.50",
+            "0-2": "15.18",
+            "1-2": "25.84"
+          },
+          "First Set Winner": {
+            "1": "1.28",
+            "2": "6.99"
           },
           "Total Games": {
             "Over": {
@@ -9513,150 +9247,6 @@
   {
     "sport": "Basketball",
     "matches": [
-      {
-        "id": "3463584",
-        "date": "Mar. 15 sept",
-        "kickoff": "14:30",
-        "competition": "Basketball Champions League Quals",
-        "home": "Korfez Basket",
-        "away": "Kolossos Rhodes",
-        "markets": {
-          "Money Line": {
-            "1": "1.74",
-            "2": "1.95"
-          },
-          "Point Spread": {
-            "1": "-1.5 (1.83)",
-            "2": "+1.5 (1.83)"
-          },
-          "Total Points": {
-            "Over": "Over 163.5 (1.83)",
-            "Under": "Under 163.5 (1.83)"
-          },
-          "Moneyline": {
-            "1": "1.74",
-            "2": "1.95"
-          },
-          "Spread": {
-            "1": "-1.5 (1.83)",
-            "2": "+1.5 (1.83)"
-          },
-          "Total": {
-            "Over": "Over 163.5 (1.83)",
-            "Under": "Under 163.5 (1.83)"
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": "-1.5 (1.83)",
-              "2": "+1.5 (1.83)"
-            },
-            "Total": {
-              "Over": "Over 163.5 (1.83)",
-              "Under": "Under 163.5 (1.83)"
-            },
-            "Money Line": {
-              "1": "1.74",
-              "2": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "86970836",
-        "date": "Mar. 15 sept",
-        "kickoff": "16:45",
-        "competition": "Basketball Champions League Quals",
-        "home": "Sport Lisboa Benfica",
-        "away": "Geneve Lions",
-        "markets": {
-          "Money Line": {
-            "1": "1.13",
-            "2": "5.25"
-          },
-          "Point Spread": {
-            "1": "-10.5 (1.80)",
-            "2": "+10.5 (1.86)"
-          },
-          "Total Points": {
-            "Over": "Over 163.5 (1.83)",
-            "Under": "Under 163.5 (1.83)"
-          },
-          "Moneyline": {
-            "1": "1.13",
-            "2": "5.25"
-          },
-          "Spread": {
-            "1": "-10.5 (1.80)",
-            "2": "+10.5 (1.86)"
-          },
-          "Total": {
-            "Over": "Over 163.5 (1.83)",
-            "Under": "Under 163.5 (1.83)"
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": "-10.5 (1.80)",
-              "2": "+10.5 (1.86)"
-            },
-            "Total": {
-              "Over": "Over 163.5 (1.83)",
-              "Under": "Under 163.5 (1.83)"
-            },
-            "Money Line": {
-              "1": "1.13",
-              "2": "5.25"
-            }
-          }
-        }
-      },
-      {
-        "id": "86936644",
-        "date": "Mar. 15 sept",
-        "kickoff": "19:00",
-        "competition": "Basketball Champions League Quals",
-        "home": "Vechta",
-        "away": "Denizli Basket",
-        "markets": {
-          "Money Line": {
-            "1": "1.27",
-            "2": "3.40"
-          },
-          "Point Spread": {
-            "1": "-7.5 (1.83)",
-            "2": "+7.5 (1.83)"
-          },
-          "Total Points": {
-            "Over": "Over 170.5 (1.83)",
-            "Under": "Under 170.5 (1.83)"
-          },
-          "Moneyline": {
-            "1": "1.27",
-            "2": "3.40"
-          },
-          "Spread": {
-            "1": "-7.5 (1.83)",
-            "2": "+7.5 (1.83)"
-          },
-          "Total": {
-            "Over": "Over 170.5 (1.83)",
-            "Under": "Under 170.5 (1.83)"
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": "-7.5 (1.83)",
-              "2": "+7.5 (1.83)"
-            },
-            "Total": {
-              "Over": "Over 170.5 (1.83)",
-              "Under": "Under 170.5 (1.83)"
-            },
-            "Money Line": {
-              "1": "1.27",
-              "2": "3.40"
-            }
-          }
-        }
-      },
       {
         "id": "199419304",
         "date": "20/10/2026",
@@ -18487,6 +18077,1050 @@
             }
           }
         }
+      },
+      {
+        "id": "200869374",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 16:00:00",
+        "competition": "France Starligue",
+        "home": "PSG Handball",
+        "away": "Chartres",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.002",
+            "X": "8.50",
+            "2": "21.00"
+          },
+          "Match Result": {
+            "1": "1.002",
+            "X": "8.50",
+            "2": "21.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.002",
+              "X": "8.50",
+              "2": "21.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869914",
+        "date": "17/09/2026",
+        "kickoff": "17/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "Frisch Auf Goppingen",
+        "away": "Rhein Neckar Lowen",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.10",
+            "X": "8.50",
+            "2": "1.70"
+          },
+          "Match Result": {
+            "1": "2.10",
+            "X": "8.50",
+            "2": "1.70"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.10",
+              "X": "8.50",
+              "2": "1.70"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869915",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "HBW Balingen-Weilstetten",
+        "away": "TVB Stuttgart",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.60",
+            "X": "8.50",
+            "2": "1.45"
+          },
+          "Match Result": {
+            "1": "2.60",
+            "X": "8.50",
+            "2": "1.45"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.60",
+              "X": "8.50",
+              "2": "1.45"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869916",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "ThSV Eisenach",
+        "away": "THW Kiel",
+        "markets": {
+          "Full Time Result": {
+            "1": "6.00",
+            "X": "8.50",
+            "2": "1.11"
+          },
+          "Match Result": {
+            "1": "6.00",
+            "X": "8.50",
+            "2": "1.11"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "6.00",
+              "X": "8.50",
+              "2": "1.11"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869917",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "SG BBM Bietigheim",
+        "away": "TSV Hannover Burgdorf",
+        "markets": {
+          "Full Time Result": {
+            "1": "4.75",
+            "X": "8.50",
+            "2": "1.15"
+          },
+          "Match Result": {
+            "1": "4.75",
+            "X": "8.50",
+            "2": "1.15"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "4.75",
+              "X": "8.50",
+              "2": "1.15"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869918",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 14:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "Bergischer HC",
+        "away": "Fuchse Berlin",
+        "markets": {
+          "Full Time Result": {
+            "1": "10.00",
+            "X": "8.50",
+            "2": "1.03"
+          },
+          "Match Result": {
+            "1": "10.00",
+            "X": "8.50",
+            "2": "1.03"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "10.00",
+              "X": "8.50",
+              "2": "1.03"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869919",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 15:30:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "HSG Wetzlar",
+        "away": "Vfl Gummersbach",
+        "markets": {
+          "Full Time Result": {
+            "1": "7.25",
+            "X": "8.50",
+            "2": "1.07"
+          },
+          "Match Result": {
+            "1": "7.25",
+            "X": "8.50",
+            "2": "1.07"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "7.25",
+              "X": "8.50",
+              "2": "1.07"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869920",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 15:30:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "TBV Lemgo Lippe",
+        "away": "HC Erlangen",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.11",
+            "X": "8.50",
+            "2": "6.00"
+          },
+          "Match Result": {
+            "1": "1.11",
+            "X": "8.50",
+            "2": "6.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.11",
+              "X": "8.50",
+              "2": "6.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869921",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 17:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "MT Melsungen",
+        "away": "SC Magdeburg",
+        "markets": {
+          "Full Time Result": {
+            "1": "3.30",
+            "X": "8.50",
+            "2": "1.28"
+          },
+          "Match Result": {
+            "1": "3.30",
+            "X": "8.50",
+            "2": "1.28"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "3.30",
+              "X": "8.50",
+              "2": "1.28"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869922",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 17:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "SG Flensburg Handewitt",
+        "away": "HC Hamburg",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.10",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Match Result": {
+            "1": "1.10",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.10",
+              "X": "8.50",
+              "2": "6.50"
+            }
+          }
+        }
+      },
+      {
+        "id": "200499330",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 18:30:00",
+        "competition": "Germany 2 Bundesliga",
+        "home": "TV Emsdetten",
+        "away": "1. Vfl Potsdam",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "1.95"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.75"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Match Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Total": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "1.95"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.75"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+1.5",
+                "odds": "1.95"
+              },
+              "1": {
+                "line": "-1.5",
+                "odds": "1.75"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "61.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "61.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.75",
+              "X": "8.50",
+              "2": "1.40"
+            }
+          }
+        }
+      },
+      {
+        "id": "201204932",
+        "date": "16/09/2026",
+        "kickoff": "16/09/2026 17:30:00",
+        "competition": "Greece Super Cup",
+        "home": "Olympiacos",
+        "away": "AEK Athens",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+3.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Match Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+3.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-3.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+3.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "62.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "62.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.45",
+              "X": "8.50",
+              "2": "3.20"
+            }
+          }
+        }
       }
     ]
   },
@@ -18494,7 +19128,7 @@
     "sport": "Cycling",
     "matches": [
       {
-        "id": "56081211",
+        "id": "7906080",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 12:00:00",
         "competition": "World Championship Time Trial 2026 - To Win Outright",
@@ -18502,11 +19136,11 @@
         "away": "",
         "markets": {
           "To Win": {
-            "Remco Evenepoel": "1.222",
-            "Filippo Ganna": "4.50",
-            "Stefan Kung": "29.00",
-            "Mathias Vacek": "29.00",
+            "Remco Evenepoel": "1.20",
+            "Filippo Ganna": "5.00",
             "Tobias Foss": "34.00",
+            "Stefan Kung": "34.00",
+            "Mathias Vacek": "34.00",
             "Brandon McNulty": "51.00",
             "Ethan Hayter": "67.00",
             "Callum Thornley": "81.00",
@@ -18520,9 +19154,9 @@
             "Derek Gee": "301.00",
             "Alec Segaert": "401.00",
             "Bruno Armirail": "501.00",
-            "Andreas Leknessund": "501.00",
             "Kasper Asgreen": "601.00",
             "Matteo Sobrero": "601.00",
+            "Andreas Leknessund": "601.00",
             "Maximilian Walscheid": "601.00",
             "Arthur Kluckers": "601.00",
             "Ivo Oliveira": "601.00",
@@ -18549,11 +19183,11 @@
             "Eric Antonio Fagundez": "4501.00"
           },
           "Race Winner": {
-            "Remco Evenepoel": "1.222",
-            "Filippo Ganna": "4.50",
-            "Stefan Kung": "29.00",
-            "Mathias Vacek": "29.00",
+            "Remco Evenepoel": "1.20",
+            "Filippo Ganna": "5.00",
             "Tobias Foss": "34.00",
+            "Stefan Kung": "34.00",
+            "Mathias Vacek": "34.00",
             "Brandon McNulty": "51.00",
             "Ethan Hayter": "67.00",
             "Callum Thornley": "81.00",
@@ -18567,9 +19201,9 @@
             "Derek Gee": "301.00",
             "Alec Segaert": "401.00",
             "Bruno Armirail": "501.00",
-            "Andreas Leknessund": "501.00",
             "Kasper Asgreen": "601.00",
             "Matteo Sobrero": "601.00",
+            "Andreas Leknessund": "601.00",
             "Maximilian Walscheid": "601.00",
             "Arthur Kluckers": "601.00",
             "Ivo Oliveira": "601.00",
@@ -18598,7 +19232,7 @@
         }
       },
       {
-        "id": "12797247",
+        "id": "84762315",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 12:00:00",
         "competition": "World Championship Road Race 2026 - To Win Outright",
@@ -18607,74 +19241,71 @@
         "markets": {
           "To Win": {
             "Remco Evenepoel": "3.50",
-            "Isaac Del Toro": "4.333",
-            "Paul Seixas": "5.00",
-            "Mathieu van der Poel": "8.00",
+            "Isaac Del Toro": "4.00",
+            "Paul Seixas": "4.50",
+            "Mathieu van der Poel": "7.50",
             "Wout van Aert": "12.00",
             "Tom Pidcock": "12.00",
-            "Ben Healy": "26.00",
-            "Giulio Ciccone": "29.00",
+            "Giulio Ciccone": "26.00",
             "Mathias Vacek": "34.00",
+            "Ben Healy": "34.00",
             "Quinn Simmons": "34.00",
             "Jhonatan Narvaez": "41.00",
             "Brandon McNulty": "41.00",
             "Mads Pedersen": "51.00",
-            "Giulio Pellizzari": "51.00",
             "Matteo Jorgenson": "67.00",
             "Richard Carapaz": "67.00",
-            "Enric Mas Nicolau": "67.00",
-            "Afonso Eulalio": "81.00",
-            "Florian Lipowitz": "81.00",
-            "Christian Scaroni": "81.00",
-            "Mauro Schmid": "126.00",
-            "Juan Ayuso": "126.00",
-            "Primoz Roglic": "126.00",
-            "Toms Skujins": "126.00",
+            "Giulio Pellizzari": "67.00",
+            "Mauro Schmid": "81.00",
+            "Juan Ayuso": "101.00",
+            "Enric Mas Nicolau": "101.00",
+            "Christian Scaroni": "101.00",
+            "Adam Yates": "101.00",
+            "Afonso Eulalio": "126.00",
+            "Lorenzo Finn": "126.00",
             "Jan Christen": "126.00",
+            "Maxim Van Gils": "151.00",
+            "Primoz Roglic": "151.00",
+            "Toms Skujins": "151.00",
             "Mikkel Honore": "151.00",
-            "Lorenzo Finn": "151.00",
-            "Adam Yates": "151.00",
-            "Michael Matthews": "201.00",
-            "Maxim Van Gils": "201.00",
-            "Alberto Bettiol": "201.00",
             "Oscar Onley": "201.00",
-            "Tobias Halland Johannessen": "201.00",
             "Alex Baudin": "201.00",
             "Thibau Nys": "201.00",
-            "Andreas Leknessund": "251.00",
+            "Michael Matthews": "251.00",
             "Santiago Buitrago": "301.00",
             "Guillermo Thomas Silva": "301.00",
+            "Tobias Halland Johannessen": "301.00",
+            "Derek Gee": "301.00",
             "Neilson Powless": "301.00",
             "Felix Gall": "301.00",
             "Kevin Vermaerke": "301.00",
             "Michael Valgren": "301.00",
+            "Michael Woods": "301.00",
+            "Andreas Leknessund": "301.00",
             "Ben O'Connor": "301.00",
             "Anthon Charmig": "301.00",
-            "Jordan Jegat": "301.00",
+            "Alberto Bettiol": "401.00",
             "Finn Fisher-Black": "401.00",
-            "Derek Gee": "401.00",
             "Valentin Paret-Peintre": "401.00",
-            "Michael Woods": "401.00",
-            "Harold Tejada": "401.00",
+            "Quinten Hermans": "401.00",
             "Marc Hirschi": "501.00",
             "Ivan Romeo": "501.00",
-            "Pavel Sivakov": "501.00",
             "Natnael Tesfatsion": "501.00",
-            "Matteo Trentin": "501.00",
-            "Quinten Hermans": "501.00",
-            "Wilmar Paredes": "501.00",
+            "Maximilian Schachmann": "501.00",
+            "Jai Hindley": "501.00",
             "Corbin Strong": "601.00",
             "Laurence Pithie": "601.00",
             "Antonio Morgado": "601.00",
             "Tiesj Benoot": "601.00",
+            "Florian Lipowitz": "601.00",
+            "Bart Lemmen": "601.00",
             "Matej Mohoric": "601.00",
             "Jakob Omrzel": "601.00",
-            "Michael Storer": "601.00",
-            "Maximilian Schachmann": "601.00",
-            "Jai Hindley": "601.00",
             "Andreas Kron": "751.00",
-            "Bart Lemmen": "751.00",
+            "Michael Storer": "751.00",
             "Alexander Vlasov": "751.00",
+            "Pavel Sivakov": "751.00",
+            "Matteo Trentin": "751.00",
             "Patrick Konrad": "751.00",
             "Davide Piganzoli": "751.00",
             "Marco Brenner": "751.00",
@@ -18687,6 +19318,7 @@
             "Michal Kwiatkowski": "1001.00",
             "Ben Oliver": "1001.00",
             "Alec Segaert": "1001.00",
+            "Harold Tejada": "1001.00",
             "Jefferson Alveiro Cepeda": "1001.00",
             "Biniam Girmay": "1001.00",
             "Rune Herregodts": "1001.00",
@@ -18738,6 +19370,7 @@
             "Darren Rafferty": "1501.00",
             "Jakob Soderqvist": "1501.00",
             "Markel Beloki": "1501.00",
+            "Walter Vargas Alzate": "1501.00",
             "Carlos Verona": "1501.00",
             "Jack Haig": "1501.00",
             "Francisco Joel Penuela": "1501.00",
@@ -18767,74 +19400,71 @@
           },
           "Race Winner": {
             "Remco Evenepoel": "3.50",
-            "Isaac Del Toro": "4.333",
-            "Paul Seixas": "5.00",
-            "Mathieu van der Poel": "8.00",
+            "Isaac Del Toro": "4.00",
+            "Paul Seixas": "4.50",
+            "Mathieu van der Poel": "7.50",
             "Wout van Aert": "12.00",
             "Tom Pidcock": "12.00",
-            "Ben Healy": "26.00",
-            "Giulio Ciccone": "29.00",
+            "Giulio Ciccone": "26.00",
             "Mathias Vacek": "34.00",
+            "Ben Healy": "34.00",
             "Quinn Simmons": "34.00",
             "Jhonatan Narvaez": "41.00",
             "Brandon McNulty": "41.00",
             "Mads Pedersen": "51.00",
-            "Giulio Pellizzari": "51.00",
             "Matteo Jorgenson": "67.00",
             "Richard Carapaz": "67.00",
-            "Enric Mas Nicolau": "67.00",
-            "Afonso Eulalio": "81.00",
-            "Florian Lipowitz": "81.00",
-            "Christian Scaroni": "81.00",
-            "Mauro Schmid": "126.00",
-            "Juan Ayuso": "126.00",
-            "Primoz Roglic": "126.00",
-            "Toms Skujins": "126.00",
+            "Giulio Pellizzari": "67.00",
+            "Mauro Schmid": "81.00",
+            "Juan Ayuso": "101.00",
+            "Enric Mas Nicolau": "101.00",
+            "Christian Scaroni": "101.00",
+            "Adam Yates": "101.00",
+            "Afonso Eulalio": "126.00",
+            "Lorenzo Finn": "126.00",
             "Jan Christen": "126.00",
+            "Maxim Van Gils": "151.00",
+            "Primoz Roglic": "151.00",
+            "Toms Skujins": "151.00",
             "Mikkel Honore": "151.00",
-            "Lorenzo Finn": "151.00",
-            "Adam Yates": "151.00",
-            "Michael Matthews": "201.00",
-            "Maxim Van Gils": "201.00",
-            "Alberto Bettiol": "201.00",
             "Oscar Onley": "201.00",
-            "Tobias Halland Johannessen": "201.00",
             "Alex Baudin": "201.00",
             "Thibau Nys": "201.00",
-            "Andreas Leknessund": "251.00",
+            "Michael Matthews": "251.00",
             "Santiago Buitrago": "301.00",
             "Guillermo Thomas Silva": "301.00",
+            "Tobias Halland Johannessen": "301.00",
+            "Derek Gee": "301.00",
             "Neilson Powless": "301.00",
             "Felix Gall": "301.00",
             "Kevin Vermaerke": "301.00",
             "Michael Valgren": "301.00",
+            "Michael Woods": "301.00",
+            "Andreas Leknessund": "301.00",
             "Ben O'Connor": "301.00",
             "Anthon Charmig": "301.00",
-            "Jordan Jegat": "301.00",
+            "Alberto Bettiol": "401.00",
             "Finn Fisher-Black": "401.00",
-            "Derek Gee": "401.00",
             "Valentin Paret-Peintre": "401.00",
-            "Michael Woods": "401.00",
-            "Harold Tejada": "401.00",
+            "Quinten Hermans": "401.00",
             "Marc Hirschi": "501.00",
             "Ivan Romeo": "501.00",
-            "Pavel Sivakov": "501.00",
             "Natnael Tesfatsion": "501.00",
-            "Matteo Trentin": "501.00",
-            "Quinten Hermans": "501.00",
-            "Wilmar Paredes": "501.00",
+            "Maximilian Schachmann": "501.00",
+            "Jai Hindley": "501.00",
             "Corbin Strong": "601.00",
             "Laurence Pithie": "601.00",
             "Antonio Morgado": "601.00",
             "Tiesj Benoot": "601.00",
+            "Florian Lipowitz": "601.00",
+            "Bart Lemmen": "601.00",
             "Matej Mohoric": "601.00",
             "Jakob Omrzel": "601.00",
-            "Michael Storer": "601.00",
-            "Maximilian Schachmann": "601.00",
-            "Jai Hindley": "601.00",
             "Andreas Kron": "751.00",
-            "Bart Lemmen": "751.00",
+            "Michael Storer": "751.00",
             "Alexander Vlasov": "751.00",
+            "Pavel Sivakov": "751.00",
+            "Matteo Trentin": "751.00",
             "Patrick Konrad": "751.00",
             "Davide Piganzoli": "751.00",
             "Marco Brenner": "751.00",
@@ -18847,6 +19477,7 @@
             "Michal Kwiatkowski": "1001.00",
             "Ben Oliver": "1001.00",
             "Alec Segaert": "1001.00",
+            "Harold Tejada": "1001.00",
             "Jefferson Alveiro Cepeda": "1001.00",
             "Biniam Girmay": "1001.00",
             "Rune Herregodts": "1001.00",
@@ -18898,6 +19529,7 @@
             "Darren Rafferty": "1501.00",
             "Jakob Soderqvist": "1501.00",
             "Markel Beloki": "1501.00",
+            "Walter Vargas Alzate": "1501.00",
             "Carlos Verona": "1501.00",
             "Jack Haig": "1501.00",
             "Francisco Joel Penuela": "1501.00",
@@ -18928,23 +19560,23 @@
         }
       },
       {
-        "id": "54093378",
+        "id": "49654905",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 12:00:00",
-        "competition": "World Championship Time Trail Women 2026 - To Win Outright",
-        "home": "World Championship Time Trail Women 2026 - To Win Outright - To Win",
+        "competition": "World Championship Women Time Trial 2026 - To Win Outright",
+        "home": "World Championship Women Time Trial 2026 - To Win Outright - To Win",
         "away": "",
         "markets": {
           "To Win": {
-            "Marlen Reusser": "1.286",
-            "Zoe Backstedt": "4.00",
-            "Demi Vollering": "11.00",
-            "Lieke Nooijen": "21.00",
-            "Antonia Niedermaier": "34.00",
-            "Lotte Kopecky": "34.00",
-            "Elisa Longo Borghini": "51.00",
-            "Taylor Knibb": "51.00",
-            "Kristen Faulkner": "67.00",
+            "Marlen Reusser": "1.333",
+            "Zoe Backstedt": "3.75",
+            "Demi Vollering": "10.00",
+            "Antonia Niedermaier": "26.00",
+            "Lieke Nooijen": "26.00",
+            "Elisa Longo Borghini": "41.00",
+            "Kristen Faulkner": "41.00",
+            "Lotte Kopecky": "51.00",
+            "Taylor Knibb": "67.00",
             "Anna Morris": "101.00",
             "Katrine Aalerud": "151.00",
             "Franziska Koch": "151.00",
@@ -18968,15 +19600,15 @@
             "Karin Abe": "2001.00"
           },
           "Race Winner": {
-            "Marlen Reusser": "1.286",
-            "Zoe Backstedt": "4.00",
-            "Demi Vollering": "11.00",
-            "Lieke Nooijen": "21.00",
-            "Antonia Niedermaier": "34.00",
-            "Lotte Kopecky": "34.00",
-            "Elisa Longo Borghini": "51.00",
-            "Taylor Knibb": "51.00",
-            "Kristen Faulkner": "67.00",
+            "Marlen Reusser": "1.333",
+            "Zoe Backstedt": "3.75",
+            "Demi Vollering": "10.00",
+            "Antonia Niedermaier": "26.00",
+            "Lieke Nooijen": "26.00",
+            "Elisa Longo Borghini": "41.00",
+            "Kristen Faulkner": "41.00",
+            "Lotte Kopecky": "51.00",
+            "Taylor Knibb": "67.00",
             "Anna Morris": "101.00",
             "Katrine Aalerud": "151.00",
             "Franziska Koch": "151.00",
@@ -19002,30 +19634,30 @@
         }
       },
       {
-        "id": "64507930",
+        "id": "64532846",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 12:00:00",
-        "competition": "World Championship Road Race Women 2026 - To Win Outright",
-        "home": "World Championship Road Race Women 2026 - To Win Outright - To Win",
+        "competition": "World Championship Women Road Race 2026 - To Win Outright",
+        "home": "World Championship Women Road Race 2026 - To Win Outright - To Win",
         "away": "",
         "markets": {
           "To Win": {
-            "Demi Vollering": "1.667",
-            "Kimberley Le Court": "6.00",
+            "Demi Vollering": "1.727",
+            "Kimberley Le Court": "5.00",
             "Elisa Longo Borghini": "15.00",
-            "Katarzyna Niewiadoma": "15.00",
-            "Lotte Kopecky": "17.00",
             "Paula Blasi": "17.00",
             "Marlen Reusser": "17.00",
+            "Katarzyna Niewiadoma": "17.00",
             "Celia Gery": "21.00",
-            "Noemi Ruegg": "21.00",
+            "Lotte Kopecky": "21.00",
             "Puck Pieterse": "26.00",
-            "Franziska Koch": "34.00",
-            "Mischa Bredewold": "41.00",
+            "Noemi Ruegg": "29.00",
+            "Franziska Koch": "29.00",
+            "Mischa Bredewold": "34.00",
             "Dominika Wlodarczyk": "41.00",
             "Cedrine Kerbaol": "51.00",
+            "Sarah Van Dam": "51.00",
             "Magdeleine Vallieres": "51.00",
-            "Sarah Van Dam": "67.00",
             "Kristen Faulkner": "67.00",
             "Antonia Niedermaier": "81.00",
             "Liane Lippert": "81.00",
@@ -19033,8 +19665,8 @@
             "Femke De Vries": "101.00",
             "Maeva Squiban": "101.00",
             "Riejanne Markus": "101.00",
-            "Juliette Berthet": "101.00",
-            "Niamh Fisher-Black": "151.00",
+            "Niamh Fisher-Black": "101.00",
+            "Juliette Berthet": "151.00",
             "Silvia Persico": "151.00",
             "Monica Trinca Colonel": "201.00",
             "Lieke Nooijen": "201.00",
@@ -19045,13 +19677,14 @@
             "Eleonora Camilla Gasparrini": "301.00",
             "Mie Bjorndal Ottestad": "301.00",
             "Lauren Dickson": "301.00",
+            "Anna Henderson": "301.00",
             "Cecilie Uttrup Ludwig": "401.00",
             "Caroline Andersson": "401.00",
             "Pfeiffer Georgi": "401.00",
             "Mireia Benito": "501.00",
             "Usoa Ostolaza": "501.00",
             "Evita Muzic": "501.00",
-            "Anna Henderson": "501.00",
+            "Steffi Haberlin": "501.00",
             "Sara Casasola": "601.00",
             "Shari Bossuyt": "601.00",
             "Lotte Claes": "601.00",
@@ -19062,11 +19695,12 @@
             "Maggie Coles-Lyster": "601.00",
             "Katrine Aalerud": "601.00",
             "Lauren Stephens": "601.00",
-            "Steffi Haberlin": "601.00",
+            "Jasmin Liechti": "601.00",
+            "Ricarda Bauernfeind": "601.00",
+            "Lea Curinier": "601.00",
             "Julie Van de Velde": "751.00",
             "Erica Magnaldi": "751.00",
             "Sara Martin": "751.00",
-            "Jasmin Liechti": "751.00",
             "Ginia Caluori": "751.00",
             "Marta Lach": "751.00",
             "Brodie Chapman": "751.00",
@@ -19082,8 +19716,6 @@
             "Millie Couzens": "751.00",
             "Josie Nelson": "751.00",
             "Talia Appleton": "751.00",
-            "Ricarda Bauernfeind": "751.00",
-            "Lea Curinier": "751.00",
             "Linda Zanetti": "751.00",
             "Katharina Sadnik": "1001.00",
             "Solbjork Minke Anderson": "1001.00",
@@ -19113,22 +19745,22 @@
             "Grace Arlandson": "2001.00"
           },
           "Race Winner": {
-            "Demi Vollering": "1.667",
-            "Kimberley Le Court": "6.00",
+            "Demi Vollering": "1.727",
+            "Kimberley Le Court": "5.00",
             "Elisa Longo Borghini": "15.00",
-            "Katarzyna Niewiadoma": "15.00",
-            "Lotte Kopecky": "17.00",
             "Paula Blasi": "17.00",
             "Marlen Reusser": "17.00",
+            "Katarzyna Niewiadoma": "17.00",
             "Celia Gery": "21.00",
-            "Noemi Ruegg": "21.00",
+            "Lotte Kopecky": "21.00",
             "Puck Pieterse": "26.00",
-            "Franziska Koch": "34.00",
-            "Mischa Bredewold": "41.00",
+            "Noemi Ruegg": "29.00",
+            "Franziska Koch": "29.00",
+            "Mischa Bredewold": "34.00",
             "Dominika Wlodarczyk": "41.00",
             "Cedrine Kerbaol": "51.00",
+            "Sarah Van Dam": "51.00",
             "Magdeleine Vallieres": "51.00",
-            "Sarah Van Dam": "67.00",
             "Kristen Faulkner": "67.00",
             "Antonia Niedermaier": "81.00",
             "Liane Lippert": "81.00",
@@ -19136,8 +19768,8 @@
             "Femke De Vries": "101.00",
             "Maeva Squiban": "101.00",
             "Riejanne Markus": "101.00",
-            "Juliette Berthet": "101.00",
-            "Niamh Fisher-Black": "151.00",
+            "Niamh Fisher-Black": "101.00",
+            "Juliette Berthet": "151.00",
             "Silvia Persico": "151.00",
             "Monica Trinca Colonel": "201.00",
             "Lieke Nooijen": "201.00",
@@ -19148,13 +19780,14 @@
             "Eleonora Camilla Gasparrini": "301.00",
             "Mie Bjorndal Ottestad": "301.00",
             "Lauren Dickson": "301.00",
+            "Anna Henderson": "301.00",
             "Cecilie Uttrup Ludwig": "401.00",
             "Caroline Andersson": "401.00",
             "Pfeiffer Georgi": "401.00",
             "Mireia Benito": "501.00",
             "Usoa Ostolaza": "501.00",
             "Evita Muzic": "501.00",
-            "Anna Henderson": "501.00",
+            "Steffi Haberlin": "501.00",
             "Sara Casasola": "601.00",
             "Shari Bossuyt": "601.00",
             "Lotte Claes": "601.00",
@@ -19165,11 +19798,12 @@
             "Maggie Coles-Lyster": "601.00",
             "Katrine Aalerud": "601.00",
             "Lauren Stephens": "601.00",
-            "Steffi Haberlin": "601.00",
+            "Jasmin Liechti": "601.00",
+            "Ricarda Bauernfeind": "601.00",
+            "Lea Curinier": "601.00",
             "Julie Van de Velde": "751.00",
             "Erica Magnaldi": "751.00",
             "Sara Martin": "751.00",
-            "Jasmin Liechti": "751.00",
             "Ginia Caluori": "751.00",
             "Marta Lach": "751.00",
             "Brodie Chapman": "751.00",
@@ -19185,8 +19819,6 @@
             "Millie Couzens": "751.00",
             "Josie Nelson": "751.00",
             "Talia Appleton": "751.00",
-            "Ricarda Bauernfeind": "751.00",
-            "Lea Curinier": "751.00",
             "Linda Zanetti": "751.00",
             "Katharina Sadnik": "1001.00",
             "Solbjork Minke Anderson": "1001.00",
@@ -20910,7 +21542,7 @@
     "sport": "F1",
     "matches": [
       {
-        "id": "31998392",
+        "id": "92611039",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Drivers Championship 2026",
@@ -20947,7 +21579,7 @@
         }
       },
       {
-        "id": "27619809",
+        "id": "72700262",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Drivers Championship 2026",
@@ -20966,7 +21598,7 @@
         }
       },
       {
-        "id": "21017388",
+        "id": "14676119",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Drivers Championship 2026",
@@ -21033,7 +21665,7 @@
         }
       },
       {
-        "id": "97987250",
+        "id": "65493771",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Constructors Championship 2026",
@@ -21061,7 +21693,7 @@
         }
       },
       {
-        "id": "45695143",
+        "id": "52431427",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Constructors Championship 2026",
@@ -21086,7 +21718,7 @@
         }
       },
       {
-        "id": "33071489",
+        "id": "19281354",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Constructors Championship 2026",
@@ -21126,7 +21758,7 @@
         }
       },
       {
-        "id": "34978308",
+        "id": "91284678",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Spanish Grand Prix",
@@ -21136,11 +21768,11 @@
           "To Win": {
             "Kimi Antonelli": "2.25",
             "Lando Norris": "5.00",
-            "George Russell": "7.00",
-            "Charles Leclerc": "8.00",
-            "Lewis Hamilton": "9.00",
-            "Max Verstappen": "9.00",
-            "Oscar Piastri": "29.00",
+            "George Russell": "6.00",
+            "Charles Leclerc": "7.00",
+            "Lewis Hamilton": "10.00",
+            "Max Verstappen": "11.00",
+            "Oscar Piastri": "26.00",
             "Liam Lawson": "301.00",
             "Alex Albon": "501.00",
             "Arvid Lindblad": "501.00",
@@ -21160,11 +21792,11 @@
           "Race Winner": {
             "Kimi Antonelli": "2.25",
             "Lando Norris": "5.00",
-            "George Russell": "7.00",
-            "Charles Leclerc": "8.00",
-            "Lewis Hamilton": "9.00",
-            "Max Verstappen": "9.00",
-            "Oscar Piastri": "29.00",
+            "George Russell": "6.00",
+            "Charles Leclerc": "7.00",
+            "Lewis Hamilton": "10.00",
+            "Max Verstappen": "11.00",
+            "Oscar Piastri": "26.00",
             "Liam Lawson": "301.00",
             "Alex Albon": "501.00",
             "Arvid Lindblad": "501.00",
@@ -21184,7 +21816,7 @@
         }
       },
       {
-        "id": "34978308",
+        "id": "91284678",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Spanish Grand Prix",
@@ -21193,13 +21825,13 @@
         "markets": {
           "To Win": {
             "Liam Lawson": "1.005",
-            "Oscar Piastri": "1.07",
-            "Max Verstappen": "1.50",
-            "Lewis Hamilton": "1.57",
-            "Charles Leclerc": "1.667",
-            "George Russell": "2.00",
+            "Oscar Piastri": "1.10",
+            "Max Verstappen": "1.364",
+            "Lewis Hamilton": "1.444",
+            "Charles Leclerc": "1.727",
+            "George Russell": "2.10",
             "Lando Norris": "2.20",
-            "Kimi Antonelli": "4.00",
+            "Kimi Antonelli": "4.333",
             "Arvid Lindblad": "101.00",
             "Franco Colapinto": "101.00",
             "Gabriel Bortoleto": "101.00",
@@ -21217,13 +21849,13 @@
           },
           "Race Winner": {
             "Liam Lawson": "1.005",
-            "Oscar Piastri": "1.07",
-            "Max Verstappen": "1.50",
-            "Lewis Hamilton": "1.57",
-            "Charles Leclerc": "1.667",
-            "George Russell": "2.00",
+            "Oscar Piastri": "1.10",
+            "Max Verstappen": "1.364",
+            "Lewis Hamilton": "1.444",
+            "Charles Leclerc": "1.727",
+            "George Russell": "2.10",
             "Lando Norris": "2.20",
-            "Kimi Antonelli": "4.00",
+            "Kimi Antonelli": "4.333",
             "Arvid Lindblad": "101.00",
             "Franco Colapinto": "101.00",
             "Gabriel Bortoleto": "101.00",
@@ -21242,7 +21874,7 @@
         }
       },
       {
-        "id": "22793109",
+        "id": "29453379",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Drivers Championship 2026",
@@ -21276,7 +21908,7 @@
         }
       },
       {
-        "id": "80802907",
+        "id": "90136845",
         "date": "16/09/2026",
         "kickoff": "16/09/2026 14:00:00",
         "competition": "Formula 1 - Constructors Championship 2026",
