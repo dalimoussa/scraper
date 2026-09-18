@@ -13,4 +13,5 @@ ENV/
 *.tmp
 .chrome_profile/
 scratch/
+.agents/
 

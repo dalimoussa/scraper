@@ -19747,6 +19747,3660 @@
     "sport": "Handball",
     "matches": [
       {
+        "id": "200864840",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:45:00",
+        "competition": "Champions League",
+        "home": "GOG",
+        "away": "Pick Szeged",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+2.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "3.20",
+            "X": "8.50",
+            "2": "1.30"
+          },
+          "Match Result": {
+            "1": "3.20",
+            "X": "8.50",
+            "2": "1.30"
+          },
+          "Total": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+2.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+2.5",
+                "odds": "1.90"
+              },
+              "1": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "65.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "65.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "3.20",
+              "X": "8.50",
+              "2": "1.30"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864839",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:45:00",
+        "competition": "Champions League",
+        "home": "HC Vardar",
+        "away": "Nantes",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+2.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-2.5",
+              "odds": "1.78"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Match Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Total": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+2.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-2.5",
+              "odds": "1.78"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+2.5",
+                "odds": "2.00"
+              },
+              "1": {
+                "line": "-2.5",
+                "odds": "1.78"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "62.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "62.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "3.50",
+              "X": "8.50",
+              "2": "1.25"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864838",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:45:00",
+        "competition": "Champions League",
+        "home": "IFK Kristianstad",
+        "away": "Sporting CP",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+4.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-4.5",
+              "odds": "1.78"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "5.50",
+            "X": "8.50",
+            "2": "1.12"
+          },
+          "Match Result": {
+            "1": "5.50",
+            "X": "8.50",
+            "2": "1.12"
+          },
+          "Total": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+4.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-4.5",
+              "odds": "1.78"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+4.5",
+                "odds": "2.00"
+              },
+              "1": {
+                "line": "-4.5",
+                "odds": "1.78"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "66.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "66.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "5.50",
+              "X": "8.50",
+              "2": "1.12"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864843",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "Fuchse Berlin",
+        "away": "Veszprem",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-1.5",
+              "odds": "2.05"
+            },
+            "2": {
+              "line": "+1.5",
+              "odds": "1.75"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.58",
+            "X": "8.50",
+            "2": "2.25"
+          },
+          "Match Result": {
+            "1": "1.58",
+            "X": "8.50",
+            "2": "2.25"
+          },
+          "Total": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-1.5",
+              "odds": "2.05"
+            },
+            "2": {
+              "line": "+1.5",
+              "odds": "1.75"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-1.5",
+                "odds": "2.05"
+              },
+              "2": {
+                "line": "+1.5",
+                "odds": "1.75"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "66.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "66.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "1.58",
+              "X": "8.50",
+              "2": "2.25"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864842",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "Kolstad",
+        "away": "KS Kielce",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+4.5",
+              "odds": "1.88"
+            },
+            "1": {
+              "line": "-4.5",
+              "odds": "1.88"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "5.00",
+            "X": "8.50",
+            "2": "1.14"
+          },
+          "Match Result": {
+            "1": "5.00",
+            "X": "8.50",
+            "2": "1.14"
+          },
+          "Total": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+4.5",
+              "odds": "1.88"
+            },
+            "1": {
+              "line": "-4.5",
+              "odds": "1.88"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+4.5",
+                "odds": "1.88"
+              },
+              "1": {
+                "line": "-4.5",
+                "odds": "1.88"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "61.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "61.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "5.00",
+              "X": "8.50",
+              "2": "1.14"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864841",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "PSG Handball",
+        "away": "RK Zagreb",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-6.5",
+              "odds": "1.78"
+            },
+            "2": {
+              "line": "+6.5",
+              "odds": "2.00"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.03",
+            "X": "8.50",
+            "2": "10.00"
+          },
+          "Match Result": {
+            "1": "1.03",
+            "X": "8.50",
+            "2": "10.00"
+          },
+          "Total": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-6.5",
+              "odds": "1.78"
+            },
+            "2": {
+              "line": "+6.5",
+              "odds": "2.00"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-6.5",
+                "odds": "1.78"
+              },
+              "2": {
+                "line": "+6.5",
+                "odds": "2.00"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "61.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "61.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "1.03",
+              "X": "8.50",
+              "2": "10.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864844",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:45:00",
+        "competition": "Champions League",
+        "home": "RK Celje",
+        "away": "Aalborg Handbold",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+7.5",
+              "odds": "1.88"
+            },
+            "1": {
+              "line": "-7.5",
+              "odds": "1.88"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "11.00",
+            "X": "8.50",
+            "2": "1.02"
+          },
+          "Match Result": {
+            "1": "11.00",
+            "X": "8.50",
+            "2": "1.02"
+          },
+          "Total": {
+            "Over": {
+              "line": "66.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "66.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+7.5",
+              "odds": "1.88"
+            },
+            "1": {
+              "line": "-7.5",
+              "odds": "1.88"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+7.5",
+                "odds": "1.88"
+              },
+              "1": {
+                "line": "-7.5",
+                "odds": "1.88"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "66.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "66.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "11.00",
+              "X": "8.50",
+              "2": "1.02"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864845",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:45:00",
+        "competition": "Champions League",
+        "home": "Wisla Plock",
+        "away": "MT Melsungen",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.88"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.88"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "58.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "58.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.30",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Match Result": {
+            "1": "1.30",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "58.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "58.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.88"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.88"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-2.5",
+                "odds": "1.88"
+              },
+              "2": {
+                "line": "+2.5",
+                "odds": "1.88"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "58.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "58.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "1.30",
+              "X": "8.50",
+              "2": "3.20"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864849",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "FC Porto",
+        "away": "RK Partizan",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-5.5",
+              "odds": "1.75"
+            },
+            "2": {
+              "line": "+5.5",
+              "odds": "2.05"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "64.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "64.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.06",
+            "X": "8.50",
+            "2": "7.50"
+          },
+          "Match Result": {
+            "1": "1.06",
+            "X": "8.50",
+            "2": "7.50"
+          },
+          "Total": {
+            "Over": {
+              "line": "64.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "64.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-5.5",
+              "odds": "1.75"
+            },
+            "2": {
+              "line": "+5.5",
+              "odds": "2.05"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-5.5",
+                "odds": "1.75"
+              },
+              "2": {
+                "line": "+5.5",
+                "odds": "2.05"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "64.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "64.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "1.06",
+              "X": "8.50",
+              "2": "7.50"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864848",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "HC Kriens-Luzern",
+        "away": "SC Magdeburg",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+5.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-5.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "64.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "64.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "7.00",
+            "X": "8.50",
+            "2": "1.08"
+          },
+          "Match Result": {
+            "1": "7.00",
+            "X": "8.50",
+            "2": "1.08"
+          },
+          "Total": {
+            "Over": {
+              "line": "64.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "64.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+5.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-5.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+5.5",
+                "odds": "1.90"
+              },
+              "1": {
+                "line": "-5.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "64.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "64.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "7.00",
+              "X": "8.50",
+              "2": "1.08"
+            }
+          }
+        }
+      },
+      {
+        "id": "200864847",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "Montpellier",
+        "away": "FC Barcelona",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+3.5",
+              "odds": "2.05"
+            },
+            "1": {
+              "line": "-3.5",
+              "odds": "1.75"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "63.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "63.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "4.50",
+            "X": "8.50",
+            "2": "1.16"
+          },
+          "Match Result": {
+            "1": "4.50",
+            "X": "8.50",
+            "2": "1.16"
+          },
+          "Total": {
+            "Over": {
+              "line": "63.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "63.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+3.5",
+              "odds": "2.05"
+            },
+            "1": {
+              "line": "-3.5",
+              "odds": "1.75"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+3.5",
+                "odds": "2.05"
+              },
+              "1": {
+                "line": "-3.5",
+                "odds": "1.75"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "63.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "63.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "4.50",
+              "X": "8.50",
+              "2": "1.16"
+            }
+          }
+        }
+      },
+      {
+        "id": "201084255",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:45:00",
+        "competition": "Champions League",
+        "home": "Skanderborg Handbold",
+        "away": "Dinamo Bucuresti",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.88"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.88"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "63.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "63.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.33",
+            "X": "8.50",
+            "2": "3.00"
+          },
+          "Match Result": {
+            "1": "1.33",
+            "X": "8.50",
+            "2": "3.00"
+          },
+          "Total": {
+            "Over": {
+              "line": "63.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "63.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.88"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.88"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-2.5",
+                "odds": "1.88"
+              },
+              "2": {
+                "line": "+2.5",
+                "odds": "1.88"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "63.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "63.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "1.33",
+              "X": "8.50",
+              "2": "3.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "201166854",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:00:00",
+        "competition": "Brazil Liga Nacional",
+        "home": "Handebol Sorriso",
+        "away": "Taubate",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+17.5",
+              "odds": "1.85"
+            },
+            "1": {
+              "line": "-17.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "54.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "54.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Match Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "54.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "54.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+17.5",
+              "odds": "1.85"
+            },
+            "1": {
+              "line": "-17.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+17.5",
+                "odds": "1.85"
+              },
+              "1": {
+                "line": "-17.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "54.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "54.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.45",
+              "X": "8.50",
+              "2": "3.20"
+            }
+          }
+        }
+      },
+      {
+        "id": "201166855",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 21:00:00",
+        "competition": "Brazil Liga Nacional",
+        "home": "Portugues",
+        "away": "Pato Handebol",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-9.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+9.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "51.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "51.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.005",
+            "X": "8.50",
+            "2": "13.00"
+          },
+          "Match Result": {
+            "1": "1.005",
+            "X": "8.50",
+            "2": "13.00"
+          },
+          "Total": {
+            "Over": {
+              "line": "51.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "51.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-9.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+9.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-9.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+9.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "51.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "51.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.005",
+              "X": "8.50",
+              "2": "13.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "201166856",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 23:00:00",
+        "competition": "Brazil Liga Nacional",
+        "home": "Nacional Sao Jose",
+        "away": "Handebol Nilton Lins",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-34.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+34.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "70.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "70.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Match Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "70.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "70.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-34.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+34.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-34.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+34.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "70.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "70.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.45",
+              "X": "8.50",
+              "2": "3.20"
+            }
+          }
+        }
+      },
+      {
+        "id": "200495995",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:00:00",
+        "competition": "Croatia Premijer Liga",
+        "home": "MRK Trogir",
+        "away": "RK Osijek",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.16",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Match Result": {
+            "1": "1.16",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.16",
+              "X": "8.50",
+              "2": "6.50"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868519",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "Skive FH",
+        "away": "Team Tvis Holstebro",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+3.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "4.00",
+            "X": "8.50",
+            "2": "1.20"
+          },
+          "Match Result": {
+            "1": "4.00",
+            "X": "8.50",
+            "2": "1.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+3.5",
+              "odds": "1.90"
+            },
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+3.5",
+                "odds": "1.90"
+              },
+              "1": {
+                "line": "-3.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "65.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "65.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "4.00",
+              "X": "8.50",
+              "2": "1.20"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868520",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "KIF Kolding",
+        "away": "SonderjyskE",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.78"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Full Time Result": {
+            "1": "2.85",
+            "X": "8.50",
+            "2": "1.38"
+          },
+          "Match Result": {
+            "1": "2.85",
+            "X": "8.50",
+            "2": "1.38"
+          },
+          "Total": {
+            "Over": {
+              "line": "65.5",
+              "odds": "1.88"
+            },
+            "Under": {
+              "line": "65.5",
+              "odds": "1.88"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "2.00"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.78"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+1.5",
+                "odds": "2.00"
+              },
+              "1": {
+                "line": "-1.5",
+                "odds": "1.78"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "65.5",
+                "odds": "1.88"
+              },
+              "Under": {
+                "line": "65.5",
+                "odds": "1.88"
+              }
+            },
+            "Money Line": {
+              "1": "2.85",
+              "X": "8.50",
+              "2": "1.38"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868521",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "Ribe Esbjerg HH",
+        "away": "Bjerringbro-Silkeborg",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.15",
+            "X": "8.50",
+            "2": "1.65"
+          },
+          "Match Result": {
+            "1": "2.15",
+            "X": "8.50",
+            "2": "1.65"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.15",
+              "X": "8.50",
+              "2": "1.65"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868522",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 14:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "TMS Ringsted",
+        "away": "Mors-Thy Handbold",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Match Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.75",
+              "X": "8.50",
+              "2": "1.40"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868523",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 15:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "GOG",
+        "away": "Fredericia HK",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.20",
+            "X": "8.50",
+            "2": "4.00"
+          },
+          "Match Result": {
+            "1": "1.20",
+            "X": "8.50",
+            "2": "4.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.20",
+              "X": "8.50",
+              "2": "4.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868526",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 13:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "Aalborg Handbold",
+        "away": "Nordsjaelland Handbold",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.015",
+            "X": "8.50",
+            "2": "13.00"
+          },
+          "Match Result": {
+            "1": "1.015",
+            "X": "8.50",
+            "2": "13.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.015",
+              "X": "8.50",
+              "2": "13.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200868527",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 19:00:00",
+        "competition": "Denmark Handboldligaen",
+        "home": "Skjern Handbold",
+        "away": "Skanderborg Handbold",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.85",
+            "X": "8.50",
+            "2": "1.85"
+          },
+          "Match Result": {
+            "1": "1.85",
+            "X": "8.50",
+            "2": "1.85"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.85",
+              "X": "8.50",
+              "2": "1.85"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869367",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 19:30:00",
+        "competition": "France Starligue",
+        "home": "Toulouse",
+        "away": "Selestat Alsace",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.28",
+            "X": "8.50",
+            "2": "3.30"
+          },
+          "Match Result": {
+            "1": "1.28",
+            "X": "8.50",
+            "2": "3.30"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.28",
+              "X": "8.50",
+              "2": "3.30"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869368",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:00:00",
+        "competition": "France Starligue",
+        "home": "Dunkerque",
+        "away": "Chambery Savoie",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.85",
+            "X": "8.50",
+            "2": "1.38"
+          },
+          "Match Result": {
+            "1": "2.85",
+            "X": "8.50",
+            "2": "1.38"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.85",
+              "X": "8.50",
+              "2": "1.38"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869369",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:00:00",
+        "competition": "France Starligue",
+        "home": "Saran Loiret",
+        "away": "USAM Nimes",
+        "markets": {
+          "Full Time Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Match Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "3.50",
+              "X": "8.50",
+              "2": "1.25"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869370",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:00:00",
+        "competition": "France Starligue",
+        "home": "Tremblay",
+        "away": "Saint Raphael",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.80",
+            "X": "8.50",
+            "2": "1.90"
+          },
+          "Match Result": {
+            "1": "1.80",
+            "X": "8.50",
+            "2": "1.90"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.80",
+              "X": "8.50",
+              "2": "1.90"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869371",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:30:00",
+        "competition": "France Starligue",
+        "home": "Caen",
+        "away": "Limoges 87",
+        "markets": {
+          "Full Time Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Match Result": {
+            "1": "3.50",
+            "X": "8.50",
+            "2": "1.25"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "3.50",
+              "X": "8.50",
+              "2": "1.25"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869372",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 18:00:00",
+        "competition": "France Starligue",
+        "home": "Cesson Rennes",
+        "away": "Pays d'Aix UC",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.72",
+            "X": "8.50",
+            "2": "2.00"
+          },
+          "Match Result": {
+            "1": "1.72",
+            "X": "8.50",
+            "2": "2.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.72",
+              "X": "8.50",
+              "2": "2.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869373",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 16:00:00",
+        "competition": "France Starligue",
+        "home": "Montpellier",
+        "away": "Nantes",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.00",
+            "X": "8.50",
+            "2": "1.72"
+          },
+          "Match Result": {
+            "1": "2.00",
+            "X": "8.50",
+            "2": "1.72"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.00",
+              "X": "8.50",
+              "2": "1.72"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869374",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 16:00:00",
+        "competition": "France Starligue",
+        "home": "PSG Handball",
+        "away": "Chartres",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.002",
+            "X": "8.50",
+            "2": "21.00"
+          },
+          "Match Result": {
+            "1": "1.002",
+            "X": "8.50",
+            "2": "21.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.002",
+              "X": "8.50",
+              "2": "21.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869914",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "Frisch Auf Goppingen",
+        "away": "Rhein Neckar Lowen",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.10",
+            "X": "8.50",
+            "2": "1.70"
+          },
+          "Match Result": {
+            "1": "2.10",
+            "X": "8.50",
+            "2": "1.70"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.10",
+              "X": "8.50",
+              "2": "1.70"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869915",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "HBW Balingen-Weilstetten",
+        "away": "TVB Stuttgart",
+        "markets": {
+          "Full Time Result": {
+            "1": "2.60",
+            "X": "8.50",
+            "2": "1.45"
+          },
+          "Match Result": {
+            "1": "2.60",
+            "X": "8.50",
+            "2": "1.45"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+2.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-2.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+2.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-2.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.60",
+              "X": "8.50",
+              "2": "1.45"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869916",
+        "date": "18/09/2026",
+        "kickoff": "18/09/2026 19:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "ThSV Eisenach",
+        "away": "THW Kiel",
+        "markets": {
+          "Full Time Result": {
+            "1": "6.00",
+            "X": "8.50",
+            "2": "1.11"
+          },
+          "Match Result": {
+            "1": "6.00",
+            "X": "8.50",
+            "2": "1.11"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "6.00",
+              "X": "8.50",
+              "2": "1.11"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869917",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 18:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "SG BBM Bietigheim",
+        "away": "TSV Hannover Burgdorf",
+        "markets": {
+          "Full Time Result": {
+            "1": "4.75",
+            "X": "8.50",
+            "2": "1.15"
+          },
+          "Match Result": {
+            "1": "4.75",
+            "X": "8.50",
+            "2": "1.15"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "4.75",
+              "X": "8.50",
+              "2": "1.15"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869918",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 14:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "Bergischer HC",
+        "away": "Fuchse Berlin",
+        "markets": {
+          "Full Time Result": {
+            "1": "10.00",
+            "X": "8.50",
+            "2": "1.03"
+          },
+          "Match Result": {
+            "1": "10.00",
+            "X": "8.50",
+            "2": "1.03"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "10.00",
+              "X": "8.50",
+              "2": "1.03"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869919",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 15:30:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "HSG Wetzlar",
+        "away": "Vfl Gummersbach",
+        "markets": {
+          "Full Time Result": {
+            "1": "7.25",
+            "X": "8.50",
+            "2": "1.07"
+          },
+          "Match Result": {
+            "1": "7.25",
+            "X": "8.50",
+            "2": "1.07"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "7.25",
+              "X": "8.50",
+              "2": "1.07"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869920",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 15:30:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "TBV Lemgo Lippe",
+        "away": "HC Erlangen",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.11",
+            "X": "8.50",
+            "2": "6.00"
+          },
+          "Match Result": {
+            "1": "1.11",
+            "X": "8.50",
+            "2": "6.00"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.11",
+              "X": "8.50",
+              "2": "6.00"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869921",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 17:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "MT Melsungen",
+        "away": "SC Magdeburg",
+        "markets": {
+          "Full Time Result": {
+            "1": "3.30",
+            "X": "8.50",
+            "2": "1.28"
+          },
+          "Match Result": {
+            "1": "3.30",
+            "X": "8.50",
+            "2": "1.28"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "+4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "-4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "+4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "-4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "3.30",
+              "X": "8.50",
+              "2": "1.28"
+            }
+          }
+        }
+      },
+      {
+        "id": "200869922",
+        "date": "20/09/2026",
+        "kickoff": "20/09/2026 17:00:00",
+        "competition": "Germany Bundesliga Handball",
+        "home": "SG Flensburg Handewitt",
+        "away": "HC Hamburg",
+        "markets": {
+          "Full Time Result": {
+            "1": "1.10",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Match Result": {
+            "1": "1.10",
+            "X": "8.50",
+            "2": "6.50"
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Total": {
+            "Over": {
+              "line": "56.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "56.5",
+              "odds": "1.85"
+            }
+          },
+          "Handicap / Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-4.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+4.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-4.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+4.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "56.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "56.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.10",
+              "X": "8.50",
+              "2": "6.50"
+            }
+          }
+        }
+      },
+      {
+        "id": "200499330",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 18:30:00",
+        "competition": "Germany 2 Bundesliga",
+        "home": "TV Emsdetten",
+        "away": "1. Vfl Potsdam",
+        "markets": {
+          "Handicap / Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "1.95"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.75"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Match Result": {
+            "1": "2.75",
+            "X": "8.50",
+            "2": "1.40"
+          },
+          "Total": {
+            "Over": {
+              "line": "61.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "61.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "2": {
+              "line": "+1.5",
+              "odds": "1.95"
+            },
+            "1": {
+              "line": "-1.5",
+              "odds": "1.75"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "2": {
+                "line": "+1.5",
+                "odds": "1.95"
+              },
+              "1": {
+                "line": "-1.5",
+                "odds": "1.75"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "61.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "61.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "2.75",
+              "X": "8.50",
+              "2": "1.40"
+            }
+          }
+        }
+      },
+      {
+        "id": "201204932",
+        "date": "19/09/2026",
+        "kickoff": "19/09/2026 17:30:00",
+        "competition": "Greece Super Cup",
+        "home": "Olympiacos",
+        "away": "AEK Athens",
+        "markets": {
+          "Handicap / Spread": {
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+3.5",
+              "odds": "1.85"
+            }
+          },
+          "Total Goals": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.85"
+            }
+          },
+          "Full Time Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Match Result": {
+            "1": "1.45",
+            "X": "8.50",
+            "2": "3.20"
+          },
+          "Total": {
+            "Over": {
+              "line": "62.5",
+              "odds": "1.85"
+            },
+            "Under": {
+              "line": "62.5",
+              "odds": "1.85"
+            }
+          },
+          "Spread": {
+            "1": {
+              "line": "-3.5",
+              "odds": "1.85"
+            },
+            "2": {
+              "line": "+3.5",
+              "odds": "1.85"
+            }
+          },
+          "Game Lines": {
+            "Spread": {
+              "1": {
+                "line": "-3.5",
+                "odds": "1.85"
+              },
+              "2": {
+                "line": "+3.5",
+                "odds": "1.85"
+              }
+            },
+            "Total": {
+              "Over": {
+                "line": "62.5",
+                "odds": "1.85"
+              },
+              "Under": {
+                "line": "62.5",
+                "odds": "1.85"
+              }
+            },
+            "Money Line": {
+              "1": "1.45",
+              "X": "8.50",
+              "2": "3.20"
+            }
+          }
+        }
+      },
+      {
         "id": "200865122",
         "date": "19/09/2026",
         "kickoff": "19/09/2026 15:00:00",
@@ -21139,180 +24793,6 @@
         }
       },
       {
-        "id": "200868522",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 14:00:00",
-        "competition": "Matchs à venir",
-        "home": "TMS Ringsted",
-        "away": "Mors-Thy Handbold",
-        "markets": {
-          "Full Time Result": {
-            "1": "2.25",
-            "X": "8.50",
-            "2": "1.58"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "64.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "64.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "2": {
-              "line": "+0.5",
-              "odds": "1.95"
-            },
-            "1": {
-              "line": "-0.5",
-              "odds": "1.80"
-            }
-          },
-          "Match Result": {
-            "1": "2.25",
-            "X": "8.50",
-            "2": "1.58"
-          },
-          "Total": {
-            "Over": {
-              "line": "64.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "64.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "2": {
-              "line": "+0.5",
-              "odds": "1.95"
-            },
-            "1": {
-              "line": "-0.5",
-              "odds": "1.80"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "2": {
-                "line": "+0.5",
-                "odds": "1.95"
-              },
-              "1": {
-                "line": "-0.5",
-                "odds": "1.80"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "64.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "64.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "2.25",
-              "X": "8.50",
-              "2": "1.58"
-            }
-          }
-        }
-      },
-      {
-        "id": "200868523",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 15:00:00",
-        "competition": "Matchs à venir",
-        "home": "GOG",
-        "away": "Fredericia HK",
-        "markets": {
-          "Full Time Result": {
-            "1": "1.16",
-            "X": "8.50",
-            "2": "4.50"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "1": {
-              "line": "-3.5",
-              "odds": "1.75"
-            },
-            "2": {
-              "line": "+3.5",
-              "odds": "2.05"
-            }
-          },
-          "Match Result": {
-            "1": "1.16",
-            "X": "8.50",
-            "2": "4.50"
-          },
-          "Total": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "1": {
-              "line": "-3.5",
-              "odds": "1.75"
-            },
-            "2": {
-              "line": "+3.5",
-              "odds": "2.05"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-3.5",
-                "odds": "1.75"
-              },
-              "2": {
-                "line": "+3.5",
-                "odds": "2.05"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "61.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "61.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "1.16",
-              "X": "8.50",
-              "2": "4.50"
-            }
-          }
-        }
-      },
-      {
         "id": "200869151",
         "date": "18/09/2026",
         "kickoff": "18/09/2026 17:30:00",
@@ -21917,528 +25397,6 @@
               "1": "2.35",
               "X": "8.50",
               "2": "1.55"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869368",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:00:00",
-        "competition": "Matchs à venir",
-        "home": "Dunkerque",
-        "away": "Chambéry Savoie",
-        "markets": {
-          "Full Time Result": {
-            "1": "2.85",
-            "X": "8.50",
-            "2": "1.38"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "60.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "60.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "2": {
-              "line": "+1.5",
-              "odds": "1.95"
-            },
-            "1": {
-              "line": "-1.5",
-              "odds": "1.80"
-            }
-          },
-          "Match Result": {
-            "1": "2.85",
-            "X": "8.50",
-            "2": "1.38"
-          },
-          "Total": {
-            "Over": {
-              "line": "60.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "60.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "2": {
-              "line": "+1.5",
-              "odds": "1.95"
-            },
-            "1": {
-              "line": "-1.5",
-              "odds": "1.80"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "2": {
-                "line": "+1.5",
-                "odds": "1.95"
-              },
-              "1": {
-                "line": "-1.5",
-                "odds": "1.80"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "60.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "60.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "2.85",
-              "X": "8.50",
-              "2": "1.38"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869369",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:00:00",
-        "competition": "Matchs à venir",
-        "home": "Saran Loiret",
-        "away": "USAM Nîmes",
-        "markets": {
-          "Full Time Result": {
-            "1": "2.60",
-            "X": "8.50",
-            "2": "1.45"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "2": {
-              "line": "+1.5",
-              "odds": "1.88"
-            },
-            "1": {
-              "line": "-1.5",
-              "odds": "1.88"
-            }
-          },
-          "Match Result": {
-            "1": "2.60",
-            "X": "8.50",
-            "2": "1.45"
-          },
-          "Total": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "2": {
-              "line": "+1.5",
-              "odds": "1.88"
-            },
-            "1": {
-              "line": "-1.5",
-              "odds": "1.88"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "2": {
-                "line": "+1.5",
-                "odds": "1.88"
-              },
-              "1": {
-                "line": "-1.5",
-                "odds": "1.88"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "61.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "61.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "2.60",
-              "X": "8.50",
-              "2": "1.45"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869370",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:00:00",
-        "competition": "Matchs à venir",
-        "home": "Tremblay",
-        "away": "Saint-Raphaël",
-        "markets": {
-          "Full Time Result": {
-            "1": "1.75",
-            "X": "8.50",
-            "2": "1.95"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "65.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "65.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "1": {
-              "line": "-0.5",
-              "odds": "2.00"
-            },
-            "2": {
-              "line": "+0.5",
-              "odds": "1.78"
-            }
-          },
-          "Match Result": {
-            "1": "1.75",
-            "X": "8.50",
-            "2": "1.95"
-          },
-          "Total": {
-            "Over": {
-              "line": "65.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "65.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "1": {
-              "line": "-0.5",
-              "odds": "2.00"
-            },
-            "2": {
-              "line": "+0.5",
-              "odds": "1.78"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-0.5",
-                "odds": "2.00"
-              },
-              "2": {
-                "line": "+0.5",
-                "odds": "1.78"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "65.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "65.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "1.75",
-              "X": "8.50",
-              "2": "1.95"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869371",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:30:00",
-        "competition": "Matchs à venir",
-        "home": "Caen",
-        "away": "Limoges 87",
-        "markets": {
-          "Full Time Result": {
-            "1": "3.50",
-            "X": "8.50",
-            "2": "1.25"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "62.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "62.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "2": {
-              "line": "+2.5",
-              "odds": "2.00"
-            },
-            "1": {
-              "line": "-2.5",
-              "odds": "1.78"
-            }
-          },
-          "Match Result": {
-            "1": "3.50",
-            "X": "8.50",
-            "2": "1.25"
-          },
-          "Total": {
-            "Over": {
-              "line": "62.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "62.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "2": {
-              "line": "+2.5",
-              "odds": "2.00"
-            },
-            "1": {
-              "line": "-2.5",
-              "odds": "1.78"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "2": {
-                "line": "+2.5",
-                "odds": "2.00"
-              },
-              "1": {
-                "line": "-2.5",
-                "odds": "1.78"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "62.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "62.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "3.50",
-              "X": "8.50",
-              "2": "1.25"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869915",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 18:00:00",
-        "competition": "Matchs à venir",
-        "home": "HBW Balingen-Weilstetten",
-        "away": "TVB Stuttgart",
-        "markets": {
-          "Full Time Result": {
-            "1": "1.85",
-            "X": "8.50",
-            "2": "1.85"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "60.5",
-              "odds": "1.78"
-            },
-            "Under": {
-              "line": "60.5",
-              "odds": "2.00"
-            }
-          },
-          "Handicap / Spread": {
-            "1": {
-              "line": "-0.5",
-              "odds": "2.10"
-            },
-            "2": {
-              "line": "+0.5",
-              "odds": "1.72"
-            }
-          },
-          "Match Result": {
-            "1": "1.85",
-            "X": "8.50",
-            "2": "1.85"
-          },
-          "Total": {
-            "Over": {
-              "line": "60.5",
-              "odds": "1.78"
-            },
-            "Under": {
-              "line": "60.5",
-              "odds": "2.00"
-            }
-          },
-          "Spread": {
-            "1": {
-              "line": "-0.5",
-              "odds": "2.10"
-            },
-            "2": {
-              "line": "+0.5",
-              "odds": "1.72"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "1": {
-                "line": "-0.5",
-                "odds": "2.10"
-              },
-              "2": {
-                "line": "+0.5",
-                "odds": "1.72"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "60.5",
-                "odds": "1.78"
-              },
-              "Under": {
-                "line": "60.5",
-                "odds": "2.00"
-              }
-            },
-            "Money Line": {
-              "1": "1.85",
-              "X": "8.50",
-              "2": "1.85"
-            }
-          }
-        }
-      },
-      {
-        "id": "200869916",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:00:00",
-        "competition": "Matchs à venir",
-        "home": "ThSV Eisenach",
-        "away": "THW Kiel",
-        "markets": {
-          "Full Time Result": {
-            "1": "4.75",
-            "X": "8.50",
-            "2": "1.15"
-          },
-          "Total Goals": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Handicap / Spread": {
-            "2": {
-              "line": "+4.5",
-              "odds": "1.78"
-            },
-            "1": {
-              "line": "-4.5",
-              "odds": "2.00"
-            }
-          },
-          "Match Result": {
-            "1": "4.75",
-            "X": "8.50",
-            "2": "1.15"
-          },
-          "Total": {
-            "Over": {
-              "line": "61.5",
-              "odds": "1.88"
-            },
-            "Under": {
-              "line": "61.5",
-              "odds": "1.88"
-            }
-          },
-          "Spread": {
-            "2": {
-              "line": "+4.5",
-              "odds": "1.78"
-            },
-            "1": {
-              "line": "-4.5",
-              "odds": "2.00"
-            }
-          },
-          "Game Lines": {
-            "Spread": {
-              "2": {
-                "line": "+4.5",
-                "odds": "1.78"
-              },
-              "1": {
-                "line": "-4.5",
-                "odds": "2.00"
-              }
-            },
-            "Total": {
-              "Over": {
-                "line": "61.5",
-                "odds": "1.88"
-              },
-              "Under": {
-                "line": "61.5",
-                "odds": "1.88"
-              }
-            },
-            "Money Line": {
-              "1": "4.75",
-              "X": "8.50",
-              "2": "1.15"
             }
           }
         }
@@ -24971,6 +27929,728 @@
   {
     "sport": "Cycling",
     "matches": [
+      {
+        "id": "7906080",
+        "date": "27/09/2026",
+        "kickoff": "27/09/2026 10:00:00",
+        "competition": "World Championship Time Trial 2026 - To Win Outright",
+        "home": "World Championship Time Trial 2026 - To Win Outright - To Win",
+        "away": "",
+        "markets": {
+          "To Win": {
+            "Remco Evenepoel": "1.20",
+            "Filippo Ganna": "5.00",
+            "Tobias Foss": "34.00",
+            "Stefan Kung": "34.00",
+            "Mathias Vacek": "34.00",
+            "Brandon McNulty": "51.00",
+            "Ethan Hayter": "67.00",
+            "Callum Thornley": "81.00",
+            "Daan Hoole": "101.00",
+            "Jakob Soderqvist": "151.00",
+            "Stefan Bissegger": "151.00",
+            "Paul Seixas": "151.00",
+            "Isaac Del Toro": "201.00",
+            "Ivan Romeo": "301.00",
+            "Mattia Cattaneo": "301.00",
+            "Derek Gee": "301.00",
+            "Alec Segaert": "401.00",
+            "Bruno Armirail": "501.00",
+            "Kasper Asgreen": "601.00",
+            "Matteo Sobrero": "601.00",
+            "Andreas Leknessund": "601.00",
+            "Maximilian Walscheid": "601.00",
+            "Arthur Kluckers": "601.00",
+            "Ivo Oliveira": "601.00",
+            "Rune Herregodts": "751.00",
+            "Conor Leahy": "751.00",
+            "Mikkel Bjerg": "1001.00",
+            "Artem Shmidt": "1001.00",
+            "Michael Leonard": "1001.00",
+            "Nelson Oliveira": "1501.00",
+            "Pablo Castrillo": "1501.00",
+            "Brandon Rivera": "1501.00",
+            "Walter Wargas": "1501.00",
+            "Ryan Mullen": "2501.00",
+            "Jan Tratnik": "2501.00",
+            "Jasha Sutterlin": "2501.00",
+            "Michal Kwiatkowski": "2501.00",
+            "Ognjen Ilic": "2501.00",
+            "Byron Munton": "4501.00",
+            "Henrique Da Silva": "4501.00",
+            "Edgar David Cadena": "4501.00",
+            "Madis Mihkels": "4501.00",
+            "Barnabas Peak": "4501.00",
+            "Janos Pelikan": "4501.00",
+            "Eric Antonio Fagundez": "4501.00"
+          },
+          "Race Winner": {
+            "Remco Evenepoel": "1.20",
+            "Filippo Ganna": "5.00",
+            "Tobias Foss": "34.00",
+            "Stefan Kung": "34.00",
+            "Mathias Vacek": "34.00",
+            "Brandon McNulty": "51.00",
+            "Ethan Hayter": "67.00",
+            "Callum Thornley": "81.00",
+            "Daan Hoole": "101.00",
+            "Jakob Soderqvist": "151.00",
+            "Stefan Bissegger": "151.00",
+            "Paul Seixas": "151.00",
+            "Isaac Del Toro": "201.00",
+            "Ivan Romeo": "301.00",
+            "Mattia Cattaneo": "301.00",
+            "Derek Gee": "301.00",
+            "Alec Segaert": "401.00",
+            "Bruno Armirail": "501.00",
+            "Kasper Asgreen": "601.00",
+            "Matteo Sobrero": "601.00",
+            "Andreas Leknessund": "601.00",
+            "Maximilian Walscheid": "601.00",
+            "Arthur Kluckers": "601.00",
+            "Ivo Oliveira": "601.00",
+            "Rune Herregodts": "751.00",
+            "Conor Leahy": "751.00",
+            "Mikkel Bjerg": "1001.00",
+            "Artem Shmidt": "1001.00",
+            "Michael Leonard": "1001.00",
+            "Nelson Oliveira": "1501.00",
+            "Pablo Castrillo": "1501.00",
+            "Brandon Rivera": "1501.00",
+            "Walter Wargas": "1501.00",
+            "Ryan Mullen": "2501.00",
+            "Jan Tratnik": "2501.00",
+            "Jasha Sutterlin": "2501.00",
+            "Michal Kwiatkowski": "2501.00",
+            "Ognjen Ilic": "2501.00",
+            "Byron Munton": "4501.00",
+            "Henrique Da Silva": "4501.00",
+            "Edgar David Cadena": "4501.00",
+            "Madis Mihkels": "4501.00",
+            "Barnabas Peak": "4501.00",
+            "Janos Pelikan": "4501.00",
+            "Eric Antonio Fagundez": "4501.00"
+          }
+        }
+      },
+      {
+        "id": "84762315",
+        "date": "27/09/2026",
+        "kickoff": "27/09/2026 10:00:00",
+        "competition": "World Championship Road Race 2026 - To Win Outright",
+        "home": "World Championship Road Race 2026 - To Win Outright - To Win",
+        "away": "",
+        "markets": {
+          "To Win": {
+            "Remco Evenepoel": "3.50",
+            "Isaac Del Toro": "4.00",
+            "Paul Seixas": "4.50",
+            "Mathieu van der Poel": "7.50",
+            "Wout van Aert": "12.00",
+            "Tom Pidcock": "12.00",
+            "Giulio Ciccone": "26.00",
+            "Mathias Vacek": "34.00",
+            "Ben Healy": "34.00",
+            "Quinn Simmons": "34.00",
+            "Jhonatan Narvaez": "41.00",
+            "Brandon McNulty": "41.00",
+            "Mads Pedersen": "51.00",
+            "Matteo Jorgenson": "67.00",
+            "Richard Carapaz": "67.00",
+            "Giulio Pellizzari": "67.00",
+            "Mauro Schmid": "81.00",
+            "Juan Ayuso": "101.00",
+            "Enric Mas Nicolau": "101.00",
+            "Christian Scaroni": "101.00",
+            "Adam Yates": "101.00",
+            "Afonso Eulalio": "126.00",
+            "Lorenzo Finn": "126.00",
+            "Jan Christen": "126.00",
+            "Maxim Van Gils": "151.00",
+            "Primoz Roglic": "151.00",
+            "Toms Skujins": "151.00",
+            "Mikkel Honore": "151.00",
+            "Oscar Onley": "201.00",
+            "Alex Baudin": "201.00",
+            "Thibau Nys": "201.00",
+            "Michael Matthews": "251.00",
+            "Santiago Buitrago": "301.00",
+            "Guillermo Thomas Silva": "301.00",
+            "Tobias Halland Johannessen": "301.00",
+            "Derek Gee": "301.00",
+            "Neilson Powless": "301.00",
+            "Felix Gall": "301.00",
+            "Kevin Vermaerke": "301.00",
+            "Michael Valgren": "301.00",
+            "Michael Woods": "301.00",
+            "Andreas Leknessund": "301.00",
+            "Ben O'Connor": "301.00",
+            "Anthon Charmig": "301.00",
+            "Alberto Bettiol": "401.00",
+            "Finn Fisher-Black": "401.00",
+            "Valentin Paret-Peintre": "401.00",
+            "Quinten Hermans": "401.00",
+            "Marc Hirschi": "501.00",
+            "Ivan Romeo": "501.00",
+            "Natnael Tesfatsion": "501.00",
+            "Maximilian Schachmann": "501.00",
+            "Jai Hindley": "501.00",
+            "Corbin Strong": "601.00",
+            "Laurence Pithie": "601.00",
+            "Antonio Morgado": "601.00",
+            "Tiesj Benoot": "601.00",
+            "Florian Lipowitz": "601.00",
+            "Bart Lemmen": "601.00",
+            "Matej Mohoric": "601.00",
+            "Jakob Omrzel": "601.00",
+            "Andreas Kron": "751.00",
+            "Michael Storer": "751.00",
+            "Alexander Vlasov": "751.00",
+            "Pavel Sivakov": "751.00",
+            "Matteo Trentin": "751.00",
+            "Patrick Konrad": "751.00",
+            "Davide Piganzoli": "751.00",
+            "Marco Brenner": "751.00",
+            "Michael Leonard": "751.00",
+            "Igor Arrieta": "751.00",
+            "Hugo Houle": "1001.00",
+            "Bruno Armirail": "1001.00",
+            "Tim Van Dijke": "1001.00",
+            "Edgar Cadena": "1001.00",
+            "Michal Kwiatkowski": "1001.00",
+            "Ben Oliver": "1001.00",
+            "Alec Segaert": "1001.00",
+            "Harold Tejada": "1001.00",
+            "Jefferson Alveiro Cepeda": "1001.00",
+            "Biniam Girmay": "1001.00",
+            "Rune Herregodts": "1001.00",
+            "Jorgen Nordhagen": "1001.00",
+            "Victor Langellotti": "1001.00",
+            "Alexey Lutsenko": "1001.00",
+            "Daan Hoole": "1001.00",
+            "Stefan Kung": "1001.00",
+            "Raul Garcia Pierna": "1001.00",
+            "Yannis Voisard": "1001.00",
+            "Artem Shmidt": "1001.00",
+            "Georg Steinhauser": "1001.00",
+            "Carlos Canal": "1001.00",
+            "Sergio Higuita": "1001.00",
+            "Soren Kragh Andersen": "1001.00",
+            "Brandon Rivera": "1001.00",
+            "Marcel Camprubi": "1001.00",
+            "Nairo Quintana": "1001.00",
+            "Jordan Labrosse": "1001.00",
+            "Nicolas Prodhomme": "1001.00",
+            "Luke Tuckwell": "1001.00",
+            "Fred Wright": "1001.00",
+            "Henok Mulubrhan": "1001.00",
+            "Orluis Aular": "1001.00",
+            "Attila Valter": "1001.00",
+            "Ivo Oliveira": "1001.00",
+            "Tiago Antunes": "1001.00",
+            "Felix Engelhardt": "1001.00",
+            "Martin Svrcek": "1001.00",
+            "Felix Grossschartner": "1501.00",
+            "Pascal Eenkhoorn": "1501.00",
+            "Bauke Mollema": "1501.00",
+            "Sean Quinn": "1501.00",
+            "Kasper Asgreen": "1501.00",
+            "Eric Antonio Fagundez": "1501.00",
+            "Jefferson Alexander Cepeda": "1501.00",
+            "Mikkel Bjerg": "1501.00",
+            "Pier-Andre Cote": "1501.00",
+            "Georg Zimmermann": "1501.00",
+            "Tobias Foss": "1501.00",
+            "Embret Svestad-Baardseng": "1501.00",
+            "Josh Kench": "1501.00",
+            "Gianni Vermeersch": "1501.00",
+            "Mattia Cattaneo": "1501.00",
+            "Byron Munton": "1501.00",
+            "Jamie Meehan": "1501.00",
+            "Nickolas Zukowsky": "1501.00",
+            "Larry Warbasse": "1501.00",
+            "Darren Rafferty": "1501.00",
+            "Jakob Soderqvist": "1501.00",
+            "Markel Beloki": "1501.00",
+            "Walter Vargas Alzate": "1501.00",
+            "Carlos Verona": "1501.00",
+            "Jack Haig": "1501.00",
+            "Francisco Joel Penuela": "1501.00",
+            "Callum Thornley": "1501.00",
+            "George Bennett": "1501.00",
+            "Mark Donovan": "1501.00",
+            "Vicente Rojas": "2001.00",
+            "Finlay Pickering": "2001.00",
+            "Merhawi Kudus": "2001.00",
+            "Arno Wallenborn": "2501.00",
+            "Stefan Bissegger": "2501.00",
+            "Nelson Oliveira": "2501.00",
+            "Jakub Otruba": "2501.00",
+            "Nadav Raisberg": "2501.00",
+            "Pavel Novak": "2501.00",
+            "Madis Mihkels": "2501.00",
+            "Tilen Finkst": "2501.00",
+            "Mateusz Gajdulewicz": "2501.00",
+            "Piotr Pekala": "2501.00",
+            "Jakub Kaczmarek": "2501.00",
+            "Andreas Miltiadis": "2501.00",
+            "Kristians Belohvosciks": "2501.00",
+            "Emils Liepins": "2501.00",
+            "Martins Pluto": "2501.00",
+            "Henrique Da Silva": "2501.00",
+            "Luis Daniel Oses": "2501.00"
+          },
+          "Race Winner": {
+            "Remco Evenepoel": "3.50",
+            "Isaac Del Toro": "4.00",
+            "Paul Seixas": "4.50",
+            "Mathieu van der Poel": "7.50",
+            "Wout van Aert": "12.00",
+            "Tom Pidcock": "12.00",
+            "Giulio Ciccone": "26.00",
+            "Mathias Vacek": "34.00",
+            "Ben Healy": "34.00",
+            "Quinn Simmons": "34.00",
+            "Jhonatan Narvaez": "41.00",
+            "Brandon McNulty": "41.00",
+            "Mads Pedersen": "51.00",
+            "Matteo Jorgenson": "67.00",
+            "Richard Carapaz": "67.00",
+            "Giulio Pellizzari": "67.00",
+            "Mauro Schmid": "81.00",
+            "Juan Ayuso": "101.00",
+            "Enric Mas Nicolau": "101.00",
+            "Christian Scaroni": "101.00",
+            "Adam Yates": "101.00",
+            "Afonso Eulalio": "126.00",
+            "Lorenzo Finn": "126.00",
+            "Jan Christen": "126.00",
+            "Maxim Van Gils": "151.00",
+            "Primoz Roglic": "151.00",
+            "Toms Skujins": "151.00",
+            "Mikkel Honore": "151.00",
+            "Oscar Onley": "201.00",
+            "Alex Baudin": "201.00",
+            "Thibau Nys": "201.00",
+            "Michael Matthews": "251.00",
+            "Santiago Buitrago": "301.00",
+            "Guillermo Thomas Silva": "301.00",
+            "Tobias Halland Johannessen": "301.00",
+            "Derek Gee": "301.00",
+            "Neilson Powless": "301.00",
+            "Felix Gall": "301.00",
+            "Kevin Vermaerke": "301.00",
+            "Michael Valgren": "301.00",
+            "Michael Woods": "301.00",
+            "Andreas Leknessund": "301.00",
+            "Ben O'Connor": "301.00",
+            "Anthon Charmig": "301.00",
+            "Alberto Bettiol": "401.00",
+            "Finn Fisher-Black": "401.00",
+            "Valentin Paret-Peintre": "401.00",
+            "Quinten Hermans": "401.00",
+            "Marc Hirschi": "501.00",
+            "Ivan Romeo": "501.00",
+            "Natnael Tesfatsion": "501.00",
+            "Maximilian Schachmann": "501.00",
+            "Jai Hindley": "501.00",
+            "Corbin Strong": "601.00",
+            "Laurence Pithie": "601.00",
+            "Antonio Morgado": "601.00",
+            "Tiesj Benoot": "601.00",
+            "Florian Lipowitz": "601.00",
+            "Bart Lemmen": "601.00",
+            "Matej Mohoric": "601.00",
+            "Jakob Omrzel": "601.00",
+            "Andreas Kron": "751.00",
+            "Michael Storer": "751.00",
+            "Alexander Vlasov": "751.00",
+            "Pavel Sivakov": "751.00",
+            "Matteo Trentin": "751.00",
+            "Patrick Konrad": "751.00",
+            "Davide Piganzoli": "751.00",
+            "Marco Brenner": "751.00",
+            "Michael Leonard": "751.00",
+            "Igor Arrieta": "751.00",
+            "Hugo Houle": "1001.00",
+            "Bruno Armirail": "1001.00",
+            "Tim Van Dijke": "1001.00",
+            "Edgar Cadena": "1001.00",
+            "Michal Kwiatkowski": "1001.00",
+            "Ben Oliver": "1001.00",
+            "Alec Segaert": "1001.00",
+            "Harold Tejada": "1001.00",
+            "Jefferson Alveiro Cepeda": "1001.00",
+            "Biniam Girmay": "1001.00",
+            "Rune Herregodts": "1001.00",
+            "Jorgen Nordhagen": "1001.00",
+            "Victor Langellotti": "1001.00",
+            "Alexey Lutsenko": "1001.00",
+            "Daan Hoole": "1001.00",
+            "Stefan Kung": "1001.00",
+            "Raul Garcia Pierna": "1001.00",
+            "Yannis Voisard": "1001.00",
+            "Artem Shmidt": "1001.00",
+            "Georg Steinhauser": "1001.00",
+            "Carlos Canal": "1001.00",
+            "Sergio Higuita": "1001.00",
+            "Soren Kragh Andersen": "1001.00",
+            "Brandon Rivera": "1001.00",
+            "Marcel Camprubi": "1001.00",
+            "Nairo Quintana": "1001.00",
+            "Jordan Labrosse": "1001.00",
+            "Nicolas Prodhomme": "1001.00",
+            "Luke Tuckwell": "1001.00",
+            "Fred Wright": "1001.00",
+            "Henok Mulubrhan": "1001.00",
+            "Orluis Aular": "1001.00",
+            "Attila Valter": "1001.00",
+            "Ivo Oliveira": "1001.00",
+            "Tiago Antunes": "1001.00",
+            "Felix Engelhardt": "1001.00",
+            "Martin Svrcek": "1001.00",
+            "Felix Grossschartner": "1501.00",
+            "Pascal Eenkhoorn": "1501.00",
+            "Bauke Mollema": "1501.00",
+            "Sean Quinn": "1501.00",
+            "Kasper Asgreen": "1501.00",
+            "Eric Antonio Fagundez": "1501.00",
+            "Jefferson Alexander Cepeda": "1501.00",
+            "Mikkel Bjerg": "1501.00",
+            "Pier-Andre Cote": "1501.00",
+            "Georg Zimmermann": "1501.00",
+            "Tobias Foss": "1501.00",
+            "Embret Svestad-Baardseng": "1501.00",
+            "Josh Kench": "1501.00",
+            "Gianni Vermeersch": "1501.00",
+            "Mattia Cattaneo": "1501.00",
+            "Byron Munton": "1501.00",
+            "Jamie Meehan": "1501.00",
+            "Nickolas Zukowsky": "1501.00",
+            "Larry Warbasse": "1501.00",
+            "Darren Rafferty": "1501.00",
+            "Jakob Soderqvist": "1501.00",
+            "Markel Beloki": "1501.00",
+            "Walter Vargas Alzate": "1501.00",
+            "Carlos Verona": "1501.00",
+            "Jack Haig": "1501.00",
+            "Francisco Joel Penuela": "1501.00",
+            "Callum Thornley": "1501.00",
+            "George Bennett": "1501.00",
+            "Mark Donovan": "1501.00",
+            "Vicente Rojas": "2001.00",
+            "Finlay Pickering": "2001.00",
+            "Merhawi Kudus": "2001.00",
+            "Arno Wallenborn": "2501.00",
+            "Stefan Bissegger": "2501.00",
+            "Nelson Oliveira": "2501.00",
+            "Jakub Otruba": "2501.00",
+            "Nadav Raisberg": "2501.00",
+            "Pavel Novak": "2501.00",
+            "Madis Mihkels": "2501.00",
+            "Tilen Finkst": "2501.00",
+            "Mateusz Gajdulewicz": "2501.00",
+            "Piotr Pekala": "2501.00",
+            "Jakub Kaczmarek": "2501.00",
+            "Andreas Miltiadis": "2501.00",
+            "Kristians Belohvosciks": "2501.00",
+            "Emils Liepins": "2501.00",
+            "Martins Pluto": "2501.00",
+            "Henrique Da Silva": "2501.00",
+            "Luis Daniel Oses": "2501.00"
+          }
+        }
+      },
+      {
+        "id": "49654905",
+        "date": "27/09/2026",
+        "kickoff": "27/09/2026 10:00:00",
+        "competition": "World Championship Women Time Trial 2026 - To Win Outright",
+        "home": "World Championship Women Time Trial 2026 - To Win Outright - To Win",
+        "away": "",
+        "markets": {
+          "To Win": {
+            "Marlen Reusser": "1.333",
+            "Zoe Backstedt": "3.75",
+            "Demi Vollering": "10.00",
+            "Antonia Niedermaier": "26.00",
+            "Lieke Nooijen": "26.00",
+            "Elisa Longo Borghini": "41.00",
+            "Kristen Faulkner": "41.00",
+            "Lotte Kopecky": "51.00",
+            "Taylor Knibb": "67.00",
+            "Anna Morris": "101.00",
+            "Katrine Aalerud": "151.00",
+            "Franziska Koch": "151.00",
+            "Juliette Berthet": "201.00",
+            "Vittoria Guazzini": "201.00",
+            "Cedrine Kerbaol": "301.00",
+            "Lotte Claes": "301.00",
+            "Christina Schweinberger": "301.00",
+            "Lauretta Hanson": "301.00",
+            "Mireia Benito": "501.00",
+            "Paula Blasi": "501.00",
+            "Anniina Ahtosalo": "501.00",
+            "Mie Bjorndal Ottestad": "601.00",
+            "Dominika Wlodarczyk": "601.00",
+            "Jasmin Liechti": "1001.00",
+            "Teniel Campbell": "1001.00",
+            "Olivia Baril": "1001.00",
+            "Diana Penuela": "1501.00",
+            "Nika Bobnar": "1501.00",
+            "Nadia Gontova": "1501.00",
+            "Karin Abe": "2001.00"
+          },
+          "Race Winner": {
+            "Marlen Reusser": "1.333",
+            "Zoe Backstedt": "3.75",
+            "Demi Vollering": "10.00",
+            "Antonia Niedermaier": "26.00",
+            "Lieke Nooijen": "26.00",
+            "Elisa Longo Borghini": "41.00",
+            "Kristen Faulkner": "41.00",
+            "Lotte Kopecky": "51.00",
+            "Taylor Knibb": "67.00",
+            "Anna Morris": "101.00",
+            "Katrine Aalerud": "151.00",
+            "Franziska Koch": "151.00",
+            "Juliette Berthet": "201.00",
+            "Vittoria Guazzini": "201.00",
+            "Cedrine Kerbaol": "301.00",
+            "Lotte Claes": "301.00",
+            "Christina Schweinberger": "301.00",
+            "Lauretta Hanson": "301.00",
+            "Mireia Benito": "501.00",
+            "Paula Blasi": "501.00",
+            "Anniina Ahtosalo": "501.00",
+            "Mie Bjorndal Ottestad": "601.00",
+            "Dominika Wlodarczyk": "601.00",
+            "Jasmin Liechti": "1001.00",
+            "Teniel Campbell": "1001.00",
+            "Olivia Baril": "1001.00",
+            "Diana Penuela": "1501.00",
+            "Nika Bobnar": "1501.00",
+            "Nadia Gontova": "1501.00",
+            "Karin Abe": "2001.00"
+          }
+        }
+      },
+      {
+        "id": "64532846",
+        "date": "27/09/2026",
+        "kickoff": "27/09/2026 10:00:00",
+        "competition": "World Championship Women Road Race 2026 - To Win Outright",
+        "home": "World Championship Women Road Race 2026 - To Win Outright - To Win",
+        "away": "",
+        "markets": {
+          "To Win": {
+            "Demi Vollering": "1.727",
+            "Kimberley Le Court": "5.00",
+            "Elisa Longo Borghini": "15.00",
+            "Paula Blasi": "17.00",
+            "Marlen Reusser": "17.00",
+            "Katarzyna Niewiadoma": "17.00",
+            "Celia Gery": "21.00",
+            "Lotte Kopecky": "21.00",
+            "Puck Pieterse": "26.00",
+            "Noemi Ruegg": "29.00",
+            "Franziska Koch": "29.00",
+            "Mischa Bredewold": "34.00",
+            "Dominika Wlodarczyk": "41.00",
+            "Cedrine Kerbaol": "51.00",
+            "Sarah Van Dam": "51.00",
+            "Magdeleine Vallieres": "51.00",
+            "Kristen Faulkner": "67.00",
+            "Antonia Niedermaier": "81.00",
+            "Liane Lippert": "81.00",
+            "Karlijn Swinkels": "81.00",
+            "Femke De Vries": "101.00",
+            "Maeva Squiban": "101.00",
+            "Riejanne Markus": "101.00",
+            "Niamh Fisher-Black": "101.00",
+            "Juliette Berthet": "151.00",
+            "Silvia Persico": "151.00",
+            "Monica Trinca Colonel": "201.00",
+            "Lieke Nooijen": "201.00",
+            "Kate Courtney": "201.00",
+            "Mavi Garcia": "201.00",
+            "Zoe Backstedt": "201.00",
+            "Sigrid Ytterhus Haugset": "301.00",
+            "Eleonora Camilla Gasparrini": "301.00",
+            "Mie Bjorndal Ottestad": "301.00",
+            "Lauren Dickson": "301.00",
+            "Anna Henderson": "301.00",
+            "Cecilie Uttrup Ludwig": "401.00",
+            "Caroline Andersson": "401.00",
+            "Pfeiffer Georgi": "401.00",
+            "Mireia Benito": "501.00",
+            "Usoa Ostolaza": "501.00",
+            "Evita Muzic": "501.00",
+            "Steffi Haberlin": "501.00",
+            "Sara Casasola": "601.00",
+            "Shari Bossuyt": "601.00",
+            "Lotte Claes": "601.00",
+            "Amanda Spratt": "601.00",
+            "Ruby Roseman-Gannon": "601.00",
+            "Mackenzie Coupland": "601.00",
+            "Christina Schweinberger": "601.00",
+            "Maggie Coles-Lyster": "601.00",
+            "Katrine Aalerud": "601.00",
+            "Lauren Stephens": "601.00",
+            "Jasmin Liechti": "601.00",
+            "Ricarda Bauernfeind": "601.00",
+            "Lea Curinier": "601.00",
+            "Julie Van de Velde": "751.00",
+            "Erica Magnaldi": "751.00",
+            "Sara Martin": "751.00",
+            "Ginia Caluori": "751.00",
+            "Marta Lach": "751.00",
+            "Brodie Chapman": "751.00",
+            "Carina Schrempf": "751.00",
+            "Margot Vanpachtenbeke": "751.00",
+            "Alison Jackson": "751.00",
+            "Nadia Gontova": "751.00",
+            "Olivia Baril": "751.00",
+            "Ella Wyllie": "751.00",
+            "Sandra Alonso": "751.00",
+            "Marie Le Net": "751.00",
+            "Karolina Perekitko": "751.00",
+            "Millie Couzens": "751.00",
+            "Josie Nelson": "751.00",
+            "Talia Appleton": "751.00",
+            "Linda Zanetti": "751.00",
+            "Katharina Sadnik": "1001.00",
+            "Solbjork Minke Anderson": "1001.00",
+            "Francesca Barale": "1001.00",
+            "Romina Hinojosa": "1001.00",
+            "Henrietta Christie": "1001.00",
+            "Tiril Jorgensen": "1001.00",
+            "Julia Borgstrom": "1001.00",
+            "Alexis Magner": "1001.00",
+            "Natalie Quinn": "1001.00",
+            "Kaja Rysz": "1001.00",
+            "Marta Jaskulska": "1001.00",
+            "Yuliia Biriukova": "1501.00",
+            "Adele Normand": "1501.00",
+            "Paula Patino": "1501.00",
+            "Diana Penuela": "1501.00",
+            "Bronwyn Macgregor": "1501.00",
+            "Petra Zsanko": "1501.00",
+            "Nika Bobnar": "1501.00",
+            "Aurelie Halbwachs": "2001.00",
+            "Lucie De Marigny-Lagesse": "2001.00",
+            "Laura Daniela Rojas": "2001.00",
+            "Karin Abe": "2001.00",
+            "Sara Roel": "2001.00",
+            "Andrea Ramirez": "2001.00",
+            "Lizbeth Yareli Salazar": "2001.00",
+            "Grace Arlandson": "2001.00"
+          },
+          "Race Winner": {
+            "Demi Vollering": "1.727",
+            "Kimberley Le Court": "5.00",
+            "Elisa Longo Borghini": "15.00",
+            "Paula Blasi": "17.00",
+            "Marlen Reusser": "17.00",
+            "Katarzyna Niewiadoma": "17.00",
+            "Celia Gery": "21.00",
+            "Lotte Kopecky": "21.00",
+            "Puck Pieterse": "26.00",
+            "Noemi Ruegg": "29.00",
+            "Franziska Koch": "29.00",
+            "Mischa Bredewold": "34.00",
+            "Dominika Wlodarczyk": "41.00",
+            "Cedrine Kerbaol": "51.00",
+            "Sarah Van Dam": "51.00",
+            "Magdeleine Vallieres": "51.00",
+            "Kristen Faulkner": "67.00",
+            "Antonia Niedermaier": "81.00",
+            "Liane Lippert": "81.00",
+            "Karlijn Swinkels": "81.00",
+            "Femke De Vries": "101.00",
+            "Maeva Squiban": "101.00",
+            "Riejanne Markus": "101.00",
+            "Niamh Fisher-Black": "101.00",
+            "Juliette Berthet": "151.00",
+            "Silvia Persico": "151.00",
+            "Monica Trinca Colonel": "201.00",
+            "Lieke Nooijen": "201.00",
+            "Kate Courtney": "201.00",
+            "Mavi Garcia": "201.00",
+            "Zoe Backstedt": "201.00",
+            "Sigrid Ytterhus Haugset": "301.00",
+            "Eleonora Camilla Gasparrini": "301.00",
+            "Mie Bjorndal Ottestad": "301.00",
+            "Lauren Dickson": "301.00",
+            "Anna Henderson": "301.00",
+            "Cecilie Uttrup Ludwig": "401.00",
+            "Caroline Andersson": "401.00",
+            "Pfeiffer Georgi": "401.00",
+            "Mireia Benito": "501.00",
+            "Usoa Ostolaza": "501.00",
+            "Evita Muzic": "501.00",
+            "Steffi Haberlin": "501.00",
+            "Sara Casasola": "601.00",
+            "Shari Bossuyt": "601.00",
+            "Lotte Claes": "601.00",
+            "Amanda Spratt": "601.00",
+            "Ruby Roseman-Gannon": "601.00",
+            "Mackenzie Coupland": "601.00",
+            "Christina Schweinberger": "601.00",
+            "Maggie Coles-Lyster": "601.00",
+            "Katrine Aalerud": "601.00",
+            "Lauren Stephens": "601.00",
+            "Jasmin Liechti": "601.00",
+            "Ricarda Bauernfeind": "601.00",
+            "Lea Curinier": "601.00",
+            "Julie Van de Velde": "751.00",
+            "Erica Magnaldi": "751.00",
+            "Sara Martin": "751.00",
+            "Ginia Caluori": "751.00",
+            "Marta Lach": "751.00",
+            "Brodie Chapman": "751.00",
+            "Carina Schrempf": "751.00",
+            "Margot Vanpachtenbeke": "751.00",
+            "Alison Jackson": "751.00",
+            "Nadia Gontova": "751.00",
+            "Olivia Baril": "751.00",
+            "Ella Wyllie": "751.00",
+            "Sandra Alonso": "751.00",
+            "Marie Le Net": "751.00",
+            "Karolina Perekitko": "751.00",
+            "Millie Couzens": "751.00",
+            "Josie Nelson": "751.00",
+            "Talia Appleton": "751.00",
+            "Linda Zanetti": "751.00",
+            "Katharina Sadnik": "1001.00",
+            "Solbjork Minke Anderson": "1001.00",
+            "Francesca Barale": "1001.00",
+            "Romina Hinojosa": "1001.00",
+            "Henrietta Christie": "1001.00",
+            "Tiril Jorgensen": "1001.00",
+            "Julia Borgstrom": "1001.00",
+            "Alexis Magner": "1001.00",
+            "Natalie Quinn": "1001.00",
+            "Kaja Rysz": "1001.00",
+            "Marta Jaskulska": "1001.00",
+            "Yuliia Biriukova": "1501.00",
+            "Adele Normand": "1501.00",
+            "Paula Patino": "1501.00",
+            "Diana Penuela": "1501.00",
+            "Bronwyn Macgregor": "1501.00",
+            "Petra Zsanko": "1501.00",
+            "Nika Bobnar": "1501.00",
+            "Aurelie Halbwachs": "2001.00",
+            "Lucie De Marigny-Lagesse": "2001.00",
+            "Laura Daniela Rojas": "2001.00",
+            "Karin Abe": "2001.00",
+            "Sara Roel": "2001.00",
+            "Andrea Ramirez": "2001.00",
+            "Lizbeth Yareli Salazar": "2001.00",
+            "Grace Arlandson": "2001.00"
+          }
+        }
+      },
       {
         "id": "44338878",
         "date": "19/09/2026",

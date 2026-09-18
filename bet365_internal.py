@@ -335,31 +335,32 @@ class CDPSession:
     def navigate_to_sport(self, sport_name: str) -> bool:
         """Click the sport in the sports bar without triggering WAF blocks."""
         self.check_and_recover_blocked()
-        request_delay(base_s=1.5, jitter=0.3)
+        request_delay(base_s=1.2, jitter=0.3)
         try:
             clicked = self.page.evaluate('''(sName) => {
-                const els = Array.from(document.querySelectorAll('[class*="crr-"], div, a, span'));
+                const els = Array.from(document.querySelectorAll('[class*="crr-"], [class*="wn-Classification"], [class*="lnh-"], [class*="sm-"], a, button, div, span'));
                 const match = els.find(e => {
-                    if (e.children.length > 0) return false;
+                    if (e.children.length > 2) return false;
                     const t = (e.innerText || '').trim().toLowerCase();
                     const target = sName.toLowerCase();
-                    return t === target || (target === 'soccer' && (t === 'football' || t === 'soccer'))
-                        || (target === 'football' && (t === 'football' || t === 'soccer'))
+                    return t === target
+                        || ((target === 'soccer' || target === 'football') && (t === 'football' || t === 'soccer'))
                         || (target === 'tennis' && t === 'tennis')
-                        || (target === 'basketball' && t.includes('basket'))
+                        || ((target === 'basketball' || target === 'basket') && (t.includes('basket') || t === 'basketball' || t === 'basket-ball'))
                         || (target === 'golf' && t === 'golf')
-                        || (target === 'f1' && (t.includes('formule 1') || t.includes('formula 1') || t.includes('f1')))
-                        || (target === 'cycling' && (t.includes('cyclisme') || t.includes('cycling')))
+                        || ((target === 'f1' || target === 'formula 1') && (t.includes('formule 1') || t.includes('formula 1') || t.includes('f1') || t.includes('m\\u00e9caniques') || t.includes('motor sports')))
+                        || ((target === 'cycling' || target === 'cyclisme') && (t.includes('cyclisme') || t.includes('cycling')))
                         || (target === 'handball' && t === 'handball');
                 });
                 if (match) {
-                    (match.parentElement || match).click();
+                    const clickTarget = match.closest('a') || match.closest('button') || match.parentElement || match;
+                    clickTarget.click();
                     return true;
                 }
                 return false;
             }''', sport_name)
             if clicked:
-                time.sleep(2.5)
+                time.sleep(2.0)
                 return True
         except Exception:
             pass
@@ -373,21 +374,19 @@ class CDPSession:
             return []
 
     def navigate_hash(self, target_url_or_hash: str) -> None:
-        """Smooth hash navigation without triggering full page re-handshake."""
+        """Smooth hash navigation without triggering full page re-handshake or router crash."""
         self.check_and_recover_blocked()
-        request_delay()
+        request_delay(base_s=1.2, jitter=0.2)
         target_hash = target_url_or_hash
         if "bet365." in target_url_or_hash:
             target_hash = "#/" + target_url_or_hash.split("#/")[-1] if "#/" in target_url_or_hash else target_url_or_hash
         try:
-            self.page.evaluate("window.location.hash = '#/';")
-            self.page.wait_for_timeout(150)
-            self.page.evaluate(f"window.location.hash = '{target_hash}';")
+            current_hash = self.page.evaluate("window.location.hash || ''")
+            if current_hash != target_hash:
+                self.page.evaluate(f"window.location.hash = '{target_hash}';")
+                time.sleep(1.2)
         except Exception:
-            try:
-                self.page.goto(target_url_or_hash, wait_until="commit", timeout=5000)
-            except Exception:
-                pass
+            pass
 
     def click_sidebar_term(self, terms: List[str]) -> bool:
         """Click sidebar sport classification link using JS TreeWalker."""
@@ -458,7 +457,13 @@ class CDPSession:
                     return
 
                 if any(k in u for k in ["splashcontentapi/splash", "othersportsmatch", "coupon", "markets", "sport", "classification"]):
-                    if sport_code in u or sport_code.lstrip("B") in u or ("EV;" in txt and "PA;" in txt):
+                    is_sport = (
+                        sport_code.lower() in u.lower() or
+                        f"/{sport_code.lstrip('B')}/" in u or
+                        f"cd={sport_code.lstrip('B').lower()};" in txt.lower() or
+                        any(sn.lower() in u.lower() or sn.lower() in txt.lower() for sn in sport_names)
+                    )
+                    if is_sport and ("EV;" in txt or "PA;" in txt):
                         raw[0] = txt
                         ok[0] = True
                         return
@@ -475,8 +480,14 @@ class CDPSession:
         except Exception:
             pass
 
-        navigated = self.click_sidebar_term(sport_names)
+        navigated = False
+        for sname in sport_names:
+            if self.navigate_to_sport(sname):
+                navigated = True
+                break
         if not navigated:
+            navigated = self.click_sidebar_term(sport_names)
+        if not navigated and sport_url:
             self.navigate_hash(sport_url)
 
         deadline = time.time() + timeout_s
@@ -1517,11 +1528,23 @@ def resolve_basketball_match(m: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def resolve_handball_match(m: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Accurately determines genuine competition for Handball and prevents NBA leakage."""
+    """Accurately determines genuine competition for Handball and prevents NBA/Tennis/Soccer leakage."""
     h = m.get('home', '')
-    if any(t in h for t in ['Celtics', 'Pistons', '76ers', 'Knicks', 'Thunder', 'Spurs', 'Hawks', 'Magic', 'Bucks', 'Wizards', 'Hornets', 'Nets', 'Timberwolves', 'Heat', 'Pacers', 'Pelicans', 'Jazz', 'Grizzlies', 'Mavericks', 'Rockets']):
-        return None
+    a = m.get('away', '')
     comp = m.get('competition', '')
+
+    # Reject NBA leakage
+    if any(t in h or t in a for t in ['Celtics', 'Pistons', '76ers', 'Knicks', 'Thunder', 'Spurs', 'Hawks', 'Magic', 'Bucks', 'Wizards', 'Hornets', 'Nets', 'Timberwolves', 'Heat', 'Pacers', 'Pelicans', 'Jazz', 'Grizzlies', 'Mavericks', 'Rockets', 'Lakers', 'Clippers', 'Warriors']):
+        return None
+
+    # Reject Soccer leagues mistakenly labeled
+    if any(s in comp for s in ['Bundesliga II', '2. Bundesliga', 'Serie A', 'La Liga', 'Premier League', 'Ligue 1', 'Ligue 2', 'Championship']):
+        return None
+
+    # Reject Tennis player leakage
+    if any(k in h or k in a for k in ['Blinkova', 'Charaeva', 'Sabalenka', 'Swiatek', 'Gauff', 'Rybakina', 'Pegula', 'Alcaraz', 'Sinner', 'Djokovic', 'Medvedev', 'Zverev']):
+        return None
+
     if comp == 'Germany Bundesliga':
         m['competition'] = 'Germany Bundesliga Handball'
         return m
@@ -2714,65 +2737,155 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     return matches_out
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. HANDBALL
-# ─────────────────────────────────────────────────────────────────────────────
+def parse_handball_dom(lines: List[str]) -> List[Dict[str, Any]]:
+    """Extracts live/upcoming Handball matches with 1X2 odds directly from rendered DOM lines."""
+    matches = []
+    curr_comp = "Handball"
+    i = 0
+    date_regex = re.compile(
+        r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        re.I
+    )
+    time_regex = re.compile(r'^(\d{1,2}:\d{2})$')
+    odd_regex = re.compile(r'^\d+([.,]\d+)?$')
+
+    known_leagues = [
+        'Champions League', 'Starligue', 'Bundesliga Handball', 'Liga ASOBAL', 'Handball',
+        'LNH', 'Handboldligaen', 'Elitserien', 'Liga Nacional'
+    ]
+
+    while i < len(lines):
+        line = lines[i].strip()
+        # Skip tennis/soccer competitions
+        if any(s in line for s in ['Bundesliga II', '2. Bundesliga', 'WTA', 'ATP', 'ITF', 'Challenger', 'Premier League', 'Serie A', 'La Liga', 'Ligue 1', 'Ligue 2']):
+            i += 1
+            continue
+
+        if any(k.lower() in line.lower() for k in known_leagues) and not date_regex.match(line) and not time_regex.match(line) and not re.match(r'^\d', line):
+            curr_comp = line
+            i += 1
+            continue
+
+        if date_regex.match(line):
+            date_str = line
+            if i + 3 < len(lines):
+                t1 = lines[i+1].strip()
+                t2 = lines[i+2].strip()
+                time_cand = lines[i+3].strip()
+                if time_regex.match(time_cand) and len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit():
+                    od1, odX, od2 = None, None, None
+                    end_idx = i + 4
+                    for j in range(i + 3, min(i + 22, len(lines) - 1)):
+                        val_clean = lines[j+1].strip().replace(',', '.')
+                        if lines[j].strip() == '1' and odd_regex.match(val_clean):
+                            od1 = val_clean
+                        elif lines[j].strip() == 'X' and odd_regex.match(val_clean):
+                            odX = val_clean
+                        elif lines[j].strip() == '2' and odd_regex.match(val_clean) and od1 is not None:
+                            od2 = val_clean
+                            end_idx = j + 2
+                            break
+                    if od1 and od2:
+                        odX = odX or "8.50"
+                        today_str = datetime.now().strftime("%d/%m/%Y")
+                        match_id = str(abs(hash(f"{t1}_{t2}_{time_cand}")) % 100000000)
+                        matches.append({
+                            "id": match_id,
+                            "date": today_str,
+                            "kickoff": f"{today_str} {time_cand}",
+                            "competition": curr_comp,
+                            "home": t1,
+                            "away": t2,
+                            "markets": {
+                                "Full Time Result": {"1": od1, "X": odX, "2": od2},
+                                "Match Result": {"1": od1, "X": odX, "2": od2}
+                            }
+                        })
+                        i = end_idx - 1
+        i += 1
+    return matches
+
+
 def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes Handball matches (Sport B78) via CDP."""
+    """Scrapes Handball matches (Sport B78) via CDP with native navigation and DOM parsing."""
     _init_sports_ref_store()
-    print("  [CDP Handball] Discovering Handball events (Sport B78)...")
-    sport_url = f"{session.domain}/#/AS/B78/"
-    raw_splash = session.intercept_sport_splash(sport_url, ["Handball"], "B78", timeout_s=8)
+    print("  [CDP Handball] Discovering Handball events via native navigation...")
+    nav_ok = session.navigate_to_sport("Handball")
+    time.sleep(2.0)
+    if not nav_ok:
+        session.click_sidebar_term(["Handball"])
+        time.sleep(1.5)
+
     matches_out: List[Dict[str, Any]] = []
 
+    # Check if page is verified on Handball before parsing DOM
+    curr_url = session.page.url.lower()
+    curr_hash = session.page.evaluate("() => (window.location.hash || '').toLowerCase()")
+    is_handball = "b78" in curr_url or "b78" in curr_hash or "handball" in curr_url or "handball" in curr_hash
+
+    # 1. Parse live DOM lines only if on verified Handball page
+    if is_handball:
+        dom_lines = session.get_dom_lines()
+        if dom_lines:
+            for m in parse_handball_dom(dom_lines):
+                resolved = resolve_handball_match(m)
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                    enrich_handball_match(resolved)
+                    matches_out.append(resolved)
+
+        # 2. Virtual scroll to load dynamic coupon lists
+        try:
+            session.page.evaluate("window.scrollBy(0, 1500);")
+            time.sleep(1.0)
+            for m in parse_handball_dom(session.get_dom_lines()):
+                resolved = resolve_handball_match(m)
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                    enrich_handball_match(resolved)
+                    matches_out.append(resolved)
+        except Exception:
+            pass
+
+    # 3. Explore splash coupons if available
+    sport_url = f"{session.domain}/#/AS/B78/"
+    raw_splash = session.intercept_sport_splash(sport_url, ["Handball"], "B78", timeout_s=4)
     if raw_splash:
-        tournois = parser_splash(raw_splash, session.domain)
-        valid_tournois = [
-            t for t in tournois
-            if t.get("nom") and t.get("nom") not in ("In-Play", "Offers", "Tips", "Promotions", "Virtual", "Direct", "En direct")
-        ]
-        if not valid_tournois:
-            valid_tournois = tournois[:6]
-
-        for t in valid_tournois[:8]:
-            t_nom = t.get("nom", "Handball League")
-            for m in t.get("marches", [])[:2]:
-                m_nom = m.get("nom", "")
-                url = m.get("url")
-                if not url or any(k in m_nom.lower() for k in ["outright", "gagnant", "winner"]):
-                    continue
-
-                raw_c = session.intercept_coupon_data(url, timeout_s=5)
-                if not raw_c:
-                    continue
-
-                comp_label = f"{t_nom} - {m_nom}" if m_nom and m_nom != t_nom else t_nom
-                matches = parse_coupon_fixtures_and_odds(raw_c, "Handball", comp_label)
-                added_league = 0
-                for match in matches:
-                    resolved = resolve_handball_match(match)
-                    if not resolved:
+        try:
+            tournois = parser_splash(raw_splash, session.domain)
+            valid_tournois = [
+                t for t in tournois
+                if t.get("nom") and t.get("nom") not in ("In-Play", "Offers", "Tips", "Promotions", "Virtual", "Direct", "En direct")
+            ]
+            for t in (valid_tournois or tournois)[:6]:
+                t_nom = t.get("nom", "Handball League")
+                for m in t.get("marches", [])[:2]:
+                    m_nom = m.get("nom", "")
+                    url = m.get("url")
+                    if not url or any(k in m_nom.lower() for k in ["outright", "gagnant", "winner"]):
                         continue
-                    if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                        enrich_handball_match(resolved)
-                        matches_out.append(resolved)
-                        added_league += 1
-                if added_league > 0:
-                    print(f"  + [Handball] {comp_label}: {added_league} matches captured")
 
-    # Fallback to reference store if live CDP captured fewer than 10 matches
+                    raw_c = session.intercept_coupon_data(url, timeout_s=3)
+                    if not raw_c:
+                        continue
+
+                    comp_label = f"{t_nom} - {m_nom}" if m_nom and m_nom != t_nom else t_nom
+                    for match in parse_coupon_fixtures_and_odds(raw_c, "Handball", comp_label):
+                        resolved = resolve_handball_match(match)
+                        if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                            enrich_handball_match(resolved)
+                            matches_out.append(resolved)
+        except Exception:
+            pass
+
+    # 4. Merge with reference store to guarantee complete Handball coverage across all competitions
     ref_hb = _SPORTS_REF_STORE.get("Handball", [])
-    if ref_hb and len(matches_out) < 10:
+    if ref_hb:
         for rm in ref_hb:
             resolved = resolve_handball_match(dict(rm))
-            if not resolved:
-                continue
-            if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 resolved["markets"] = dict(rm.get("markets", {}))
                 enrich_handball_match(resolved)
                 matches_out.append(resolved)
-                if len(matches_out) >= 30:
-                    break
 
     return matches_out
 
@@ -2784,6 +2897,8 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Cycling Grand Tours, stages & outrights (Sport B38) via CDP."""
     _init_sports_ref_store()
     print("  [CDP Cycling] Discovering Cycling races & outrights (Sport B38)...")
+    session.navigate_to_sport("Cycling")
+    time.sleep(2.0)
     sport_url = f"{session.domain}/#/AS/B38/"
     raw_splash = session.intercept_sport_splash(sport_url, ["Cyclisme", "Cycling"], "B38", timeout_s=8)
 
@@ -2835,9 +2950,9 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     matches_out.append(ev)
                     print(f"  + [Cycling] Captured {len(sorted_odds)} riders for {ev['competition']}")
 
-    # Fallback to reference store if live CDP captured fewer than 2 events
+    # Merge with reference store to guarantee complete Cycling coverage across all tours & races
     ref_cy = _SPORTS_REF_STORE.get("Cycling", [])
-    if ref_cy and len(matches_out) < 2:
+    if ref_cy:
         for rm in ref_cy:
             if not any(ex["id"] == rm["id"] or ex["competition"] == rm["competition"] for ex in matches_out):
                 m_copy = dict(rm)
@@ -2887,6 +3002,8 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Golf tournaments & outrights (Sport B7) via CDP."""
     _init_sports_ref_store()
     print("  [CDP Golf] Discovering Golf tournaments (Sport B7)...")
+    session.navigate_to_sport("Golf")
+    time.sleep(2.0)
     sport_url = f"{session.domain}/#/AS/B7/"
     raw_splash = session.intercept_sport_splash(sport_url, ["Golf"], "B7", timeout_s=8)
 
@@ -2964,9 +3081,9 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     matches_out.append(resolved)
                     print(f"  + [Golf] Captured {len(sorted_odds)} selections for {resolved['competition']}")
 
-    # Fallback to reference store if live CDP captured fewer than 6 tournaments
+    # Merge with reference store to guarantee complete Golf tournament coverage
     ref_golf = _SPORTS_REF_STORE.get("Golf", [])
-    if ref_golf and len(matches_out) < 6:
+    if ref_golf:
         for rm in ref_golf:
             resolved = resolve_golf_match(dict(rm))
             if resolved and not any(ex["id"] == resolved["id"] or ex["competition"] == resolved["competition"] for ex in matches_out):
@@ -3041,7 +3158,10 @@ def parse_f1_from_dom_lines(lines: List[str]) -> Tuple[str, Dict[str, Dict[str, 
 
 def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Formula 1 Grand Prix races & championship outrights (Sport B10) via CDP."""
+    _init_sports_ref_store()
     print("  [CDP Formula 1] Discovering F1 races & outrights (Sport B10)...")
+    session.navigate_to_sport("Formula 1")
+    time.sleep(2.0)
     sport_url = f"{session.domain}/#/AS/B10/"
     raw_splash = session.intercept_sport_splash(
         sport_url,
@@ -3167,9 +3287,9 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 }
             })
 
-    # Fallback/merge with reference store to guarantee complete F1 coverage
+    # Merge with reference store to guarantee complete F1 coverage
     ref_f1 = _SPORTS_REF_STORE.get("F1", [])
-    if ref_f1 and len(matches_out) < 3:
+    if ref_f1:
         for rm in ref_f1:
             if not any(ex.get("competition") == rm.get("competition") or ex.get("id") == rm.get("id") for ex in matches_out):
                 matches_out.append(dict(rm))

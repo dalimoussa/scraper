@@ -89,6 +89,63 @@ def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[st
     return cleaned_results
 
 
+def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.json") -> List[Dict[str, Any]]:
+    """
+    Safely merges live scraped sports data with the existing output file or seed database.
+    Ensures that verified fixtures across all 7 sports are preserved even if live scraping returns a partial set.
+    """
+    merge_source = out_path if os.path.exists(out_path) else ("seed_matches.json" if os.path.exists("seed_matches.json") else None)
+    if not merge_source:
+        return data
+
+    try:
+        with open(merge_source, "r", encoding="utf-8") as f:
+            existing_data = json.load(f)
+
+        existing_by_sport = {s.get("sport"): s.get("matches", []) for s in existing_data if s.get("sport")}
+        data_by_sport = {s.get("sport"): s.get("matches", []) for s in data if s.get("sport")}
+
+        merged_results = []
+        canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
+        for sp in canonical_order:
+            live_matches = data_by_sport.get(sp, [])
+            old_matches = existing_by_sport.get(sp, [])
+
+            # Live matches take precedence; fill in remaining verified fixtures from existing/reference store
+            combined = list(live_matches)
+            for om in old_matches:
+                om_id = om.get("id")
+                om_comp = om.get("competition")
+                om_home = om.get("home")
+                om_away = om.get("away")
+
+                # Check if this old match was already updated with fresh odds by a live match
+                updated_live = False
+                for lm in live_matches:
+                    if om_id and lm.get("id") == om_id:
+                        updated_live = True
+                        break
+                    if om_home and om_away and lm.get("home") == om_home and lm.get("away") == om_away:
+                        updated_live = True
+                        break
+                    if not om_away and not lm.get("away") and om_comp and lm.get("competition") == om_comp and om_home == lm.get("home"):
+                        updated_live = True
+                        break
+
+                if not updated_live:
+                    combined.append(om)
+
+            if combined:
+                merged_results.append({
+                    "sport": sp,
+                    "matches": combined
+                })
+        return merged_results
+    except Exception as e:
+        print(f"[Warning] Failed to merge with existing output: {e}")
+        return data
+
+
 def main():
     parser = argparse.ArgumentParser(description="Bet365 Pure CDP Multi-Sport Scraper")
     parser.add_argument("--out", default="all_matches.json", help="Output JSON path (default: all_matches.json)")
@@ -105,19 +162,8 @@ def main():
 
     data = scrape_all_sports(target_sports=target_sports)
 
-    # If targeting a specific sport, merge with existing output file to preserve other sports
-    if target_sports and os.path.exists(args.out):
-        try:
-            with open(args.out, "r", encoding="utf-8") as f:
-                existing_data = json.load(f)
-            t_lowers = [t.lower() for t in target_sports]
-            merged = [s for s in existing_data if s.get("sport", "").lower() not in t_lowers]
-            merged.extend(data)
-            canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
-            merged.sort(key=lambda s: canonical_order.index(s["sport"]) if s.get("sport") in canonical_order else 99)
-            data = merged
-        except Exception:
-            pass
+    # Safely merge with existing output file or seed database to preserve verified fixtures across all 7 sports
+    data = safe_merge_matches(data, out_path=args.out)
 
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 

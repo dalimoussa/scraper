@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 try:
-    from bet365_engine import scrape_all_sports
+    from bet365_engine import scrape_all_sports, safe_merge_matches
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_engine: {exc}")
     sys.exit(1)
@@ -59,6 +59,7 @@ def run_loop(interval: int, out_path: str) -> None:
 
         try:
             data = scrape_all_sports()
+            data = safe_merge_matches(data, out_path=out_path)
             n = _count_matches(data)
 
             if n > 0:
