@@ -31,6 +31,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -53,9 +54,77 @@ except ImportError:
 # Global Settings & Pacing
 # ─────────────────────────────────────────────────────────────────────────────
 CDP_PORT = 9222
-DEFAULT_DOMAIN = "https://www.bet365.com"
 DEFAULT_DELAY = 2.5
 DEFAULT_JITTER = 0.5
+
+_DETECTED_DOMAIN: Optional[str] = None
+
+
+def get_bet365_domain() -> str:
+    """
+    Auto-detect whether to target https://www.bet365.fr (French IP) or https://www.bet365.com (global).
+    - If BET365_DOMAIN environment variable is set, uses that.
+    - If config.json specifies a concrete domain ('bet365.fr' or 'bet365.com'), uses that.
+    - Otherwise checks public IP geolocation. If country is France ('FR'), returns 'https://www.bet365.fr'.
+    - Otherwise defaults to 'https://www.bet365.com'.
+    """
+    global _DETECTED_DOMAIN
+    if _DETECTED_DOMAIN:
+        return _DETECTED_DOMAIN
+
+    # 1. Environment variable override
+    env_dom = os.environ.get("BET365_DOMAIN", "").strip()
+    if env_dom:
+        if "bet365.fr" in env_dom.lower():
+            _DETECTED_DOMAIN = "https://www.bet365.fr"
+            return _DETECTED_DOMAIN
+        elif "bet365.com" in env_dom.lower():
+            _DETECTED_DOMAIN = "https://www.bet365.com"
+            return _DETECTED_DOMAIN
+
+    # 2. Config override
+    try:
+        if os.path.exists("config.json"):
+            with open("config.json", encoding="utf-8") as f:
+                cfg = json.load(f)
+                cfg_dom = cfg.get("default_domain", "")
+                if "bet365.fr" in cfg_dom.lower():
+                    _DETECTED_DOMAIN = "https://www.bet365.fr"
+                    return _DETECTED_DOMAIN
+                elif "bet365.com" in cfg_dom.lower() and cfg_dom.lower() != "auto":
+                    _DETECTED_DOMAIN = "https://www.bet365.com"
+                    return _DETECTED_DOMAIN
+    except Exception:
+        pass
+
+    # 3. GeoIP Lookup to detect if host has French IP
+    try:
+        req = urllib.request.Request("https://api.country.is/", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=1.8) as r:
+            geo = json.loads(r.read().decode())
+            if (geo.get("country") or "").upper() == "FR":
+                print("  [*] French IP detected (GeoIP: FR) -> Automatically targeting https://www.bet365.fr")
+                _DETECTED_DOMAIN = "https://www.bet365.fr"
+                return _DETECTED_DOMAIN
+    except Exception:
+        pass
+
+    try:
+        req = urllib.request.Request("http://ip-api.com/json/?fields=countryCode", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=1.8) as r:
+            geo = json.loads(r.read().decode())
+            if (geo.get("countryCode") or "").upper() == "FR":
+                print("  [*] French IP detected (ip-api: FR) -> Automatically targeting https://www.bet365.fr")
+                _DETECTED_DOMAIN = "https://www.bet365.fr"
+                return _DETECTED_DOMAIN
+    except Exception:
+        pass
+
+    _DETECTED_DOMAIN = "https://www.bet365.com"
+    return _DETECTED_DOMAIN
+
+
+DEFAULT_DOMAIN = get_bet365_domain()
 
 # Load config if present
 try:
@@ -63,7 +132,6 @@ try:
         with open("config.json", encoding="utf-8") as _cfg_f:
             _cfg = json.load(_cfg_f)
             CDP_PORT = int(_cfg.get("cdp_port", CDP_PORT))
-            DEFAULT_DOMAIN = _cfg.get("default_domain", DEFAULT_DOMAIN)
             DEFAULT_DELAY = float(_cfg.get("request_delay_seconds", DEFAULT_DELAY))
             DEFAULT_JITTER = float(_cfg.get("delay_jitter", DEFAULT_JITTER))
 except Exception:
@@ -93,7 +161,7 @@ _CDP_CHECKED: Optional[bool] = None
 
 
 def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
-    """Ensure Google Chrome CDP is running; launches start_chrome_cdp.bat or chrome.exe if not active."""
+    """Ensure Google Chrome CDP is running; launches chrome.exe if not active."""
     global _CDP_CHECKED
     if _CDP_CHECKED is True and is_port_in_use(cdp_port):
         return True
@@ -103,37 +171,38 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
         return True
 
     print(f"  [*] Chrome CDP (port {cdp_port}) not active. Attempting initialization...")
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    bat_path = os.path.join(base_dir, "start_chrome_cdp.bat")
 
-    if os.path.exists(bat_path):
-        try:
-            subprocess.Popen(f'start "" "{bat_path}"', shell=True)
-        except Exception as e:
-            print(f"  [Notice] Launch bat notice: {e}")
-    else:
-        chrome_candidates = [
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+    target_domain = get_bet365_domain()
+    chrome_candidates = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium"
+    ]
+    chrome_bin = next((c for c in chrome_candidates if os.path.exists(c)), None)
+    if chrome_bin:
+        profile_dir = os.path.join(tempfile.gettempdir(), "bet365_cdp_profile")
+        cmd = [
+            chrome_bin,
+            f"--remote-debugging-port={cdp_port}",
+            f"--user-data-dir={profile_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            target_domain,
         ]
-        chrome_bin = next((c for c in chrome_candidates if os.path.exists(c)), None)
-        if chrome_bin:
-            profile_dir = os.path.join(tempfile.gettempdir(), "bet365_cdp_profile")
-            cmd = [
-                chrome_bin,
-                f"--remote-debugging-port={cdp_port}",
-                f"--user-data-dir={profile_dir}",
-                "--no-first-run",
-                "--no-default-browser-check",
-                DEFAULT_DOMAIN,
-            ]
+        try:
+            flags = 0x00000008 if sys.platform == "win32" else 0
+            subprocess.Popen(cmd, creationflags=flags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
             try:
                 subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception:
                 pass
 
-    for _ in range(8):
+    for _ in range(16):
         time.sleep(0.5)
         if is_port_in_use(cdp_port):
             print(f"  [*] Chrome CDP connected on port {cdp_port}.")
@@ -211,9 +280,25 @@ def pd_vers_url(pd: str, domain: str = DEFAULT_DOMAIN) -> str:
 class CDPSession:
     """Encapsulates the live Playwright browser context connected via CDP."""
 
-    def __init__(self, page, domain: str):
+    def __init__(self, page, domain: str = "https://www.bet365.com"):
         self.page = page
-        self.domain = domain
+        self._domain = domain
+
+    @property
+    def domain(self) -> str:
+        try:
+            u = (self.page.url or "").lower()
+            if "bet365.fr" in u:
+                return "https://www.bet365.fr"
+            if "bet365.com" in u:
+                return "https://www.bet365.com"
+        except Exception:
+            pass
+        return self._domain or get_bet365_domain()
+
+    @domain.setter
+    def domain(self, val: str) -> None:
+        self._domain = val
 
     def reset_to_home(self) -> None:
         """Clean navigation to root domain to reset SPA router state and clear blocks."""
@@ -226,8 +311,20 @@ class CDPSession:
     def check_and_recover_blocked(self) -> bool:
         """Detect if 'Impossible to display this content' or 'Désolé' is shown and recover."""
         try:
-            body_text = self.page.inner_text("body") or ""
-            if any(k in body_text for k in ["Impossible d'afficher ce contenu", "Impossible to display this content", "Page Not Available", "Désolé, cette page n'est plus disponible"]):
+            body_text = (self.page.inner_text("body") or "").lower()
+            block_keywords = [
+                "impossible d'afficher ce contenu",
+                "impossible to display this content",
+                "page not available",
+                "page non disponible",
+                "désolé, cette page n'est plus disponible",
+                "désolé",
+                "sorry, this page is no longer available",
+                "contenu indisponible",
+                "service temporairement indisponible",
+                "page introuvable"
+            ]
+            if any(k in body_text for k in block_keywords):
                 print("  [Anti-Detection] Block/Error detected on page. Resetting to home...")
                 self.reset_to_home()
                 return True
@@ -1113,6 +1210,66 @@ SOCCER_TARGET_LEAGUES = [
         "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135119474/G40/",
         "terms": ["Coupe de France", "France Coupe de France", "French Cup", "Coupe de France de football"]
     },
+    {
+        "name": "English Championship",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E91422159/G40/",
+        "terms": ["Championship", "England Championship", "Angleterre - Championship"]
+    },
+    {
+        "name": "English League One",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E91422160/G40/",
+        "terms": ["League One", "League 1", "England League 1", "Angleterre - League 1"]
+    },
+    {
+        "name": "EFL Cup",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E91422161/G40/",
+        "terms": ["EFL Cup", "Carabao Cup", "Coupe de la Ligue anglaise"]
+    },
+    {
+        "name": "Spain Segunda Division",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135651000/G40/",
+        "terms": ["Segunda Division", "LaLiga 2", "LaLiga Hypermotion", "Espagne - LaLiga 2"]
+    },
+    {
+        "name": "Italy Serie B",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E92269711/G40/",
+        "terms": ["Serie B", "Italy Serie B", "Italie - Serie B"]
+    },
+    {
+        "name": "Germany 2. Bundesliga",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135680141/G40/",
+        "terms": ["2. Bundesliga", "Germany 2. Bundesliga", "Allemagne - 2. Bundesliga"]
+    },
+    {
+        "name": "France Ligue 2",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135119475/G40/",
+        "terms": ["Ligue 2", "France Ligue 2", "France - Ligue 2", "Ligue 2 BKT"]
+    },
+    {
+        "name": "Netherlands Eredivisie",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400599/G40/",
+        "terms": ["Eredivisie", "Netherlands Eredivisie", "Pays-Bas - Eredivisie"]
+    },
+    {
+        "name": "Portugal Primeira Liga",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400600/G40/",
+        "terms": ["Primeira Liga", "Liga Portugal", "Portugal Primeira Liga"]
+    },
+    {
+        "name": "Scottish Premiership",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400601/G40/",
+        "terms": ["Scottish Premiership", "Scotland Premiership", "Écosse - Premiership"]
+    },
+    {
+        "name": "Major League Soccer",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400602/G40/",
+        "terms": ["Major League Soccer", "MLS", "USA - MLS", "États-Unis - MLS"]
+    },
+    {
+        "name": "Saudi Pro League",
+        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400603/G40/",
+        "terms": ["Saudi Pro League", "Arabie Saoudite - Pro League"]
+    },
 ]
 
 CYRILLIC_TO_LATIN = {
@@ -1176,6 +1333,16 @@ def clean_team_name(name: str) -> str:
     name = str(name).strip()
     return CYRILLIC_TO_LATIN.get(name, name)
 
+AUTHENTIC_SOCCER_LEAGUES = {
+    'England Premier League', 'LA LIGA', 'Italy Serie A', 'Germany Bundesliga', 'France Ligue 1',
+    'UEFA Champions League', 'UEFA Europa League', 'UEFA Conference League',
+    'FA Cup', 'Copa del Rey', 'Coppa Italia', 'DFB-Pokal', 'Coupe de France',
+    'English Championship', 'English League One', 'EFL Cup',
+    'Spain Segunda Division', 'Italy Serie B', 'Germany 2. Bundesliga', 'France Ligue 2',
+    'Netherlands Eredivisie', 'Portugal Primeira Liga', 'Scottish Premiership',
+    'Major League Soccer', 'Saudi Pro League'
+}
+
 def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     """Accurately determines genuine competition and standardizes team names for Soccer."""
     home = clean_team_name(m.get('home', ''))
@@ -1187,38 +1354,76 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     curr = str(m.get('competition', '')).strip()
     curr_l = curr.lower()
 
-    # 1. Strict retention and recognition of Domestic Cups & UEFA Competitions
-    if curr == "UEFA Champions League" or any(term in curr_l for term in ['champions league', 'ucl', 'ligue des champions']):
-        m['competition'] = 'UEFA Champions League'
-        return m
-    if curr == "UEFA Europa League" or any(term in curr_l for term in ['europa league', 'uel', 'ligue europa']):
-        m['competition'] = 'UEFA Europa League'
-        return m
-    if curr == "UEFA Conference League" or any(term in curr_l for term in ['conference league', 'conferance', 'uecl', 'ligue conférence', 'ligue conference']):
-        m['competition'] = 'UEFA Conference League'
-        return m
-    if curr == "FA Cup" or any(term in curr_l for term in ['fa cup', 'the fa cup', 'coupe d\'angleterre']):
-        m['competition'] = 'FA Cup'
-        return m
-    if curr == "Copa del Rey" or any(term in curr_l for term in ['copa del rey', 'coupe du roi']):
-        m['competition'] = 'Copa del Rey'
-        return m
-    if curr == "Coppa Italia" or any(term in curr_l for term in ['coppa italia', 'coupe d\'italie', 'tim cup']):
-        m['competition'] = 'Coppa Italia'
-        return m
-    if curr == "DFB-Pokal" or any(term in curr_l for term in ['dfb-pokal', 'dfb pokal', 'coupe d\'allemagne']):
-        m['competition'] = 'DFB-Pokal'
-        return m
-    if curr == "Coupe de France" or any(term in curr_l for term in ['coupe de france', 'french cup']):
-        m['competition'] = 'Coupe de France'
-        return m
-
-    # 2. Strict retention if already set to authentic domestic leagues
-    if curr in ['England Premier League', 'LA LIGA', 'Italy Serie A', 'Germany Bundesliga', 'France Ligue 1']:
+    # 1. Strict retention if already set to authentic domestic or international leagues
+    if curr in AUTHENTIC_SOCCER_LEAGUES:
         m['competition'] = curr
         return m
 
-    # 3. Explicit competition keyword mapping
+    # 2. Strict retention and recognition of Domestic Cups & UEFA Competitions
+    if any(term in curr_l for term in ['champions league', 'ucl', 'ligue des champions']):
+        m['competition'] = 'UEFA Champions League'
+        return m
+    if any(term in curr_l for term in ['europa league', 'uel', 'ligue europa']):
+        m['competition'] = 'UEFA Europa League'
+        return m
+    if any(term in curr_l for term in ['conference league', 'conferance', 'uecl', 'ligue conférence', 'ligue conference']):
+        m['competition'] = 'UEFA Conference League'
+        return m
+    if any(term in curr_l for term in ['fa cup', 'the fa cup', 'coupe d\'angleterre']):
+        m['competition'] = 'FA Cup'
+        return m
+    if any(term in curr_l for term in ['efl cup', 'carabao cup', 'coupe de la ligue anglaise']):
+        m['competition'] = 'EFL Cup'
+        return m
+    if any(term in curr_l for term in ['copa del rey', 'coupe du roi']):
+        m['competition'] = 'Copa del Rey'
+        return m
+    if any(term in curr_l for term in ['coppa italia', 'coupe d\'italie', 'tim cup']):
+        m['competition'] = 'Coppa Italia'
+        return m
+    if any(term in curr_l for term in ['dfb-pokal', 'dfb pokal', 'coupe d\'allemagne']):
+        m['competition'] = 'DFB-Pokal'
+        return m
+    if any(term in curr_l for term in ['coupe de france', 'french cup']):
+        m['competition'] = 'Coupe de France'
+        return m
+
+    # 3. Secondary domestic leagues (checked before primary leagues to avoid keyword substring collisions)
+    if any(term in curr_l for term in ['championship', 'angleterre - championship', 'efl championship']):
+        m['competition'] = 'English Championship'
+        return m
+    if any(term in curr_l for term in ['league one', 'league 1', 'angleterre - league 1', 'efl league one']):
+        m['competition'] = 'English League One'
+        return m
+    if any(term in curr_l for term in ['segunda division', 'segunda división', 'segunda', 'laliga 2', 'laliga hy', 'espagne - laliga 2']):
+        m['competition'] = 'Spain Segunda Division'
+        return m
+    if any(term in curr_l for term in ['serie b', 'italie - serie b']):
+        m['competition'] = 'Italy Serie B'
+        return m
+    if any(term in curr_l for term in ['2. bundesliga', '2.bundesliga', 'zweite bundesliga', 'allemagne - 2. bundesliga']):
+        m['competition'] = 'Germany 2. Bundesliga'
+        return m
+    if any(term in curr_l for term in ['ligue 2', 'france ligue 2', 'france - ligue 2', 'ligue 2 bkt']):
+        m['competition'] = 'France Ligue 2'
+        return m
+    if any(term in curr_l for term in ['eredivisie', 'pays-bas - eredivisie', 'netherlands eredivisie']):
+        m['competition'] = 'Netherlands Eredivisie'
+        return m
+    if any(term in curr_l for term in ['primeira liga', 'liga portugal', 'portugal primeira']):
+        m['competition'] = 'Portugal Primeira Liga'
+        return m
+    if any(term in curr_l for term in ['scottish premiership', 'scotland premiership', 'écosse - premiership', 'ecosse - premiership']):
+        m['competition'] = 'Scottish Premiership'
+        return m
+    if any(term in curr_l for term in ['major league soccer', 'mls', 'usa - mls', 'états-unis - mls']):
+        m['competition'] = 'Major League Soccer'
+        return m
+    if any(term in curr_l for term in ['saudi pro league', 'saudi', 'arabie saoudite - pro league']):
+        m['competition'] = 'Saudi Pro League'
+        return m
+
+    # 4. Explicit Tier 1 competition keyword mapping
     if any(term in curr_l for term in ['premier league', 'epl', 'barclaycard', 'anglet', 'premiership']):
         m['competition'] = 'England Premier League'
         return m
@@ -1231,11 +1436,11 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     if any(term in curr_l for term in ['bundesliga', 'allemagne']):
         m['competition'] = 'Germany Bundesliga'
         return m
-    if any(term in curr_l for term in ['ligue 1', 'france', 'mcdonald', 'french ligue']):
+    if any(term in curr_l for term in ['ligue 1', 'mcdonald', 'french ligue', 'championnat de france']):
         m['competition'] = 'France Ligue 1'
         return m
 
-    # 4. Club-based domestic league identification (for generic or unassigned competitions)
+    # 5. Club-based domestic league identification (for generic or unassigned competitions)
     if (h in SPAIN_TEAMS or any(t in h for t in SPAIN_TEAMS)) and (a in SPAIN_TEAMS or any(t in a for t in SPAIN_TEAMS)):
         m['competition'] = 'LA LIGA'
     elif (h in EPL_TEAMS or any(t in h for t in EPL_TEAMS)) and (a in EPL_TEAMS or any(t in a for t in EPL_TEAMS)):
@@ -1247,11 +1452,13 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     elif (h in FRANCE_TEAMS or any(t in h for t in FRANCE_TEAMS)) and (a in FRANCE_TEAMS or any(t in a for t in FRANCE_TEAMS)):
         m['competition'] = 'France Ligue 1'
     else:
-        # Cross-country European fixtures default to European tournaments
+        # Cross-country European fixtures or unmapped tournaments
         if any(term in curr_l for term in ['conference', 'uecl']):
             m['competition'] = 'UEFA Conference League'
         elif any(term in curr_l for term in ['europa', 'uel']):
             m['competition'] = 'UEFA Europa League'
+        elif curr and curr not in ['Soccer', 'Football']:
+            m['competition'] = curr
         else:
             m['competition'] = 'UEFA Champions League'
     return m
@@ -1596,8 +1803,8 @@ def enrich_golf_tournament(match: Dict[str, Any]) -> Dict[str, Any]:
 VERIFIED_FRANCE_LIGUE1_MATCHES = [
     {
         "id": "200116426",
-        "date": "13/09/2026",
-        "kickoff": "13/09/2026 19:45:00",
+        "date": "27/09/2026",
+        "kickoff": "27/09/2026 19:45:00",
         "competition": "France Ligue 1",
         "home": "Brest",
         "away": "PSG",
@@ -2078,40 +2285,57 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def parse_soccer_dom(lines: List[str]) -> List[Dict[str, Any]]:
-    """Extracts live Soccer matches with 1X2 odds directly from rendered DOM lines."""
+    """
+    Extracts live/upcoming Soccer matches with 1X2 odds directly from rendered DOM lines.
+    Supports both English (bet365.com) and French (bet365.fr) day names, decimal formats ('.' and ','),
+    and diverse table and coupon layouts.
+    """
     matches = []
     curr_comp = "Football"
     i = 0
-    date_regex = re.compile(r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\.?\s+\d+', re.I)
-    time_regex = re.compile(r'^\d{1,2}:\d{2}$')
+
+    date_regex = re.compile(
+        r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|'
+        r'Friday|Saturday|Sunday|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        re.I
+    )
+    time_regex = re.compile(r'^(\d{1,2}:\d{2}|\d+[\'’]|1ère\s*MT|2ème\s*MT|Mi-temps|HT|FT)$', re.I)
+    odd_regex = re.compile(r'^\d+([.,]\d+)?$')
+
     known_leagues = [
-        'Premier League', 'La Liga', 'Serie A', 'Bundesliga', 'Ligue 1',
-        'Champions League', 'Europa League', 'Conference League', 'EFL Cup',
-        'FA Cup', 'Coppa Italia', 'Copa del Rey', 'Coupe de France', 'Championship', 'League 1', 'League 2'
+        'Premier League', 'La Liga', 'LaLiga', 'Serie A', 'Serie B', 'Bundesliga',
+        '2. Bundesliga', 'Ligue 1', 'Ligue 2', 'Champions League', 'Europa League',
+        'Conference League', 'EFL Cup', 'Carabao Cup', 'FA Cup', 'Coppa Italia',
+        'Copa del Rey', 'Coupe de France', 'DFB-Pokal', 'Championship', 'League 1',
+        'League 2', 'Eredivisie', 'Primeira Liga', 'Liga Portugal', 'Scottish Premiership',
+        'Super Lig', 'MLS', 'Major League Soccer', 'Saudi Pro League'
     ]
 
     while i < len(lines):
-        line = lines[i]
+        line = lines[i].strip()
         if any(k.lower() in line.lower() for k in known_leagues) and not date_regex.match(line) and not time_regex.match(line) and not re.match(r'^\d', line):
             curr_comp = line
             i += 1
             continue
+
         if date_regex.match(line):
             date_str = line
             if i + 3 < len(lines):
-                t1 = lines[i+1]
-                t2 = lines[i+2]
-                time_cand = lines[i+3]
-                if time_regex.match(time_cand) and len(t1) > 2 and len(t2) > 2:
+                t1 = lines[i+1].strip()
+                t2 = lines[i+2].strip()
+                time_cand = lines[i+3].strip()
+                if time_regex.match(time_cand) and len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit():
                     od1, odX, od2 = None, None, None
                     end_idx = i + 4
-                    for j in range(i + 3, min(i + 18, len(lines) - 1)):
-                        if lines[j] == '1' and re.match(r'^\d+\.\d+$', lines[j+1]):
-                            od1 = lines[j+1]
-                        elif lines[j] == 'X' and re.match(r'^\d+\.\d+$', lines[j+1]):
-                            odX = lines[j+1]
-                        elif lines[j] == '2' and re.match(r'^\d+\.\d+$', lines[j+1]) and od1 is not None and odX is not None:
-                            od2 = lines[j+1]
+                    for j in range(i + 3, min(i + 22, len(lines) - 1)):
+                        val_clean = lines[j+1].strip().replace(',', '.')
+                        if lines[j].strip() == '1' and odd_regex.match(val_clean):
+                            od1 = val_clean
+                        elif lines[j].strip() == 'X' and odd_regex.match(val_clean):
+                            odX = val_clean
+                        elif lines[j].strip() == '2' and odd_regex.match(val_clean) and od1 is not None and odX is not None:
+                            od2 = val_clean
                             end_idx = j + 2
                             break
                     if od1 and odX and od2:
@@ -2119,7 +2343,7 @@ def parse_soccer_dom(lines: List[str]) -> List[Dict[str, Any]]:
                         matches.append({
                             "id": match_id,
                             "date": date_str,
-                            "kickoff": time_cand,
+                            "kickoff": f"{date_str} {time_cand}",
                             "competition": curr_comp,
                             "home": t1,
                             "away": t2,
@@ -2128,34 +2352,103 @@ def parse_soccer_dom(lines: List[str]) -> List[Dict[str, Any]]:
                             }
                         })
                         i = end_idx - 1
+        elif time_regex.match(line) and i + 2 < len(lines):
+            time_cand = line
+            t1 = lines[i+1].strip()
+            t2 = lines[i+2].strip()
+            if len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit() and not date_regex.match(t1):
+                od1, odX, od2 = None, None, None
+                end_idx = i + 3
+                for j in range(i + 2, min(i + 20, len(lines) - 1)):
+                    val_clean = lines[j+1].strip().replace(',', '.')
+                    if lines[j].strip() == '1' and odd_regex.match(val_clean):
+                        od1 = val_clean
+                    elif lines[j].strip() == 'X' and odd_regex.match(val_clean):
+                        odX = val_clean
+                    elif lines[j].strip() == '2' and odd_regex.match(val_clean) and od1 is not None and odX is not None:
+                        od2 = val_clean
+                        end_idx = j + 2
+                        break
+                if od1 and odX and od2:
+                    today_str = datetime.now().strftime("%d/%m/%Y")
+                    match_id = str(abs(hash(f"{t1}_{t2}_{time_cand}")) % 100000000)
+                    matches.append({
+                        "id": match_id,
+                        "date": today_str,
+                        "kickoff": f"{today_str} {time_cand}",
+                        "competition": curr_comp,
+                        "home": t1,
+                        "away": t2,
+                        "markets": {
+                            "Match Result": {"1": od1, "X": odX, "2": od2}
+                        }
+                    })
+                    i = end_idx - 1
+
         i += 1
     return matches
 
 
 def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """
-    Scrapes Soccer matches for Big 5 European Leagues, UEFA Competitions (UCL, UEL, UECL),
-    and Major Domestic Cups via CDP with live DOM extraction and full detailed markets.
+    Scrapes Soccer matches across European and World leagues via CDP with multi-step virtual scrolling,
+    coupon discovery, live DOM extraction, and full analytical market expansion.
     """
     _init_soccer_ref_store()
-    print("  [CDP Soccer] Discovering Soccer matches via native navigation...")
+    print(f"  [CDP Soccer] Discovering Soccer matches on {session.domain} via native navigation...")
     session.navigate_to_sport("Football")
     time.sleep(2.5)
 
     matches_out: List[Dict[str, Any]] = []
+
+    # 1. Parse initial screen
     dom_lines = session.get_dom_lines()
-    live_dom_matches = parse_soccer_dom(dom_lines) if dom_lines else []
+    if dom_lines:
+        for m in parse_soccer_dom(dom_lines):
+            resolve_soccer_match(m)
+            enrich_soccer_match(m)
+            if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
+                matches_out.append(m)
 
-    for m in live_dom_matches:
-        resolve_soccer_match(m)
-        enrich_soccer_match(m)
-        if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
-            matches_out.append(m)
+    # 2. Virtual scroll to load dynamic coupon lists
+    try:
+        session.page.evaluate("window.scrollBy(0, 1500);")
+        time.sleep(1.2)
+        for m in parse_soccer_dom(session.get_dom_lines()):
+            resolve_soccer_match(m)
+            enrich_soccer_match(m)
+            if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
+                matches_out.append(m)
 
-    if live_dom_matches:
-        print(f"  + [Soccer DOM] {len(live_dom_matches)} live matches captured directly from Bet365")
+        session.page.evaluate("window.scrollBy(0, 1500);")
+        time.sleep(1.2)
+        for m in parse_soccer_dom(session.get_dom_lines()):
+            resolve_soccer_match(m)
+            enrich_soccer_match(m)
+            if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
+                matches_out.append(m)
+    except Exception:
+        pass
 
-    # Merge with reference store to guarantee complete coverage of all Big 5 leagues + UEFA
+    # 3. Explore 'Matches' / 'Matchs' / 'Upcoming Matches' tab if clickable
+    try:
+        clicked = session.click_link_by_text(["Matchs à venir", "Upcoming Matches", "Matchs", "Matches"])
+        if clicked:
+            time.sleep(2.0)
+            session.page.evaluate("window.scrollBy(0, 1500);")
+            time.sleep(1.0)
+            for m in parse_soccer_dom(session.get_dom_lines()):
+                resolve_soccer_match(m)
+                enrich_soccer_match(m)
+                if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
+                    matches_out.append(m)
+    except Exception:
+        pass
+
+    if matches_out:
+        print(f"  + [Soccer DOM] {len(matches_out)} live/upcoming matches captured directly from {session.domain}")
+
+    # Merge with reference store to guarantee comprehensive coverage across all leagues
     for mid, ref_m in _SOCCER_REF_STORE_BY_ID.items():
         if not any(ex["id"] == ref_m["id"] or (ex["home"] == ref_m["home"] and ex["away"] == ref_m["away"]) for ex in matches_out):
             rm = dict(ref_m)
@@ -2941,22 +3234,25 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
                 break
         if not page and context.pages:
             page = context.pages[0]
-        elif not page:
-            page = context.new_page()
-            page.goto(DEFAULT_DOMAIN, wait_until="commit")
-
-        domain = DEFAULT_DOMAIN
+        # Auto-detect target domain: bet365.fr (if French IP) or bet365.com (if normal IP)
+        target_domain = get_bet365_domain()
         for p_item in context.pages:
-            u = p_item.url or ""
+            u = (p_item.url or "").lower()
             if "bet365.fr" in u:
-                domain = "https://www.bet365.fr"
+                target_domain = "https://www.bet365.fr"
                 break
             elif "bet365.com" in u:
-                domain = "https://www.bet365.com"
+                target_domain = "https://www.bet365.com"
                 break
 
-        print(f"[*] Attached to Bet365 session ({domain}) via CDP port {CDP_PORT}")
-        session = CDPSession(page, domain)
+        if not page and context.pages:
+            page = context.pages[0]
+        elif not page:
+            page = context.new_page()
+            page.goto(target_domain, wait_until="commit")
+
+        print(f"[*] Attached to Bet365 session ({target_domain}) via CDP port {CDP_PORT}")
+        session = CDPSession(page, target_domain)
 
         for sport_name, handler in ALL_SPORT_HANDLERS:
             if not want(sport_name):

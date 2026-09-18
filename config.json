@@ -2,7 +2,7 @@
   "cdp_port": 9222,
   "request_delay_seconds": 2.5,
   "delay_jitter": 0.5,
-  "default_domain": "https://www.bet365.com",
+  "default_domain": "auto",
   "sports": [
     "Soccer",
     "Tennis",
