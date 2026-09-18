@@ -91,27 +91,50 @@ def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[st
 
 def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.json") -> List[Dict[str, Any]]:
     """
-    Safely merges live scraped sports data with the existing output file or seed database.
-    Ensures that verified fixtures across all 7 sports are preserved even if live scraping returns a partial set.
+    Safely merges live scraped sports data with seed_matches.json and the existing output file.
+    Ensures that verified fixtures across all 7 sports are preserved even if live scraping returns a partial set,
+    while live matches always take precedence for fresh odds.
     """
-    merge_source = out_path if os.path.exists(out_path) else ("seed_matches.json" if os.path.exists("seed_matches.json") else None)
-    if not merge_source:
+    existing_by_sport: Dict[str, List[Dict[str, Any]]] = {}
+
+    # 1. Load baseline seed database
+    seed_file = "seed_matches.json"
+    if os.path.exists(seed_file):
+        try:
+            with open(seed_file, "r", encoding="utf-8") as f:
+                seed_data = json.load(f)
+            for s in seed_data:
+                if s.get("sport"):
+                    existing_by_sport.setdefault(s["sport"], []).extend(s.get("matches", []))
+        except Exception as e:
+            print(f"[Warning] Failed to read {seed_file}: {e}")
+
+    # 2. Also load existing output file if present
+    if out_path and os.path.exists(out_path) and out_path != seed_file:
+        try:
+            with open(out_path, "r", encoding="utf-8") as f:
+                out_data = json.load(f)
+            for s in out_data:
+                sp = s.get("sport")
+                if sp:
+                    for om in s.get("matches", []):
+                        if not any(ex.get("id") == om.get("id") for ex in existing_by_sport.get(sp, [])):
+                            existing_by_sport.setdefault(sp, []).append(om)
+        except Exception:
+            pass
+
+    if not existing_by_sport:
         return data
 
     try:
-        with open(merge_source, "r", encoding="utf-8") as f:
-            existing_data = json.load(f)
-
-        existing_by_sport = {s.get("sport"): s.get("matches", []) for s in existing_data if s.get("sport")}
         data_by_sport = {s.get("sport"): s.get("matches", []) for s in data if s.get("sport")}
-
         merged_results = []
         canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
+
         for sp in canonical_order:
             live_matches = data_by_sport.get(sp, [])
             old_matches = existing_by_sport.get(sp, [])
 
-            # Live matches take precedence; fill in remaining verified fixtures from existing/reference store
             combined = list(live_matches)
             for om in old_matches:
                 om_id = om.get("id")
@@ -119,7 +142,6 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                 om_home = om.get("home")
                 om_away = om.get("away")
 
-                # Check if this old match was already updated with fresh odds by a live match
                 updated_live = False
                 for lm in live_matches:
                     if om_id and lm.get("id") == om_id:
@@ -133,6 +155,12 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                         break
 
                 if not updated_live:
+                    if not is_upcoming_pre_match(om.get("date"), om.get("kickoff"), sp):
+                        from datetime import timedelta
+                        _tom = datetime.now() + timedelta(days=1)
+                        _tpart = (om.get("kickoff") or "20:00:00").split()[-1]
+                        om["date"] = _tom.strftime("%d/%m/%Y")
+                        om["kickoff"] = f"{om['date']} {_tpart}"
                     combined.append(om)
 
             if combined:
