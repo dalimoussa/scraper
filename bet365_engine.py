@@ -98,7 +98,7 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
     existing_by_sport: Dict[str, List[Dict[str, Any]]] = {}
 
     # 1. Load baseline seed database
-    seed_file = "seed_matches.json"
+    seed_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed_matches.json")
     if os.path.exists(seed_file):
         try:
             with open(seed_file, "r", encoding="utf-8") as f:
