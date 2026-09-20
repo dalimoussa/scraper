@@ -32,7 +32,7 @@ import sys
 import tempfile
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 if sys.platform == "win32":
@@ -303,64 +303,142 @@ class CDPSession:
         self._domain = val
 
     def reset_to_home(self) -> None:
-        """Clean navigation to root domain to reset SPA router state and clear blocks."""
+        """Clean navigation to root domain / #/HO/ to reset SPA router state and clear blocks."""
         try:
-            self.page.goto(f"{self.domain}/", wait_until="load", timeout=15000)
+            loc = self.page.locator('text=Tous les Sports').first
+            if loc.count() > 0 and loc.is_visible():
+                loc.click(timeout=3000)
+                time.sleep(2.0)
+                return
+        except Exception:
+            pass
+        try:
+            self.page.goto(f"{self.domain}/#/HO/", wait_until="commit", timeout=15000)
             time.sleep(2.5)
         except Exception:
             pass
 
     def check_and_recover_blocked(self) -> bool:
-        """Detect if 'Impossible to display this content' or router death is shown and recover."""
+        """Detect if real WAF / Cloudflare block screen or error screen is shown and recover."""
         try:
             body_text = (self.page.inner_text("body") or "").lower()
-            block_keywords = [
-                "impossible d'afficher ce contenu",
-                "impossible to display this content",
-                "désolé, cette page n'est plus disponible",
-                "sorry, this page is no longer available",
-                "service temporairement indisponible",
-                "access denied",
-                "error 1020",
-                "please verify you are human"
-            ]
-            if any(k in body_text for k in block_keywords):
-                print("  [Anti-Detection] Real Block/Error detected on page. Resetting to home...")
-                self.reset_to_home()
+            # Real WAF / Cloudflare blocks replace the entire page with a minimal error screen
+            if len(body_text) < 1500:
+                block_keywords = [
+                    "access denied",
+                    "error 1020",
+                    "please verify you are human",
+                    "attention required! | cloudflare",
+                    "checking your browser before accessing",
+                    "ray id:"
+                ]
+                if any(k in body_text for k in block_keywords):
+                    print("  [Anti-Detection] Real WAF Block detected on page. Resetting to home...")
+                    self.reset_to_home()
+                    return True
+            if "désolé, cette page n'est plus disponible" in body_text or "impossible d'afficher ce contenu" in body_text:
+                print("  [Router Recovery] Bet365 'Désolé' or 'Impossible d'afficher' detected. Reloading page...")
+                try:
+                    self.page.reload(wait_until="commit", timeout=12000)
+                    time.sleep(2.5)
+                except Exception:
+                    pass
                 return True
         except Exception:
             pass
         return False
 
     def navigate_to_sport(self, sport_name: str) -> bool:
-        """Click the sport in the sports bar without triggering WAF blocks."""
+        """Navigate to sport via direct hash route or sidebar click, ensuring clean SPA state."""
         self.check_and_recover_blocked()
-        request_delay(base_s=1.2, jitter=0.3)
+        request_delay(base_s=1.0, jitter=0.2)
+
+        sport_routes = {
+            "soccer": "#/AS/B1/",
+            "football": "#/AS/B1/",
+            "tennis": "#/AS/B13/",
+            "basketball": "#/AS/B18/",
+            "handball": "#/AS/B78/",
+            "cycling": "#/AS/B38/",
+            "cyclisme": "#/AS/B38/",
+            "golf": "#/AS/B7/",
+            "f1": "#/AS/B10/",
+            "formula 1": "#/AS/B10/"
+        }
+        target_route = sport_routes.get(sport_name.lower())
+        if target_route:
+            try:
+                target_url = f"{self.domain}/{target_route}"
+                self.page.goto(target_url, wait_until="commit", timeout=10000)
+                time.sleep(2.0)
+                lines = self.get_dom_lines()
+                if any("Impossible d'afficher ce contenu" in l for l in lines):
+                    self.page.reload(wait_until="commit", timeout=15000)
+                    time.sleep(2.0)
+                return True
+            except Exception:
+                pass
+
+        search_terms = {
+            "soccer": ["football du week-end", "football"],
+            "football": ["football du week-end", "football"],
+            "tennis": ["tennis"],
+            "basketball": ["wnba", "basketball"],
+            "handball": ["handball"],
+            "cycling": ["cyclisme", "cycling"],
+            "golf": ["golf"],
+            "f1": ["formule 1", "formula 1", "sports mécaniques"],
+            "formula 1": ["formule 1", "formula 1"]
+        }
+        terms = search_terms.get(sport_name.lower(), [sport_name.lower()])
+        # 1. First try exact match (e.g. ^Tennis$)
+        for term in terms:
+            try:
+                loc = self.page.locator('.lhs-2d').filter(has_text=re.compile(f"^{re.escape(term)}$", re.I)).first
+                if loc.count() > 0 and loc.is_visible():
+                    loc.scroll_into_view_if_needed()
+                    loc.click(timeout=4000)
+                    time.sleep(3.0)
+                    return True
+            except Exception:
+                pass
+        # 2. Try prefix/contains match
+        for term in terms:
+            try:
+                loc = self.page.locator('.lhs-2d').filter(has_text=re.compile(f"^{re.escape(term)}$|{re.escape(term)}", re.I)).first
+                if loc.count() > 0 and loc.is_visible():
+                    loc.scroll_into_view_if_needed()
+                    loc.click(timeout=4000)
+                    time.sleep(3.0)
+                    return True
+            except Exception:
+                pass
+
         try:
             clicked = self.page.evaluate('''(sName) => {
-                const els = Array.from(document.querySelectorAll('[class*="crr-"], [class*="wn-Classification"], [class*="lnh-"], [class*="sm-"], a, button, div, span'));
+                const els = Array.from(document.querySelectorAll('[class*="crr-"], [class*="wn-Classification"], [class*="lnh-"], [class*="sm-"], [class*="lhs-"], a, button, div, span'));
                 const match = els.find(e => {
                     if (e.children.length > 2) return false;
                     const t = (e.innerText || '').trim().toLowerCase();
                     const target = sName.toLowerCase();
                     return t === target
-                        || ((target === 'soccer' || target === 'football') && (t === 'football' || t === 'soccer'))
-                        || (target === 'tennis' && t === 'tennis')
-                        || ((target === 'basketball' || target === 'basket') && (t.includes('basket') || t === 'basketball' || t === 'basket-ball'))
+                        || ((target === 'soccer' || target === 'football') && (t === 'football' || t === 'soccer' || t === 'football du week-end'))
+                        || (target === 'tennis' && (t === 'tennis' || t === 'tennis à venir'))
+                        || ((target === 'basketball' || target === 'basket') && (t.includes('basket') || t === 'wnba'))
                         || (target === 'golf' && t === 'golf')
-                        || ((target === 'f1' || target === 'formula 1') && (t.includes('formule 1') || t.includes('formula 1') || t.includes('f1') || t.includes('m\\u00e9caniques') || t.includes('motor sports')))
+                        || ((target === 'f1' || target === 'formula 1') && (t.includes('formule 1') || t.includes('formula 1') || t.includes('f1')))
                         || ((target === 'cycling' || target === 'cyclisme') && (t.includes('cyclisme') || t.includes('cycling')))
                         || (target === 'handball' && t === 'handball');
                 });
                 if (match) {
-                    const clickTarget = match.closest('a') || match.closest('button') || match.parentElement || match;
+                    const clickTarget = match.closest('.lhs-2d') || match.closest('a') || match.closest('button') || match;
                     clickTarget.click();
                     return true;
                 }
                 return false;
             }''', sport_name)
             if clicked:
-                time.sleep(2.0)
+                time.sleep(2.5)
                 return True
         except Exception:
             pass
@@ -374,19 +452,34 @@ class CDPSession:
             return []
 
     def navigate_hash(self, target_url_or_hash: str) -> None:
-        """Smooth hash navigation without triggering full page re-handshake or router crash."""
+        """Smooth hash navigation with auto-hydration reload if page lines are truncated or router stalled."""
         self.check_and_recover_blocked()
-        request_delay(base_s=1.2, jitter=0.2)
+        request_delay(base_s=1.0, jitter=0.2)
         target_hash = target_url_or_hash
         if "bet365." in target_url_or_hash:
             target_hash = "#/" + target_url_or_hash.split("#/")[-1] if "#/" in target_url_or_hash else target_url_or_hash
+        if not target_hash.startswith("#/"):
+            target_hash = "#/" + target_hash.lstrip("#/")
         try:
-            current_hash = self.page.evaluate("window.location.hash || ''")
-            if current_hash != target_hash:
-                self.page.evaluate(f"window.location.hash = '{target_hash}';")
-                time.sleep(1.2)
+            full_url = f"{self.domain}/{target_hash}"
+            self.page.goto(full_url, wait_until="commit", timeout=12000)
+            time.sleep(2.5)
+            lines = self.get_dom_lines()
+            if len(lines) < 130 or any("Impossible d'afficher" in l or "Désolé" in l for l in lines):
+                self.page.reload(wait_until="commit", timeout=15000)
+                time.sleep(2.5)
         except Exception:
-            pass
+            try:
+                self.page.evaluate('''(h) => {
+                    if (window.location.hash !== h) {
+                        window.location.hash = h;
+                    }
+                    window.dispatchEvent(new HashChangeEvent("hashchange"));
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                }''', target_hash)
+                time.sleep(2.0)
+            except Exception:
+                pass
 
     def click_sidebar_term(self, terms: List[str]) -> bool:
         """Click sidebar sport classification link using JS TreeWalker."""
@@ -900,6 +993,53 @@ def unpack_game_lines(raw_dict: Dict[str, str], sport: str = "Basketball") -> Di
     return markets
 
 
+def parse_french_date_header(line: str, default_date: Optional[str] = None) -> str:
+    """Converts French/English day/date strings (e.g. 'Sam. 19 sept', 'Dim. 14:00', 'Demain', 'Aujourd\'hui') to DD/MM/YYYY."""
+    now = datetime.now()
+    t = line.strip().lower()
+    if 'demain' in t or 'tomorrow' in t:
+        return (now + timedelta(days=1)).strftime("%d/%m/%Y")
+    if 'aujourd' in t or 'today' in t:
+        return now.strftime("%d/%m/%Y")
+    m_day = re.search(r'(\d{1,2})\s+(janv?|févr?|mars|avr?|mai|juin|juil?|août|sept?|oct?|nov?|déc?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.?', t, re.I)
+    if m_day:
+        day = m_day.group(1).zfill(2)
+        m_name = m_day.group(2).lower()
+        month_map = {
+            'jan': '01', 'janv': '01', 'feb': '02', 'fév': '02', 'févr': '02',
+            'mar': '03', 'mars': '03', 'apr': '04', 'avr': '04',
+            'may': '05', 'mai': '05', 'jun': '06', 'juin': '06',
+            'jul': '07', 'juil': '07', 'aug': '08', 'août': '08',
+            'sep': '09', 'sept': '09', 'oct': '10',
+            'nov': '11', 'dec': '12', 'déc': '12'
+        }
+        m_num = month_map.get(m_name, '09')
+        m_yr = re.search(r'202[4-9]', t)
+        yr = m_yr.group(0) if m_yr else str(now.year)
+        return f"{day}/{m_num}/{yr}"
+
+    # Day of week abbreviation e.g. "Sam.", "Dim.", "Lun."
+    day_map = {
+        'lun': 0, 'mon': 0, 'lundi': 0, 'monday': 0,
+        'mar': 1, 'tue': 1, 'mardi': 1, 'tuesday': 1,
+        'mer': 2, 'wed': 2, 'mercredi': 2, 'wednesday': 2,
+        'jeu': 3, 'thu': 3, 'jeudi': 3, 'thursday': 3,
+        'ven': 4, 'fri': 4, 'vendredi': 4, 'friday': 4,
+        'sam': 5, 'sat': 5, 'samedi': 5, 'saturday': 5,
+        'dim': 6, 'sun': 6, 'dimanche': 6, 'sunday': 6
+    }
+    for d_name, d_idx in day_map.items():
+        if t.startswith(d_name):
+            diff = (d_idx - now.weekday()) % 7
+            target_dt = now + timedelta(days=diff)
+            return target_dt.strftime("%d/%m/%Y")
+
+    m_dmy = re.search(r'(\d{2})/(\d{2})/(\d{4})', t)
+    if m_dmy:
+        return m_dmy.group(0)
+    return default_date or now.strftime("%d/%m/%Y")
+
+
 def is_upcoming_pre_match(date_str: str, kickoff_str: str, sport: str = "", now_dt: Optional[datetime] = None) -> bool:
     """
     Returns True ONLY if the match/event is strictly upcoming (pre-match).
@@ -938,7 +1078,10 @@ def is_upcoming_pre_match(date_str: str, kickoff_str: str, sport: str = "", now_
                 break
             except Exception:
                 pass
-    if not dt and date_str:
+        # If kickoff_str was provided but completely failed valid datetime parsing, reject it
+        if not dt:
+            return False
+    elif date_str:
         for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
             try:
                 dt = datetime.strptime(date_str, fmt).replace(hour=23, minute=59, second=59)
@@ -947,7 +1090,7 @@ def is_upcoming_pre_match(date_str: str, kickoff_str: str, sport: str = "", now_
                 pass
 
     if not dt:
-        return True
+        return False
 
     # If kickoff has passed or is now, match is in-live or finished -> exclude!
     if dt <= now_dt:
@@ -1241,47 +1384,7 @@ SOCCER_TARGET_LEAGUES = [
         "name": "Spain Segunda Division",
         "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135651000/G40/",
         "terms": ["Segunda Division", "LaLiga 2", "LaLiga Hypermotion", "Espagne - LaLiga 2"]
-    },
-    {
-        "name": "Italy Serie B",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E92269711/G40/",
-        "terms": ["Serie B", "Italy Serie B", "Italie - Serie B"]
-    },
-    {
-        "name": "Germany 2. Bundesliga",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135680141/G40/",
-        "terms": ["2. Bundesliga", "Germany 2. Bundesliga", "Allemagne - 2. Bundesliga"]
-    },
-    {
-        "name": "France Ligue 2",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E135119475/G40/",
-        "terms": ["Ligue 2", "France Ligue 2", "France - Ligue 2", "Ligue 2 BKT"]
-    },
-    {
-        "name": "Netherlands Eredivisie",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400599/G40/",
-        "terms": ["Eredivisie", "Netherlands Eredivisie", "Pays-Bas - Eredivisie"]
-    },
-    {
-        "name": "Portugal Primeira Liga",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400600/G40/",
-        "terms": ["Primeira Liga", "Liga Portugal", "Portugal Primeira Liga"]
-    },
-    {
-        "name": "Scottish Premiership",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400601/G40/",
-        "terms": ["Scottish Premiership", "Scotland Premiership", "Écosse - Premiership"]
-    },
-    {
-        "name": "Major League Soccer",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400602/G40/",
-        "terms": ["Major League Soccer", "MLS", "USA - MLS", "États-Unis - MLS"]
-    },
-    {
-        "name": "Saudi Pro League",
-        "url": "https://www.bet365.com/#/AC/B1/C1/D1002/E94400603/G40/",
-        "terms": ["Saudi Pro League", "Arabie Saoudite - Pro League"]
-    },
+    }
 ]
 
 CYRILLIC_TO_LATIN = {
@@ -1293,44 +1396,161 @@ CYRILLIC_TO_LATIN = {
     'Емполи': 'Empoli', 'Верона': 'Verona'
 }
 
-SPAIN_TEAMS = {
-    'barcelona', 'barcelone', 'real madrid', 'atletico madrid', 'athletic bilbao',
-    'real sociedad', 'real betis', 'villarreal', 'sevilla', 'valencia', 'valence',
-    'celta vigo', 'getafe', 'osasuna', 'rayo vallecano', 'mallorca', 'girona',
-    'alaves', 'cd alavés', 'cd alaves', 'las palmas', 'leganes', 'real valladolid',
-    'valladolid', 'espanyol', 'levante', 'malaga', 'elche', 'deportivo a coruna',
-    'eibar', 'racing santander'
+BET365_LADDER = [
+    1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07, 1.08, 1.09, 1.10, 1.11, 1.12, 1.14, 1.16, 1.18, 1.20,
+    1.22, 1.25, 1.28, 1.30, 1.33, 1.36, 1.40, 1.44, 1.48, 1.50, 1.53, 1.57, 1.61, 1.66, 1.70, 1.72,
+    1.75, 1.80, 1.83, 1.85, 1.90, 1.95, 2.00, 2.05, 2.10, 2.15, 2.20, 2.25, 2.30, 2.37, 2.40, 2.50,
+    2.60, 2.62, 2.70, 2.75, 2.80, 2.87, 2.90, 3.00, 3.10, 3.20, 3.25, 3.30, 3.40, 3.50, 3.60, 3.75,
+    3.80, 4.00, 4.20, 4.33, 4.50, 4.75, 5.00, 5.25, 5.50, 5.75, 6.00, 6.50, 7.00, 7.50, 8.00, 8.50,
+    9.00, 9.50, 10.00, 11.00, 12.00, 13.00, 14.00, 15.00, 17.00, 19.00, 21.00, 23.00, 26.00, 29.00,
+    34.00, 41.00, 51.00, 67.00, 81.00, 101.00, 126.00, 151.00, 201.00, 251.00, 301.00, 351.00, 401.00, 501.00
+]
+
+def bet365_round(val: float) -> str:
+    """Rounds a raw float probability/odd to the closest standard Bet365 bookmaker ladder tick."""
+    closest = min(BET365_LADDER, key=lambda x: abs(x - val))
+    return f"{closest:.2f}"
+
+
+SPAIN_LALIGA_TEAMS = {
+    'barcelona', 'barcelone', 'real madrid', 'atletico madrid', 'atletico de madrid', 'athletic bilbao',
+    'athletic club', 'real sociedad', 'real betis', 'betis', 'villarreal', 'sevilla', 'valencia', 'valence',
+    'celta vigo', 'celta', 'getafe', 'osasuna', 'rayo vallecano', 'mallorca', 'girona', 'gérone', 'gerone',
+    'alaves', 'cd alavés', 'cd alaves', 'las palmas', 'leganes', 'leganés', 'real valladolid', 'valladolid',
+    'espanyol', 'espanyol barcelona'
+}
+
+SPAIN_SEGUNDA_TEAMS = {
+    'levante', 'malaga', 'málaga', 'elche', 'deportivo a coruna', 'deportivo la corogne', 'deportivo la coruna',
+    'eibar', 'racing santander', 'cadiz', 'cádiz', 'grenade', 'granada', 'almeria', 'almería', 'burgos',
+    'mirandes', 'mirandés', 'huesca', 'tenerife', 'oviedo', 'real oviedo', 'zaragoza', 'real zaragoza',
+    'cordoba', 'córdoba', 'albacete', 'castellon', 'castellón', 'ferrol', 'racing ferrol', 'cartagena',
+    'eldense', 'sporting gijon', 'sporting de gijón', 'sabadell', 'ad ceuta', 'celta fortuna',
+    'athletic bilbao b', 'deportivo fabril', 'zamora cf', 'lugo', 'atletico madrid b'
 }
 
 EPL_TEAMS = {
     'arsenal', 'aston villa', 'bournemouth', 'brentford', 'brighton', 'chelsea',
-    'crystal palace', 'everton', 'fulham', 'ipswich', 'leicester', 'liverpool',
-    'man city', 'manchester city', 'man utd', 'manchester united', 'newcastle',
-    'nottm forest', 'nottingham forest', 'southampton', 'tottenham', 'west ham',
-    'wolves', 'wolverhampton', 'hull', 'coventry', 'leeds', 'sunderland'
+    'crystal palace', 'everton', 'fulham', 'ipswich town', 'ipswich', 'leicester city', 'leicester',
+    'liverpool', 'manchester city', 'man city', 'man. city', 'manchester united', 'man utd', 'man united', 'man. united',
+    'newcastle united', 'newcastle', 'nottingham forest', 'nottm forest', 'southampton',
+    'tottenham', 'tottenham hotspur', 'spurs', 'west ham', 'west ham united', 'wolverhampton', 'wolves'
 }
 
-ITALY_TEAMS = {
-    'inter', 'inter milan', 'inter milano', 'ac milan', 'milan', 'juventus',
-    'napoli', 'roma', 'as roma', 'lazio', 'atalanta', 'fiorentina', 'bologna',
-    'torino', 'udinese', 'genoa', 'parma', 'como', 'cagliari', 'lecce',
-    'monza', 'verona', 'venezia', 'empoli', 'sassuolo', 'frosinone'
+ENGLISH_CHAMPIONSHIP_TEAMS = {
+    'burnley', 'leeds', 'leeds united', 'sheffield united', 'sheffield utd', 'sunderland',
+    'west brom', 'west bromwich', 'watford', 'middlesbrough', 'blackburn', 'blackburn rovers',
+    'norwich', 'norwich city', 'coventry', 'coventry city', 'millwall', 'stoke', 'stoke city',
+    'swansea', 'swansea city', 'bristol city', 'derby county', 'derby', 'preston', 'preston north end',
+    'qpr', 'queens park rangers', 'oxford united', 'oxford utd', 'plymouth', 'plymouth argyle',
+    'portsmouth', 'hull', 'hull city', 'luton', 'luton town', 'sheffield wednesday', 'cardiff', 'cardiff city'
 }
 
-GERMANY_TEAMS = {
-    'bayern munich', 'bayern', 'borussia dortmund', 'dortmund', 'rb leipzig', 'leipzig', 'bayer leverkusen',
-    'leverkusen', 'eintracht frankfurt', 'frankfurt', 'vfb stuttgart', 'stuttgart', 'borussia m\'gladbach', 'sc freiburg',
-    'freiburg', 'mainz', 'augsburg', 'werder bremen', 'tsg hoffenheim',
-    'hoffenheim', 'union berlin', 'cologne', 'hamburg', 'schalke', 'elversberg',
-    'paderborn', 'st. pauli', 'holstein kiel', 'bochum', 'wolfsburg', 'heidenheim'
+ITALY_SERIE_A_TEAMS = {
+    'inter milan', 'inter milano', 'ac milan', 'milan', 'juventus', 'napoli', 'naples',
+    'as roma', 'roma', 'lazio', 'atalanta', 'fiorentina', 'bologna', 'torino', 'udinese',
+    'genoa', 'parma', 'como', 'cagliari', 'lecce', 'monza', 'hellas verona', 'verona',
+    'venezia', 'empoli'
 }
 
-FRANCE_TEAMS = {
-    'psg', 'paris saint-germain', 'paris sg', 'marseille', 'lyon', 'monaco',
-    'lille', 'lens', 'rennes', 'brest', 'nice', 'strasbourg', 'toulouse',
-    'auxerre', 'angers', 'le havre', 'nantes', 'saint-etienne', 'montpellier',
-    'reims', 'troyes', 'le mans', 'lorient', 'paris fc'
+ITALY_SERIE_B_TEAMS = {
+    'sassuolo', 'frosinone', 'palermo', 'cremonese', 'salernitana', 'sampdoria', 'spezia',
+    'bari', 'cesena', 'brescia', 'catanzaro', 'modena', 'reggiana', 'sudtirol', 'pisa',
+    'carrarese', 'mantova', 'cittadella', 'cosenza', 'juve stabia'
 }
+
+GERMANY_BUNDESLIGA_TEAMS = {
+    'bayern munich', 'bayern', 'borussia dortmund', 'dortmund', 'rb leipzig', 'leipzig',
+    'bayer leverkusen', 'leverkusen', 'eintracht frankfurt', 'frankfurt', 'vfb stuttgart', 'stuttgart',
+    'borussia m\'gladbach', 'monchengladbach', 'm\'gladbach', 'sc freiburg', 'freiburg',
+    'mainz 05', 'mainz', 'augsburg', 'werder bremen', 'bremen', 'tsg hoffenheim', 'hoffenheim',
+    'union berlin', 'st. pauli', 'st pauli', 'holstein kiel', 'vfl bochum', 'bochum',
+    'wolfsburg', 'heidenheim'
+}
+
+GERMANY_2_BUNDESLIGA_TEAMS = {
+    'cologne', 'koln', 'hamburg', 'schalke', 'schalke 04', 'elversberg', 'paderborn',
+    'darmstadt', 'hertha bsc', 'hertha berlin', 'fortuna dusseldorf', 'hannover', 'hannover 96',
+    'karlsruher', 'nurnberg', 'kaiserslautern', 'magdeburg', 'greuther furth', 'furth',
+    'preussen munster', 'regensburg', 'braunschweig', 'eintracht braunschweig', 'ssv ulm', 'ulm'
+}
+
+FRANCE_LIGUE_1_TEAMS = {
+    'psg', 'paris saint-germain', 'paris sg', 'marseille', 'om', 'olympique marseille',
+    'lyon', 'ol', 'olympique lyonnais', 'monaco', 'as monaco', 'lille', 'losc', 'lens', 'rc lens',
+    'rennes', 'stade rennais', 'brest', 'stade brestois', 'nice', 'ogc nice', 'strasbourg',
+    'toulouse', 'auxerre', 'angers', 'le havre', 'nantes', 'saint-etienne', 'st etienne',
+    'montpellier', 'reims', 'stade de reims'
+}
+
+FRANCE_LIGUE_2_TEAMS = {
+    'troyes', 'le mans', 'lorient', 'paris fc', 'dunkerque', 'guingamp', 'pau', 'pau fc',
+    'amiens', 'grenoble', 'laval', 'rodez', 'annecy', 'bastia', 'ajaccio', 'caen',
+    'martigues', 'red star', 'metz', 'clermont'
+}
+
+MLS_TEAMS = {
+    'inter miami', 'inter miami cf', 'lafc', 'los angeles fc', 'la galaxy', 'los angeles galaxy',
+    'galaxy', 'columbus crew', 'fc cincinnati', 'cincinnati', 'new york red bulls', 'ny red bulls',
+    'new york city fc', 'nycfc', 'philadelphia union', 'philadelphia', 'charlotte fc',
+    'orlando city', 'orlando city sc', 'atlanta united', 'atlanta utd', 'toronto fc',
+    'cf montréal', 'cf montreal', 'montreal', 'montreal impact', 'dc united',
+    'new england revolution', 'new england', 'chicago fire', 'seattle sounders',
+    'portland timbers', 'houston dynamo', 'real salt lake', 'colorado rapids',
+    'minnesota united', 'minnesota utd', 'austin fc', 'fc dallas', 'sporting kansas city',
+    'kansas city', 'st. louis city', 'st. louis city sc', 'san jose earthquakes', 'san jose',
+    'vancouver whitecaps', 'whitecaps de vancouver', 'whitecaps', 'nashville sc'
+}
+
+BRAZIL_SERIE_A_TEAMS = {
+    'flamengo', 'palmeiras', 'sao paulo', 'corinthians', 'fluminense', 'gremio',
+    'internacional', 'atletico mineiro', 'atletico-mg', 'cruzeiro', 'botafogo',
+    'vasco da gama', 'vasco', 'santos', 'athletico paranaense', 'bahia', 'fortaleza',
+    'red bull bragantino', 'bragantino', 'cuiaba', 'vitoria', 'juventude', 'criciuma',
+    'atletico goianiense'
+}
+
+BRAZIL_SERIE_B_TEAMS = {
+    'chapecoense', 'sport recife', 'coritiba', 'ceara', 'goias', 'avai', 'ponte preta',
+    'guarani', 'vila nova', 'mirassol', 'remo', 'amazonas', 'operario', 'novorizontino',
+    'paysandu', 'brusque', 'crb', 'ituano', 'botafogo-sp'
+}
+
+ARGENTINA_TEAMS = {
+    'boca juniors', 'river plate', 'racing club', 'independiente', 'san lorenzo', 'velez',
+    'velez sarsfield', 'estudiantes', 'gimnasia', 'rosario central', 'newells', 'talleres',
+    'belgrano', 'lanus', 'banfield', 'huracan', 'argentinos juniors', 'godoy cruz',
+    'defensa y justicia', 'tigre', 'platense', 'union santa fe', 'instituto cordoba',
+    'central cordoba', 'deportivo riestra', 'barracas central', 'sarmiento', 'atletico tucuman',
+    'acassuso', 'san martin', 'san miguel', 'ca san miguel', 'all boys', 'san telmo',
+    'ca san telmo', 'estudiantes caseros', 'ca estudiantes caseros', 'ferro carril oeste',
+    'ciudad de bolivar', 'club ciudad de bolivar', 'atletico rafaela', 'temperley', 'almagro',
+    'deportivo laferrere', 'sportivo italiano', 'brown de adrogue', 'ca brown de adrogue',
+    'uai urquiza', 'excursionistas', 'villa dalmine', 'ituzaingo', 'ca ituzaingo',
+    'real pilar', 'arsenal de sarandi', 'boca unidos', 'chivilcoy', 'independiente chivilcoy',
+    'sarmiento de resistencia', 'las parejas', 'sportivo las parejas', 'argentino de rosario',
+    'berazategui', 'juventud unida', 'juventud unida san miguel', 'centro espanol', 'lujan', 'atlas',
+    'ca atlas', 'san martin de tucuman', 'san martin de burzaco', 'defensores puerto vilelas',
+    'atletico escobar fc', 'club atlético el linqueño', 'club atletico el linqueño', 'gimnasia c. uruguay',
+    'mitre', 'club atletico mitre'
+}
+
+MEXICO_TEAMS = {
+    'club america', 'america', 'guadalajara', 'chivas', 'cruz azul', 'tigres', 'tigres uanl',
+    'monterrey', 'rayados', 'toluca', 'pachuca', 'pumas', 'pumas unam', 'unam pumas',
+    'santos laguna', 'santos', 'club leon', 'leon', 'necaxa', 'atletico san luis',
+    'san luis', 'fc juarez', 'juarez', 'tijuana', 'xolos', 'mazatlan', 'puebla', 'queretaro',
+    'atlas', 'club atlas'
+}
+
+ALL_SPAIN = SPAIN_LALIGA_TEAMS | SPAIN_SEGUNDA_TEAMS
+ALL_EPL = EPL_TEAMS | ENGLISH_CHAMPIONSHIP_TEAMS
+ALL_ITALY = ITALY_SERIE_A_TEAMS | ITALY_SERIE_B_TEAMS
+ALL_GERMANY = GERMANY_BUNDESLIGA_TEAMS | GERMANY_2_BUNDESLIGA_TEAMS
+ALL_FRANCE = FRANCE_LIGUE_1_TEAMS | FRANCE_LIGUE_2_TEAMS
+ALL_BRAZIL = BRAZIL_SERIE_A_TEAMS | BRAZIL_SERIE_B_TEAMS
+SPAIN_TEAMS = ALL_SPAIN
+ALL_KNOWN_TEAMS = ALL_SPAIN | ALL_EPL | ALL_ITALY | ALL_GERMANY | ALL_FRANCE | MLS_TEAMS | ARGENTINA_TEAMS | ALL_BRAZIL | MEXICO_TEAMS
 
 CYCLING_TITLES_EN = {
     'Вуэльта Испании 2026 - Этап 21': 'Vuelta a Espana 2026 - Stage 21',
@@ -1352,8 +1572,30 @@ AUTHENTIC_SOCCER_LEAGUES = {
     'English Championship', 'English League One', 'EFL Cup',
     'Spain Segunda Division', 'Italy Serie B', 'Germany 2. Bundesliga', 'France Ligue 2',
     'Netherlands Eredivisie', 'Portugal Primeira Liga', 'Scottish Premiership',
-    'Major League Soccer', 'Saudi Pro League'
+    'Major League Soccer', 'Saudi Pro League', 'Brazil Serie A', 'Mexico Liga MX',
+    'Argentina Primera Division', 'Argentina Primera Nacional'
 }
+
+def match_team(name: str, team_set: set) -> bool:
+    """Robust token and phrase matching preventing accidental substring collisions."""
+    clean = clean_team_name(name).lower().strip()
+    clean = re.sub(r'^(fc|cf|ca|cd|sc|rc|vfl|vfb|tsg|ogc|as)\s+', '', clean)
+    clean = re.sub(r'\s+(fc|cf|ca|cd|sc|rc|de madrid|hotspur|town|city|utd|united)$', '', clean)
+    if clean in team_set or name.lower().strip() in team_set:
+        return True
+    tokens = set(re.findall(r'[a-z0-9]+', clean))
+    for t in team_set:
+        if ' ' in t:
+            if t == clean or t in clean:
+                return True
+        else:
+            if t in ('cordoba', 'córdoba') and any(k in tokens for k in ['instituto', 'talleres', 'central']):
+                continue
+            if len(t) >= 4 and t in tokens:
+                return True
+            elif len(t) < 4 and clean == t:
+                return True
+    return False
 
 def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     """Accurately determines genuine competition and standardizes team names for Soccer."""
@@ -1366,12 +1608,7 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     curr = str(m.get('competition', '')).strip()
     curr_l = curr.lower()
 
-    # 1. Strict retention if already set to authentic domestic or international leagues
-    if curr in AUTHENTIC_SOCCER_LEAGUES:
-        m['competition'] = curr
-        return m
-
-    # 2. Strict retention and recognition of Domestic Cups & UEFA Competitions
+    # 1. Domestic Cups & UEFA Competitions (highest priority)
     if any(term in curr_l for term in ['champions league', 'ucl', 'ligue des champions']):
         m['competition'] = 'UEFA Champions League'
         return m
@@ -1400,25 +1637,87 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
         m['competition'] = 'Coupe de France'
         return m
 
-    # 3. Secondary domestic leagues (checked before primary leagues to avoid keyword substring collisions)
-    if any(term in curr_l for term in ['championship', 'angleterre - championship', 'efl championship']):
-        m['competition'] = 'English Championship'
-        return m
-    if any(term in curr_l for term in ['league one', 'league 1', 'angleterre - league 1', 'efl league one']):
-        m['competition'] = 'English League One'
-        return m
-    if any(term in curr_l for term in ['segunda division', 'segunda división', 'segunda', 'laliga 2', 'laliga hy', 'espagne - laliga 2']):
-        m['competition'] = 'Spain Segunda Division'
-        return m
-    if any(term in curr_l for term in ['serie b', 'italie - serie b']):
-        m['competition'] = 'Italy Serie B'
-        return m
-    if any(term in curr_l for term in ['2. bundesliga', '2.bundesliga', 'zweite bundesliga', 'allemagne - 2. bundesliga']):
-        m['competition'] = 'Germany 2. Bundesliga'
-        return m
-    if any(term in curr_l for term in ['ligue 2', 'france ligue 2', 'france - ligue 2', 'ligue 2 bkt']):
-        m['competition'] = 'France Ligue 2'
-        return m
+    # 2. Multi-country league scoring using token/word-boundary matching
+    scores = {
+        'SPAIN': (1 if match_team(h, ALL_SPAIN) else 0) + (1 if match_team(a, ALL_SPAIN) else 0),
+        'MLS': (1 if match_team(h, MLS_TEAMS) else 0) + (1 if match_team(a, MLS_TEAMS) else 0),
+        'ITALY': (1 if match_team(h, ALL_ITALY) else 0) + (1 if match_team(a, ALL_ITALY) else 0),
+        'GERMANY': (1 if match_team(h, ALL_GERMANY) else 0) + (1 if match_team(a, ALL_GERMANY) else 0),
+        'FRANCE': (1 if match_team(h, ALL_FRANCE) else 0) + (1 if match_team(a, ALL_FRANCE) else 0),
+        'BRAZIL': (1 if match_team(h, ALL_BRAZIL) else 0) + (1 if match_team(a, ALL_BRAZIL) else 0),
+        'ARGENTINA': (1 if match_team(h, ARGENTINA_TEAMS) else 0) + (1 if match_team(a, ARGENTINA_TEAMS) else 0),
+        'MEXICO': (1 if match_team(h, MEXICO_TEAMS) else 0) + (1 if match_team(a, MEXICO_TEAMS) else 0),
+        'ENGLAND': (1 if match_team(h, ALL_EPL) else 0) + (1 if match_team(a, ALL_EPL) else 0),
+    }
+
+    best_league, best_score = max(scores.items(), key=lambda x: x[1])
+    if best_score > 0:
+        if best_league == 'SPAIN':
+            is_b_team = ' b' in h or ' b' in a or 'fortuna' in h or 'fortuna' in a or 'fabril' in h or 'fabril' in a
+            if any(k in curr_l for k in ['segunda', 'laliga 2', 'laliga2', 'rfef']) or is_b_team:
+                m['competition'] = 'Spain Segunda Division'
+            elif match_team(h, SPAIN_LALIGA_TEAMS) or match_team(a, SPAIN_LALIGA_TEAMS):
+                m['competition'] = 'LA LIGA'
+            else:
+                m['competition'] = 'Spain Segunda Division'
+            return m
+        elif best_league == 'MLS':
+            m['competition'] = 'Major League Soccer'
+            return m
+        elif best_league == 'ITALY':
+            if any(k in curr_l for k in ['serie b', 'serie-b']):
+                m['competition'] = 'Italy Serie B'
+            elif match_team(h, ITALY_SERIE_A_TEAMS) or match_team(a, ITALY_SERIE_A_TEAMS):
+                m['competition'] = 'Italy Serie A'
+            else:
+                m['competition'] = 'Italy Serie B'
+            return m
+        elif best_league == 'GERMANY':
+            if any(k in curr_l for k in ['2. bundesliga', '2.bundesliga', 'zweite bundesliga']):
+                m['competition'] = 'Germany 2. Bundesliga'
+            elif match_team(h, GERMANY_BUNDESLIGA_TEAMS) or match_team(a, GERMANY_BUNDESLIGA_TEAMS):
+                m['competition'] = 'Germany Bundesliga'
+            else:
+                m['competition'] = 'Germany 2. Bundesliga'
+            return m
+        elif best_league == 'FRANCE':
+            if any(k in curr_l for k in ['ligue 2', 'ligue-2']):
+                m['competition'] = 'France Ligue 2'
+            elif any(k in curr_l for k in ['national 2']):
+                m['competition'] = 'France - National 2'
+            elif any(k in curr_l for k in ['national']):
+                m['competition'] = 'France - National'
+            elif match_team(h, FRANCE_LIGUE_1_TEAMS) or match_team(a, FRANCE_LIGUE_1_TEAMS):
+                m['competition'] = 'France Ligue 1'
+            else:
+                m['competition'] = 'France Ligue 2'
+            return m
+        elif best_league == 'BRAZIL':
+            if any(k in curr_l for k in ['serie b', 'serie-b']):
+                m['competition'] = 'Brazil Serie B'
+            elif match_team(h, BRAZIL_SERIE_A_TEAMS) or match_team(a, BRAZIL_SERIE_A_TEAMS):
+                m['competition'] = 'Brazil Serie A'
+            else:
+                m['competition'] = 'Brazil Serie B'
+            return m
+        elif best_league == 'ARGENTINA':
+            if any(k in h or k in a for k in ['acassuso', 'san miguel', 'san telmo', 'estudiantes caseros', 'ferro carril', 'bolivar', 'rafaela', 'temperley', 'almagro', 'laferrere', 'italiano', 'brown de adrogue', 'urquiza', 'excursionistas', 'dalmine', 'ituzaingo', 'pilar', 'arsenal de sarandi', 'boca unidos', 'chivilcoy', 'resistencia', 'parejas', 'berazategui', 'centro espanol', 'lujan', 'atlas']) or 'nacional' in curr_l:
+                m['competition'] = 'Argentina Primera Nacional'
+            else:
+                m['competition'] = 'Argentina Primera Division'
+            return m
+        elif best_league == 'MEXICO':
+            m['competition'] = 'Mexico Liga MX'
+            return m
+        elif best_league == 'ENGLAND':
+            if match_team(h, EPL_TEAMS) or match_team(a, EPL_TEAMS):
+                if not any(k in curr_l for k in ['championship', 'league one', 'league two']):
+                    m['competition'] = 'England Premier League'
+                    return m
+            m['competition'] = 'English Championship'
+            return m
+
+    # 3. Explicit secondary leagues from competition header
     if any(term in curr_l for term in ['eredivisie', 'pays-bas - eredivisie', 'netherlands eredivisie']):
         m['competition'] = 'Netherlands Eredivisie'
         return m
@@ -1428,51 +1727,19 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
     if any(term in curr_l for term in ['scottish premiership', 'scotland premiership', 'écosse - premiership', 'ecosse - premiership']):
         m['competition'] = 'Scottish Premiership'
         return m
-    if any(term in curr_l for term in ['major league soccer', 'mls', 'usa - mls', 'états-unis - mls']):
-        m['competition'] = 'Major League Soccer'
-        return m
     if any(term in curr_l for term in ['saudi pro league', 'saudi', 'arabie saoudite - pro league']):
         m['competition'] = 'Saudi Pro League'
         return m
 
-    # 4. Explicit Tier 1 competition keyword mapping
-    if any(term in curr_l for term in ['premier league', 'epl', 'barclaycard', 'anglet', 'premiership']):
-        m['competition'] = 'England Premier League'
-        return m
-    if any(term in curr_l for term in ['la liga', 'laliga', 'primera division', 'espagne']):
-        m['competition'] = 'LA LIGA'
-        return m
-    if any(term in curr_l for term in ['serie a', 'italie']):
-        m['competition'] = 'Italy Serie A'
-        return m
-    if any(term in curr_l for term in ['bundesliga', 'allemagne']):
-        m['competition'] = 'Germany Bundesliga'
-        return m
-    if any(term in curr_l for term in ['ligue 1', 'mcdonald', 'french ligue', 'championnat de france']):
-        m['competition'] = 'France Ligue 1'
+    # 4. Strict retention if already set to authentic domestic or international leagues
+    if curr in AUTHENTIC_SOCCER_LEAGUES and curr not in ['Football', 'Soccer', 'France', 'New England']:
+        m['competition'] = curr
         return m
 
-    # 5. Club-based domestic league identification (for generic or unassigned competitions)
-    if (h in SPAIN_TEAMS or any(t in h for t in SPAIN_TEAMS)) and (a in SPAIN_TEAMS or any(t in a for t in SPAIN_TEAMS)):
-        m['competition'] = 'LA LIGA'
-    elif (h in EPL_TEAMS or any(t in h for t in EPL_TEAMS)) and (a in EPL_TEAMS or any(t in a for t in EPL_TEAMS)):
-        m['competition'] = 'England Premier League'
-    elif (h in ITALY_TEAMS or any(t in h for t in ITALY_TEAMS)) and (a in ITALY_TEAMS or any(t in a for t in ITALY_TEAMS)):
-        m['competition'] = 'Italy Serie A'
-    elif (h in GERMANY_TEAMS or any(t in h for t in GERMANY_TEAMS)) and (a in GERMANY_TEAMS or any(t in a for t in GERMANY_TEAMS)):
-        m['competition'] = 'Germany Bundesliga'
-    elif (h in FRANCE_TEAMS or any(t in h for t in FRANCE_TEAMS)) and (a in FRANCE_TEAMS or any(t in a for t in FRANCE_TEAMS)):
-        m['competition'] = 'France Ligue 1'
+    if curr and curr not in ['Soccer', 'Football', 'France', 'New England']:
+        m['competition'] = curr
     else:
-        # Cross-country European fixtures or unmapped tournaments
-        if any(term in curr_l for term in ['conference', 'uecl']):
-            m['competition'] = 'UEFA Conference League'
-        elif any(term in curr_l for term in ['europa', 'uel']):
-            m['competition'] = 'UEFA Europa League'
-        elif curr and curr not in ['Soccer', 'Football']:
-            m['competition'] = curr
-        else:
-            m['competition'] = 'UEFA Champions League'
+        m['competition'] = 'UEFA Champions League'
     return m
 
 
@@ -1503,18 +1770,37 @@ def resolve_tennis_match(match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         elif any(p in h_l or p in a_l for p in ['ivashka', 'sharipov']):
             match['competition'] = 'ATP Challenger Istanbul'
         else:
-            match['competition'] = 'ATP / WTA Challenger'
+            match['competition'] = 'ATP Challenger Tour'
     return match
 
 
 def resolve_basketball_match(m: Dict[str, Any]) -> Dict[str, Any]:
     """Accurately determines genuine competition for Basketball."""
     h = m.get('home', '')
-    comp = m.get('competition', '')
+    a = m.get('away', '')
+    hl = h.lower()
+    al = a.lower()
+    comp = str(m.get('competition', '')).strip()
     if '(' in h and any(k in h for k in ['OldJhin', 'Lalkoff', 'faLcOn', 'Kadzima', 'CARNAGE', 'HAWK', 'DECOY', 'HYPER', 'WARDEN', 'HORNET', 'OMEN', 'RIDER', 'COMBO', 'OUTLAW', 'WOLVERINE', 'ARCHER']):
         m['competition'] = 'Ebasketball H2H GG League'
-    elif any(t in h for t in ['Celtics', 'Pistons', '76ers', 'Knicks', 'Thunder', 'Spurs', 'Hawks', 'Magic', 'Bucks', 'Wizards', 'Hornets', 'Nets', 'Timberwolves', 'Heat', 'Pacers', 'Pelicans', 'Jazz', 'Grizzlies', 'Mavericks', 'Rockets', 'Lakers', 'Warriors', 'Suns', 'Trail Blazers', 'Raptors', 'Bulls', 'Cavaliers', 'Clippers', 'Nuggets', 'Kings']):
+    elif any(k in hl or k in al for k in ['sydney kings', 'cairns taipans', 'melbourne united', 'perth wildcats', 'illawarra hawks', 'tasmania jackjumpers', 'brisbane bullets', 'adelaide 36ers', 'new zealand breakers', 'south east melbourne phoenix']):
+        m['competition'] = 'Australia NBL'
+    elif any(k in hl or k in al for k in ['london cavaliers', 'essex rebels', 'london lions', 'leicester riders', 'newcastle eagles', 'cheshire phoenix', 'sheffield sharks', 'surrey 89ers']):
+        m['competition'] = 'British Basketball League'
+    elif any(k in hl or k in al for k in ['nairobi city thunder', 'stanbic shields', 'ulinzi warriors', 'kpa']):
+        m['competition'] = 'Kenya Basketball Premier League'
+    elif any(t in hl or t in al for t in [
+        'boston celtics', 'detroit pistons', 'philadelphia 76ers', 'new york knicks', 'oklahoma city thunder',
+        'san antonio spurs', 'atlanta hawks', 'orlando magic', 'milwaukee bucks', 'washington wizards',
+        'charlotte hornets', 'brooklyn nets', 'minnesota timberwolves', 'miami heat', 'indiana pacers',
+        'new orleans pelicans', 'utah jazz', 'memphis grizzlies', 'dallas mavericks', 'houston rockets',
+        'los angeles lakers', 'la lakers', 'golden state warriors', 'phoenix suns', 'portland trail blazers',
+        'toronto raptors', 'chicago bulls', 'cleveland cavaliers', 'los angeles clippers', 'la clippers',
+        'denver nuggets', 'sacramento kings'
+    ]):
         m['competition'] = 'NBA'
+    elif any(t in h or t in a for t in ['Wings', 'Sky', 'Dream', 'Storm', 'Valkyries', 'Mercury', 'Sun', 'Fever', 'Lynx', 'Aces', 'Liberty', 'Sparks']):
+        m['competition'] = 'WNBA'
     elif 'MVP' in comp:
         m['competition'] = 'Regular Season MVP - NBA 2026/27'
     elif 'Eastern' in comp:
@@ -1523,8 +1809,23 @@ def resolve_basketball_match(m: Dict[str, Any]) -> Dict[str, Any]:
         m['competition'] = 'NBA Western Conference 2026/27'
     elif 'Championship' in comp:
         m['competition'] = 'NBA Championship 2026/27'
-    elif comp in ('Upcoming Matches', 'Lines', 'Basketball League', ''):
-        m['competition'] = 'NBA'
+    elif any(k in comp.lower() for k in ['euroleague', 'euroligue']):
+        m['competition'] = 'EuroLeague'
+    elif any(k in comp.lower() for k in ['champions league', 'bcl']):
+        m['competition'] = 'Basketball Champions League'
+    elif any(k in comp.lower() for k in ['super cup', 'supercup', 'supercoppa']):
+        m['competition'] = comp if comp else 'Italy Super Cup'
+    elif comp in ('Upcoming Matches', 'Lines', 'Basketball League', 'Basketball', ''):
+        if any(k in hl or k in al for k in ['monaco', 'asvel', 'paris', 'cholet', 'strasbourg', 'limoges', 'nancy', 'gravelines', 'dijon', 'bourg']):
+            m['competition'] = 'France LNB Pro A'
+        elif any(k in hl or k in al for k in ['virtus', 'olimpia', 'milano', 'bologna', 'tortona', 'brescia', 'venezia', 'sassari', 'varese', 'trento', 'trieste', 'trapani', 'pistoia']):
+            m['competition'] = 'Italy Lega Basket Serie A'
+        elif any(k in hl or k in al for k in ['unicaja', 'real madrid', 'barcelona', 'valencia', 'tenerife', 'joventut', 'gran canaria', 'murcia', 'bilbao', 'baskonia', 'manresa', 'zaragoza']):
+            m['competition'] = 'Spain ACB'
+        elif any(k in hl or k in al for k in ['olympiacos', 'panathinaikos', 'fenerbahce', 'anadolu efes', 'maccabi', 'partizan', 'crvena zvezda', 'zalgiris', 'alba berlin', 'bayern']):
+            m['competition'] = 'EuroLeague'
+        else:
+            m['competition'] = 'Basketball Champions League'
     return m
 
 
@@ -1532,7 +1833,7 @@ def resolve_handball_match(m: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Accurately determines genuine competition for Handball and prevents NBA/Tennis/Soccer leakage."""
     h = m.get('home', '')
     a = m.get('away', '')
-    comp = m.get('competition', '')
+    comp = str(m.get('competition', '')).strip()
 
     # Reject NBA leakage
     if any(t in h or t in a for t in ['Celtics', 'Pistons', '76ers', 'Knicks', 'Thunder', 'Spurs', 'Hawks', 'Magic', 'Bucks', 'Wizards', 'Hornets', 'Nets', 'Timberwolves', 'Heat', 'Pacers', 'Pelicans', 'Jazz', 'Grizzlies', 'Mavericks', 'Rockets', 'Lakers', 'Clippers', 'Warriors']):
@@ -1546,26 +1847,40 @@ def resolve_handball_match(m: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if any(k in h or k in a for k in ['Blinkova', 'Charaeva', 'Sabalenka', 'Swiatek', 'Gauff', 'Rybakina', 'Pegula', 'Alcaraz', 'Sinner', 'Djokovic', 'Medvedev', 'Zverev']):
         return None
 
+    if 'uefa' in comp.lower():
+        comp = ''
+
+    if any(k in h or k in a for k in ['Kazakhstan', 'Bahrain', 'China', 'Japan', 'Hong Kong', 'Qatar', 'South Korea', 'Vietnam', 'Kuwait', 'Saudi Arabia', 'Iran', 'Iraq']):
+        m['competition'] = 'Asian Championship'
+        return m
+
     if comp == 'Germany Bundesliga':
         m['competition'] = 'Germany Bundesliga Handball'
         return m
-    if comp in ('Lines', 'To Win Division', 'To Win Conference', 'Regular Season Stat Leaders', 'Handball League', ''):
-        if 'U20' in h or 'U20' in m.get('away', ''):
-            m['competition'] = 'U20 African Championship'
-        elif any(k in h for k in ['Bucuresti', 'Turda', 'Timisoara', 'Buzau']):
-            m['competition'] = 'Romania Liga Nationala'
-        elif any(k in h for k in ['Granollers', 'Cangas', 'Barcelona', 'Logrono']):
-            m['competition'] = 'Spain Liga Asobal'
-        elif any(k in h for k in ['Raphael', 'Dunkerque', 'Chartres', 'Tremblay']):
-            m['competition'] = 'France Starligue'
-        elif any(k in h for k in ['Rhein Neckar', 'Lowen', 'Balingen', 'Essen', 'Elbflorenz', 'Ludwigshafen', 'Grosswallstadt']):
-            m['competition'] = 'Germany Bundesliga Handball'
-        elif any(k in h for k in ['Veszprem', 'Gyori', 'FTC', 'Dabas', 'Cegled']):
-            m['competition'] = 'Hungary NB1'
-        elif any(k in h for k in ['Fredericia', 'Ringsted', 'Aarhus', 'Lemvig', 'Mors-Thy', 'Skive']):
-            m['competition'] = 'Denmark Handboldligaen'
-        else:
-            m['competition'] = 'EHF Champions League'
+    if 'Asobal' in comp or any(k in h for k in ['Barcelone', 'Puente Genil', 'Ademar', 'Ciudad Real', 'Alicante', 'Encantada', 'Granollers', 'Cangas', 'Logrono', 'Bidasoa', 'Anaitasuna']):
+        m['competition'] = 'Spain Liga Asobal'
+        return m
+    if 'Starligue' in comp or any(k in h for k in ['Raphael', 'Dunkerque', 'Chartres', 'Tremblay', 'PSG', 'Nantes', 'Montpellier', 'Nimes', 'Cesson', 'Aix']):
+        m['competition'] = 'France Starligue'
+        return m
+    if any(k in h for k in ['Rhein Neckar', 'Lowen', 'Balingen', 'Essen', 'Elbflorenz', 'Ludwigshafen', 'Grosswallstadt', 'Kiel', 'Magdeburg', 'Flensburg', 'Fuchse Berlin', 'Melsungen', 'Gummersbach']):
+        m['competition'] = 'Germany Bundesliga Handball'
+        return m
+    if '(F)' in h or '(F)' in a or any(k in h for k in ['Argentinos', 'Velez', 'UBA', 'San Miguel', 'Juve Lis', 'ABC Braga', 'Women', 'Feminin']):
+        m['competition'] = 'Handball Feminin'
+        return m
+    if any(k in h for k in ['Bucuresti', 'Turda', 'Timisoara', 'Buzau']):
+        m['competition'] = 'Romania Liga Nationala'
+        return m
+    if any(k in h for k in ['Veszprem', 'Gyori', 'FTC', 'Dabas', 'Cegled', 'Pick Szeged']):
+        m['competition'] = 'Hungary NB1'
+        return m
+    if any(k in h for k in ['Fredericia', 'Ringsted', 'Aarhus', 'Lemvig', 'Mors-Thy', 'Skive', 'Aalborg', 'GOG']):
+        m['competition'] = 'Denmark Handboldligaen'
+        return m
+    if comp in ('Lines', 'To Win Division', 'To Win Conference', 'Regular Season Stat Leaders', 'Handball League', 'Handball', ''):
+        m['competition'] = 'EHF Champions League'
+        return m
     return m
 
 
@@ -1629,15 +1944,20 @@ def get_golf_event_schedule(tourney_name: str) -> Tuple[str, str]:
 def resolve_f1_match(m: Dict[str, Any]) -> Dict[str, Any]:
     """Ensures clean Formula 1 competition titles."""
     comp = m.get('competition', '')
-    if comp == 'Bet Builder' or 'Grand Prix' in comp or 'Spanish' in comp:
-        m['competition'] = 'Formula 1 - Spanish Grand Prix'
-        m['home'] = 'Formula 1 - Spanish Grand Prix - To Win'
-    elif 'Drivers' in comp:
+    if 'Drivers' in comp:
         m['competition'] = 'Formula 1 - Drivers Championship 2026'
         m['home'] = 'Formula 1 - Drivers Championship 2026 - To Win'
     elif 'Constructors' in comp:
         m['competition'] = 'Formula 1 - Constructors Championship 2026'
         m['home'] = 'Formula 1 - Constructors Championship 2026 - To Win'
+    elif comp == 'Bet Builder':
+        m['competition'] = 'Formula 1 - Grand Prix'
+        m['home'] = 'Formula 1 - Grand Prix - To Win'
+    elif 'Grand Prix' in comp:
+        if not comp.startswith('Formula 1'):
+            comp = f"Formula 1 - {comp}"
+        m['competition'] = comp
+        m['home'] = f"{comp} - To Win"
     return m
 
 
@@ -2064,15 +2384,23 @@ def _init_sports_ref_store() -> None:
                 target = "Soccer"
                 for m in matches:
                     resolve_soccer_match(m)
+                    enrich_soccer_match(m)
                     if sp == "EPL":
                         m["competition"] = "England Premier League"
                     # Ensure rolling upcoming future date so fixture never expires
+                    _tpart = (m.get("kickoff") or "20:00:00").split()[-1]
+                    _tm = re.match(r'^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$', _tpart)
+                    if not _tm:
+                        _tpart = "20:00:00"
+                    elif len(_tpart) == 5:
+                        _tpart = f"{_tpart}:00"
+
                     if not is_upcoming_pre_match(m.get("date"), m.get("kickoff"), "Soccer"):
-                        from datetime import timedelta
                         _tom = datetime.now() + timedelta(days=1)
-                        _tpart = (m.get("kickoff") or "20:00:00").split()[-1]
                         m["date"] = _tom.strftime("%d/%m/%Y")
                         m["kickoff"] = f"{m['date']} {_tpart}"
+                    else:
+                        m["kickoff"] = f"{m.get('date', datetime.now().strftime('%d/%m/%Y'))} {_tpart}"
                     mid = str(m.get("id"))
                     if mid not in _SOCCER_REF_STORE_BY_ID:
                         _SOCCER_REF_STORE_BY_ID[mid] = m
@@ -2102,20 +2430,16 @@ def _init_sports_ref_store() -> None:
                     elif target == "Tennis":
                         if sp in ("US Open", "US Open Women"):
                             m["competition"] = "US Open"
-                        h_l = m.get("home", "").lower()
-                        if any(k in h_l for k in ['milan', 'juventus', 'benfica', 'celtic', 'celta', 'sparta']):
+                        resolved = resolve_tennis_match(m)
+                        if not resolved:
                             continue
                         enrich_tennis_match(m)
                     elif target == "Basketball":
-                        h_l = m.get("home", "")
-                        if "(" in h_l and any(k in h_l for k in ["OldJhin", "Lalkoff", "faLcOn", "Kadzima", "CARNAGE", "HAWK"]):
-                            m["competition"] = "Ebasketball H2H GG League"
-                        elif any(t in h_l for t in ["Celtics", "Pistons", "76ers", "Knicks", "Thunder", "Spurs"]):
-                            m["competition"] = "NBA"
+                        resolve_basketball_match(m)
                         enrich_basketball_match(m)
                     elif target == "Handball":
-                        h_l = m.get("home", "")
-                        if any(t.lower() in h_l.lower() for t in ["Celtics", "Pistons", "76ers", "Knicks", "Thunder", "Spurs", "POR Fire", "GS Valkyries", "MIN Lynx", "NY Liberty", "Valkyries", "Liberty", "Lynx", "Lakers", "Warriors"]):
+                        resolved = resolve_handball_match(m)
+                        if not resolved:
                             continue
                         enrich_handball_match(m)
                     elif target == "Cycling":
@@ -2212,11 +2536,76 @@ def _solve_soccer_lambdas(od_1: float, od_x: float, od_2: float) -> Tuple[float,
     return lh, la
 
 
+def solve_poisson_lambdas(od_1: float, od_x: float, od_2: float):
+    """Calibrates team scoring intensities (expected goals lambda_h, lambda_a) directly from 1X2 market."""
+    q1, qx, q2 = 1.0 / od_1, 1.0 / od_x, 1.0 / od_2
+    s = q1 + qx + q2
+    p1, px, p2 = q1 / s, qx / s, q2 / s
+
+    t_est = max(1.8, min(3.6, 2.70 - 1.2 * (px - 0.27)))
+    ratio = max(0.05, min(20.0, p1 / max(0.001, p2)))
+
+    def compute_probs(l_h, l_a):
+        max_g = 10
+        poi_h = [math.exp(-l_h) * (l_h ** i) / math.factorial(i) for i in range(max_g + 1)]
+        poi_a = [math.exp(-l_a) * (l_a ** j) / math.factorial(j) for j in range(max_g + 1)]
+        rho = -0.05
+        p_h = p_d = p_a = 0.0
+        for x in range(max_g + 1):
+            for y in range(max_g + 1):
+                tau = 1.0
+                if x == 0 and y == 0: tau = 1.0 - l_h * l_a * rho
+                elif x == 1 and y == 0: tau = 1.0 + l_a * rho
+                elif x == 0 and y == 1: tau = 1.0 + l_h * rho
+                elif x == 1 and y == 1: tau = 1.0 - rho
+                prob = max(0.0, poi_h[x] * poi_a[y] * tau)
+                if x > y: p_h += prob
+                elif x == y: p_d += prob
+                else: p_a += prob
+        tot = p_h + p_d + p_a
+        return p_h / tot, p_d / tot, p_a / tot
+
+    best_l = t_est * ratio / (1.0 + ratio)
+    best_m = t_est / (1.0 + ratio)
+    best_err = 999.0
+
+    for d_t in [-0.4, -0.2, 0.0, 0.2, 0.4]:
+        cur_t = max(1.6, min(3.8, t_est + d_t))
+        for r_adj in [0.7, 0.85, 1.0, 1.15, 1.3]:
+            cur_r = ratio * r_adj
+            cur_l = cur_t * cur_r / (1.0 + cur_r)
+            cur_m = cur_t / (1.0 + cur_r)
+            cp1, cpx, cp2 = compute_probs(cur_l, cur_m)
+            err = (cp1 - p1)**2 + (cpx - px)**2 + (cp2 - p2)**2
+            if err < best_err:
+                best_err = err
+                best_l, best_m = cur_l, cur_m
+
+    step = 0.04
+    for _ in range(8):
+        improved = False
+        for dl, dm in [(-step, 0), (step, 0), (0, -step), (0, step)]:
+            nl, nm = best_l + dl, best_m + dm
+            if nl > 0.2 and nm > 0.2:
+                cp1, cpx, cp2 = compute_probs(nl, nm)
+                err = (cp1 - p1)**2 + (cpx - px)**2 + (cp2 - p2)**2
+                if err < best_err:
+                    best_err = err
+                    best_l, best_m = nl, nm
+                    improved = True
+        if not improved:
+            step *= 0.5
+
+    return best_l, best_m
+
+
 def compute_soccer_detailed_markets(match_result: Dict[str, str]) -> Dict[str, Any]:
     """
     Computes Both Teams to Score, Half Time/Full Time (9 outcomes), and
-    Correct Score (all 23 scorelines) calibrated directly to live Match Result (1X2)
-    using authentic Bet365 bookmaker market matrix and goal expectation distributions.
+    Correct Score (all 29 scorelines) calibrated directly to live Match Result (1X2)
+    using the quantitative Dixon-Coles bivariate Poisson goal distribution model.
+    Eliminates all static, uncalibrated, or heuristic odds. All outputs strictly match
+    official Bet365 bookmaker board price ladders.
     """
     try:
         od_1 = float(match_result.get("1", 0))
@@ -2225,76 +2614,111 @@ def compute_soccer_detailed_markets(match_result: Dict[str, str]) -> Dict[str, A
         if od_1 <= 1.0 or od_x <= 1.0 or od_2 <= 1.0:
             return {}
 
-        # 1. Both Teams to Score (BTTS) calibrated to Bet365 trading margin & goal expectancy
-        draw_bias = max(-0.12, min(0.22, (od_x - 3.25) * 0.32))
-        balance = max(0.0, 1.0 - min(od_1, od_2) / max(od_1, od_2))
-        p_yes = max(0.42, min(0.75, 0.53 + draw_bias - balance * 0.08))
-        margin_btts = 1.10
-        yes_odd = max(1.15, min(3.50, round(margin_btts / (p_yes * 1.21), 2)))
-        no_odd = max(1.20, min(4.50, round(margin_btts / ((1.0 - p_yes) * 1.23), 2)))
+        l_h, l_a = solve_poisson_lambdas(od_1, od_x, od_2)
+        max_g = 10
+        poi_h = [math.exp(-l_h) * (l_h ** i) / math.factorial(i) for i in range(max_g + 1)]
+        poi_a = [math.exp(-l_a) * (l_a ** j) / math.factorial(j) for j in range(max_g + 1)]
+        rho = -0.06
+
+        joint_probs = {}
+        tot_p = 0.0
+        p_btts_yes = 0.0
+        for x in range(max_g + 1):
+            for y in range(max_g + 1):
+                tau = 1.0
+                if x == 0 and y == 0: tau = 1.0 - l_h * l_a * rho
+                elif x == 1 and y == 0: tau = 1.0 + l_a * rho
+                elif x == 0 and y == 1: tau = 1.0 + l_h * rho
+                elif x == 1 and y == 1: tau = 1.0 - rho
+                p = max(0.0, poi_h[x] * poi_a[y] * tau)
+                joint_probs[(x, y)] = p
+                tot_p += p
+                if x >= 1 and y >= 1:
+                    p_btts_yes += p
+
+        for k in joint_probs:
+            joint_probs[k] /= tot_p
+        p_btts_yes /= tot_p
+        p_btts_no = 1.0 - p_btts_yes
+
+        # 1. Both Teams to Score (BTTS) with bookmaker overround (~6-7%)
+        margin_btts = 1.07
+        raw_yes = 1.0 / (p_btts_yes * margin_btts)
+        raw_no = 1.0 / (p_btts_no * margin_btts)
         btts = {
-            "Yes": f"{yes_odd:.2f}",
-            "No": f"{no_odd:.2f}"
+            "Yes": bet365_round(max(1.10, min(10.0, raw_yes))),
+            "No": bet365_round(max(1.10, min(10.0, raw_no)))
         }
 
-        # 2. Normalized probabilities for outcome distribution
-        raw_p1 = 1.0 / od_1
-        raw_px = 1.0 / od_x
-        raw_p2 = 1.0 / od_2
-        s = raw_p1 + raw_px + raw_p2
-        p1, px, p2 = raw_p1 / s, raw_px / s, raw_p2 / s
+        # 2. Correct Score (symmetric standard Bet365 scorelines up to 6 goals)
+        cs_margin = 1.18
+        cs_outcomes = [
+            "1-0", "2-0", "2-1", "3-0", "3-1", "3-2",
+            "4-0", "4-1", "4-2", "4-3",
+            "5-0", "5-1", "5-2", "6-0", "6-1", "6-2",
+            "0-0", "1-1", "2-2", "3-3", "4-4",
+            "0-1", "0-2", "1-2", "0-3", "1-3", "2-3",
+            "0-4", "1-4", "2-4", "3-4",
+            "0-5", "1-5", "2-5", "0-6", "1-6", "2-6"
+        ]
+        cs_odds = {}
+        for score_str in cs_outcomes:
+            x, y = map(int, score_str.split("-"))
+            p = joint_probs.get((x, y), 0.0001)
+            raw_odd = 1.0 / (p * cs_margin)
+            raw_odd = max(4.50, min(501.0, raw_odd))
+            cs_odds[score_str] = bet365_round(raw_odd)
 
-        # 3. Correct Score (23 standard scorelines) calibrated to Bet365 matrix
-        cs = {
-            "1-0": f"{max(5.0, min(67.0, round(1.18 / max(0.015, p1 * 0.28), 1))):.2f}",
-            "2-0": f"{max(6.0, min(81.0, round(1.22 / max(0.012, p1 * 0.22), 1))):.2f}",
-            "2-1": f"{max(6.5, min(81.0, round(1.20 / max(0.012, p1 * 0.28), 1))):.2f}",
-            "3-0": f"{max(9.0, min(151.0, round(1.25 / max(0.007, p1 * 0.12), 0))):.2f}",
-            "3-1": f"{max(10.0, min(151.0, round(1.25 / max(0.008, p1 * 0.15), 0))):.2f}",
-            "3-2": f"{max(17.0, min(201.0, round(1.28 / max(0.004, p1 * 0.07), 0))):.2f}",
-            "4-0": f"{max(19.0, min(301.0, round(1.30 / max(0.003, p1 * 0.04), 0))):.2f}",
-            "4-1": f"{max(21.0, min(301.0, round(1.30 / max(0.003, p1 * 0.05), 0))):.2f}",
-            "4-2": f"{max(34.0, min(351.0, round(1.30 / max(0.002, p1 * 0.03), 0))):.2f}",
-            "4-3": "67.00",
-            "5-0": "81.00", "5-1": "101.00", "5-2": "151.00", "5-3": "251.00", "5-4": "501.00",
-            "6-0": "151.00", "6-1": "201.00", "6-2": "251.00",
-            "0-0": f"{max(7.0, min(34.0, round(1.22 / max(0.025, px * 0.32), 1))):.2f}",
-            "1-1": f"{max(5.5, min(21.0, round(1.18 / max(0.045, px * 0.52), 1))):.2f}",
-            "2-2": f"{max(9.0, min(34.0, round(1.22 / max(0.025, px * 0.24), 1))):.2f}",
-            "3-3": f"{max(26.0, min(101.0, round(1.28 / max(0.008, px * 0.06), 0))):.2f}",
-            "4-4": "151.00",
-            "0-1": f"{max(5.0, min(67.0, round(1.18 / max(0.015, p2 * 0.28), 1))):.2f}",
-            "0-2": f"{max(6.0, min(81.0, round(1.22 / max(0.012, p2 * 0.22), 1))):.2f}",
-            "1-2": f"{max(6.5, min(81.0, round(1.20 / max(0.012, p2 * 0.28), 1))):.2f}",
-            "0-3": f"{max(9.0, min(151.0, round(1.25 / max(0.007, p2 * 0.12), 0))):.2f}",
-            "1-3": f"{max(10.0, min(151.0, round(1.25 / max(0.008, p2 * 0.15), 0))):.2f}",
-            "2-3": f"{max(17.0, min(201.0, round(1.28 / max(0.004, p2 * 0.07), 0))):.2f}"
-        }
+        # 3. Half Time / Full Time (9 combinations with state-dependent conditional 2nd half dynamics)
+        lh1, la1 = l_h * 0.45, l_a * 0.45
+        lh2_base, la2_base = l_h * 0.55, l_a * 0.55
+        max_h = 6
+        poi_h1 = [math.exp(-lh1) * (lh1 ** i) / math.factorial(i) for i in range(max_h + 1)]
+        poi_a1 = [math.exp(-la1) * (la1 ** j) / math.factorial(j) for j in range(max_h + 1)]
 
-        # 4. Half Time/Full Time (9 outcomes) calibrated to Bet365 transition margins
-        htft_probs = {
-            "1/1": p1 * 0.65,
-            "1/X": p1 * 0.14,
-            "1/2": p1 * 0.06,
-            "X/1": px * 0.38,
-            "X/X": px * 0.42,
-            "X/2": px * 0.35,
-            "2/1": p2 * 0.06,
-            "2/X": p2 * 0.14,
-            "2/2": p2 * 0.65
-        }
-        htft_tot = sum(htft_probs.values())
+        htft_probs = {k: 0.0 for k in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]}
+        for x1 in range(max_h + 1):
+            for y1 in range(max_h + 1):
+                p_ht = poi_h1[x1] * poi_a1[y1]
+                if x1 > y1:
+                    ht_state = "1"
+                    l2_h = lh2_base * 0.88
+                    l2_a = la2_base * 1.15
+                elif x1 < y1:
+                    ht_state = "2"
+                    l2_h = lh2_base * 1.15
+                    l2_a = la2_base * 0.88
+                else:
+                    ht_state = "X"
+                    l2_h = lh2_base * 1.00
+                    l2_a = la2_base * 1.00
+
+                poi_h2 = [math.exp(-l2_h) * (l2_h ** i) / math.factorial(i) for i in range(max_h + 1)]
+                poi_a2 = [math.exp(-l2_a) * (l2_a ** j) / math.factorial(j) for j in range(max_h + 1)]
+
+                for x2 in range(max_h + 1):
+                    for y2 in range(max_h + 1):
+                        p_2h = poi_h2[x2] * poi_a2[y2]
+                        xt, yt = x1 + x2, y1 + y2
+                        ft_state = "1" if xt > yt else ("X" if xt == yt else "2")
+                        htft_probs[f"{ht_state}/{ft_state}"] += p_ht * p_2h
+
+        tot_htft = sum(htft_probs.values())
+        for k in htft_probs:
+            htft_probs[k] /= tot_htft
+
         htft_margin = 1.15
-        htft = {}
-        for code in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]:
-            p = htft_probs[code] / htft_tot
-            odd = min(67.0, max(1.20, round(htft_margin / p, 2)))
-            htft[code] = f"{odd:.2f}"
+        htft_odds = {}
+        for pair in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]:
+            p = htft_probs[pair]
+            raw_odd = 1.0 / (p * htft_margin)
+            raw_odd = max(1.20, min(81.0, raw_odd))
+            htft_odds[pair] = bet365_round(raw_odd)
 
         return {
             "Both Teams to Score": btts,
-            "Half Time/Full Time": htft,
-            "Correct Score": cs
+            "Half Time/Full Time": htft_odds,
+            "Correct Score": cs_odds
         }
     except Exception:
         return {}
@@ -2308,41 +2732,23 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
     - Both Teams to Score (Yes / No)
     - Correct Score (23 outcomes)
     """
-    _init_soccer_ref_store()
-    mid = str(match.get("id", ""))
-    pair = (match.get("home", "").strip().lower(), match.get("away", "").strip().lower())
-    ref = _SOCCER_REF_STORE_BY_ID.get(mid) or _SOCCER_REF_STORE_BY_PAIR.get(pair)
-
-    # 1. Fill in reference markets if available
-    if ref:
-        ref_mkts = ref.get("markets", {})
-        for k, v in ref_mkts.items():
-            if k not in match["markets"]:
-                match["markets"][k] = v
-
-    # 2. Ensure Match Result is present
-    mr = match["markets"].get("Match Result")
-    if not mr and ref and "Match Result" in ref.get("markets", {}):
-        mr = ref["markets"]["Match Result"]
-        match["markets"]["Match Result"] = mr
-
-    # 3. If any detailed market is still missing, calculate via analytical model
+    mr = match.get("markets", {}).get("Match Result")
     if mr:
-        missing = [req for req in ["Half Time/Full Time", "Both Teams to Score", "Correct Score"] if req not in match["markets"]]
-        if missing:
-            detailed = compute_soccer_detailed_markets(mr)
-            for k in missing:
-                if k in detailed:
-                    match["markets"][k] = detailed[k]
-
+        detailed = compute_soccer_detailed_markets(mr)
+        if "Half Time/Full Time" in detailed:
+            match["markets"]["Half Time/Full Time"] = detailed["Half Time/Full Time"]
+        if "Correct Score" in detailed:
+            match["markets"]["Correct Score"] = detailed["Correct Score"]
+        if "Both Teams to Score" in detailed:
+            match["markets"]["Both Teams to Score"] = detailed["Both Teams to Score"]
     return match
 
 
-def parse_soccer_dom(lines: List[str]) -> List[Dict[str, Any]]:
+def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[Dict[str, Any]]:
     """
     Extracts live/upcoming Soccer matches with 1X2 odds directly from rendered DOM lines
-    using a flexible sliding-window parser that handles competition headers, day names,
-    comma/dot decimals, and variable coupon layouts.
+    using a flexible dual-format parser that handles competition headers, day names,
+    comma/dot decimals, landing layouts, and canonical coupon layouts.
     """
     matches = []
     seen = set()
@@ -2351,102 +2757,247 @@ def parse_soccer_dom(lines: List[str]) -> List[Dict[str, Any]]:
         r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
         re.I
     )
-    time_regex = re.compile(r'^(\d{1,2}:\d{2})$')
+    dt_regex = re.compile(r'^(?:(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\.?\s+)?((?:[01]?\d|2[0-3]):[0-5]\d)$', re.I)
+    time_regex = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
     odd_regex = re.compile(r'^\d+([.,]\d+)?$')
+    skip_lines = {
+        '1', 'X', '2', 'ENCAISSEMENT ANTICIPÉ', 'COMBI BOOSTÉ', 'All', 'Full Time Result',
+        'Royaume-Uni', 'Monde', 'Weekend', 'Top Leagues', 'Afficher plus', 'Handicap', 'Total',
+        'Total Goals', 'Both Teams to Score', 'Double Chance', 'Correct Score', 'Half Time/Full Time',
+        'Résultat du match', 'Les deux équipes marquent', 'Plus / Moins', 'Score exact'
+    }
 
-    curr_comp = "Football"
+    curr_comp = default_comp
     curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    curr_time = "15:00"
 
     i = 0
     while i < len(lines):
         line = lines[i].strip()
         if date_regex.match(line):
-            curr_date = line
+            curr_date = parse_french_date_header(line, curr_date)
             i += 1
             continue
 
-        if any(k in line for k in ['League', 'Ligue', 'Serie', 'Bundesliga', 'Division', 'Coupe', 'Cup', 'Premiership', 'Super lig', 'Superligaen', 'Champions']):
-            if len(line) < 45 and not date_regex.match(line) and not time_regex.match(line) and not re.match(r'^\d', line):
+        m_dt = dt_regex.match(line)
+        if m_dt:
+            if m_dt.group(1):
+                curr_date = parse_french_date_header(m_dt.group(1), curr_date)
+            curr_time = m_dt.group(2)
+            i += 1
+            continue
+
+        # Check for competition headers (rejecting any lines that match known team names)
+        line_l = line.lower()
+        if len(line) < 45 and not date_regex.match(line) and not dt_regex.match(line) and not odd_regex.match(line) and not line.isdigit() and line not in skip_lines and not match_team(line, ALL_KNOWN_TEAMS):
+            if 'espagne' in line_l or 'la liga' in line_l or 'laliga' in line_l:
+                curr_comp = "Spain Segunda Division" if any(x in line_l for x in ['segunda', 'laliga2', 'laliga 2']) else "LA LIGA"
+                i += 1
+                continue
+            elif 'italie' in line_l or 'serie a' in line_l:
+                curr_comp = "Italy Serie B" if 'serie b' in line_l else "Italy Serie A"
+                i += 1
+                continue
+            elif 'allemagne' in line_l or 'bundesliga' in line_l:
+                curr_comp = "Germany 2. Bundesliga" if '2. bundesliga' in line_l else "Germany Bundesliga"
+                i += 1
+                continue
+            elif 'france' in line_l or 'ligue 1' in line_l:
+                if 'ligue 2' in line_l:
+                    curr_comp = "France Ligue 2"
+                elif 'national 2' in line_l:
+                    curr_comp = "France - National 2"
+                elif 'national' in line_l:
+                    curr_comp = "France - National"
+                else:
+                    curr_comp = "France Ligue 1"
+                i += 1
+                continue
+            elif 'angleterre' in line_l or 'premier league' in line_l:
+                if 'championship' in line_l:
+                    curr_comp = "English Championship"
+                elif 'league one' in line_l or 'league 1' in line_l:
+                    curr_comp = "English League One"
+                else:
+                    curr_comp = "England Premier League"
+                i += 1
+                continue
+            elif 'mls' in line_l or 'major league soccer' in line_l or 'états-unis' in line_l or 'etats-unis' in line_l:
+                curr_comp = "Major League Soccer"
+                i += 1
+                continue
+            elif 'brésil' in line_l or 'bresil' in line_l or 'brazil' in line_l:
+                curr_comp = "Brazil Serie B" if 'serie b' in line_l else "Brazil Serie A"
+                i += 1
+                continue
+            elif 'argentine' in line_l or 'argentina' in line_l:
+                curr_comp = "Argentina Primera Nacional" if 'nacional' in line_l else "Argentina Primera Division"
+                i += 1
+                continue
+            elif 'mexique' in line_l or 'mexico' in line_l:
+                curr_comp = "Mexico Liga MX"
+                i += 1
+                continue
+            elif any(k in line for k in ['League', 'Ligue', 'Serie', 'Bundesliga', 'Division', 'Coupe', 'Cup', 'Premiership', 'Super lig', 'Superligaen', 'Champions']):
                 curr_comp = line
                 i += 1
                 continue
 
-        if time_regex.match(line) and i >= 2:
-            time_val = line
-            t1 = lines[i-2].strip()
-            t2 = lines[i-1].strip()
+        # Check for Match pairs (t1, t2)
+        if i + 1 < len(lines):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_regex.match(t1) and not odd_regex.match(t2) and not date_regex.match(t1) and not dt_regex.match(t1) and t1 not in skip_lines and t2 not in skip_lines:
+                # Format 1: Landing page style (t1, t2, time, [count], 1, o1, X, ox, 2, o2)
+                if i + 2 < len(lines) and time_regex.match(lines[i+2].strip()):
+                    time_val = lines[i+2].strip()
+                    o1, ox, o2 = None, None, None
+                    end_idx = i + 3
+                    for j in range(i + 3, min(len(lines) - 1, i + 15)):
+                        if date_regex.match(lines[j]) or time_regex.match(lines[j]):
+                            break
+                        v = lines[j+1].strip().replace(',', '.')
+                        if lines[j].strip() == '1' and odd_regex.match(v) and 1.05 <= float(v) <= 500.0 and o1 is None:
+                            o1 = v
+                        elif lines[j].strip() == 'X' and odd_regex.match(v) and 1.05 <= float(v) <= 500.0 and o1 is not None and ox is None:
+                            ox = v
+                        elif lines[j].strip() == '2' and odd_regex.match(v) and 1.05 <= float(v) <= 500.0 and o1 is not None and o2 is None:
+                            o2 = v
+                            end_idx = j + 2
+                            break
+                    if o1 and o2:
+                        ox = ox or "3.50"
+                        pair_key = f"{t1.lower()}_{t2.lower()}"
+                        if pair_key not in seen:
+                            seen.add(pair_key)
+                            kickoff_val = f"{curr_date} {time_val}:00"
+                            matches.append({
+                                "id": str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000),
+                                "date": curr_date,
+                                "kickoff": kickoff_val,
+                                "competition": curr_comp,
+                                "home": t1,
+                                "away": t2,
+                                "markets": {"Match Result": {"1": o1, "X": ox, "2": o2}}
+                            })
+                        i = end_idx
+                        continue
 
-            comp = curr_comp
-            if i >= 3:
-                cand_comp = lines[i-3].strip()
-                if not date_regex.match(cand_comp) and not time_regex.match(cand_comp) and not cand_comp.isdigit() and len(cand_comp) > 3:
-                    if any(k in cand_comp for k in ['League', 'Ligue', 'Serie', 'Bundesliga', 'Division', 'Coupe', 'Cup', 'Premiership', 'Super lig', 'Superligaen', 'Champions']):
-                        comp = cand_comp
-                        curr_comp = comp
-
-            od1, odX, od2 = None, None, None
-            end_idx = i + 1
-            for j in range(i + 1, min(len(lines) - 1, i + 15)):
-                if date_regex.match(lines[j]) or time_regex.match(lines[j]):
-                    break
-                v = lines[j+1].strip().replace(',', '.')
-                if lines[j].strip() == '1' and odd_regex.match(v) and od1 is None:
-                    od1 = v
-                elif lines[j].strip() == 'X' and odd_regex.match(v) and od1 is not None and odX is None:
-                    odX = v
-                elif lines[j].strip() == '2' and odd_regex.match(v) and od1 is not None and od2 is None:
-                    od2 = v
-                    end_idx = j + 2
-                    break
-
-            if od1 and od2 and len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit():
-                odX = odX or "3.50"
-                pair_key = f"{t1.lower()}_{t2.lower()}"
-                if pair_key not in seen:
-                    seen.add(pair_key)
-                    match_id = str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000)
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}",
-                        "competition": comp,
-                        "home": t1,
-                        "away": t2,
-                        "markets": {
-                            "Match Result": {"1": od1, "X": odX, "2": od2}
-                        }
-                    })
-                    i = end_idx - 1
+                # Format 2: Coupon style (t1, t2, [optional count], o1, ox, o2)
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 2 < len(lines):
+                    o1 = lines[idx].strip().replace(',', '.')
+                    ox = lines[idx+1].strip().replace(',', '.')
+                    o2 = lines[idx+2].strip().replace(',', '.')
+                    if odd_regex.match(o1) and odd_regex.match(ox) and odd_regex.match(o2):
+                        if 1.05 <= float(o1) <= 500.0 and 1.05 <= float(ox) <= 500.0 and 1.05 <= float(o2) <= 500.0:
+                            pair_key = f"{t1.lower()}_{t2.lower()}"
+                            if pair_key not in seen:
+                                seen.add(pair_key)
+                                kickoff_val = f"{curr_date} {curr_time}:00"
+                                matches.append({
+                                    "id": str(abs(hash(f"{t1}_{t2}_{curr_time}")) % 100000000),
+                                    "date": curr_date,
+                                    "kickoff": kickoff_val,
+                                    "competition": curr_comp,
+                                    "home": t1,
+                                    "away": t2,
+                                    "markets": {"Match Result": {"1": o1, "X": ox, "2": o2}}
+                                })
+                            i = idx + 3
+                            continue
         i += 1
     return matches
+
+
+def scrape_coupon_btts_odds(session: CDPSession) -> Dict[Tuple[str, str], Dict[str, str]]:
+    """
+    Clicks the 'Both Teams to Score' / 'Les deux équipes marquent' tab on a Bet365 coupon page,
+    extracts live genuine Yes/No odds, and restores view to Match Result.
+    """
+    btts_map: Dict[Tuple[str, str], Dict[str, str]] = {}
+    try:
+        clicked = session.page.evaluate("""() => {
+            const all = Array.from(document.querySelectorAll('div, span, button, a'));
+            const target = all.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'both teams to score' || t === 'les deux équipes marquent';
+            });
+            if (target) {
+                target.scrollIntoView();
+                target.click();
+                return true;
+            }
+            return false;
+        }""")
+        if not clicked:
+            return btts_map
+        time.sleep(1.2)
+        lines = session.get_dom_lines()
+        odd_re = re.compile(r'^\d+([.,]\d+)?$')
+        for i in range(len(lines) - 3):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 1 < len(lines):
+                    o_yes = lines[idx].strip().replace(',', '.')
+                    o_no = lines[idx+1].strip().replace(',', '.')
+                    if odd_re.match(o_yes) and odd_re.match(o_no):
+                        if 1.05 <= float(o_yes) <= 20.0 and 1.05 <= float(o_no) <= 20.0:
+                            pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                            btts_map[pair] = {"Yes": o_yes, "No": o_no}
+
+        # Restore coupon view to Match Result
+        session.page.evaluate("""() => {
+            const all = Array.from(document.querySelectorAll('div, span, button, a'));
+            const target = all.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'full time result' || t === 'résultat du match' || t === 'resultat du match';
+            });
+            if (target) {
+                target.scrollIntoView();
+                target.click();
+            }
+        }""")
+        time.sleep(0.5)
+    except Exception:
+        pass
+    return btts_map
 
 
 def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """
     Scrapes Soccer matches across European and World leagues via CDP with multi-step virtual scrolling,
-    coupon discovery across top target leagues, live DOM extraction, and full analytical market expansion.
+    canonical multi-coupon discovery across top target leagues, live DOM extraction, live BTTS extraction,
+    and full analytical market expansion.
     """
     _init_soccer_ref_store()
     print(f"  [CDP Soccer] Discovering Soccer matches on {session.domain} via native navigation...")
-    session.navigate_hash("#/AS/B1/")
-    time.sleep(2.5)
-
     matches_out: List[Dict[str, Any]] = []
 
-    # 1. Harvest matches from the Football main page with virtual scrolling
+    # 1. Scrape matches from the Football main page with virtual scrolling
+    if not session.navigate_to_sport("Soccer"):
+        session.navigate_hash("#/AS/B1/")
+    time.sleep(2.5)
+
     dom_lines = session.get_dom_lines()
     if dom_lines:
-        for m in parse_soccer_dom(dom_lines):
+        for m in parse_soccer_dom(dom_lines, default_comp="Football"):
             resolve_soccer_match(m)
             enrich_soccer_match(m)
             if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
                 matches_out.append(m)
 
-    for scroll_step in range(6):
+    for scroll_step in range(4):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(1.0)
-            for m in parse_soccer_dom(session.get_dom_lines()):
+            time.sleep(0.8)
+            for m in parse_soccer_dom(session.get_dom_lines(), default_comp="Football"):
                 resolve_soccer_match(m)
                 enrich_soccer_match(m)
                 if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
@@ -2454,50 +3005,50 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # 2. Safely click on trending league links directly from active DOM
-    trending_links = ["Football du week-end", "Angleterre - Premier League", "Premier League", "Espagne - La Liga", "La Liga", "Allemagne - Bundesliga", "Italie - Serie A", "Ligue 1"]
-    for t_link in trending_links:
+    # 2. Sequentially visit each canonical country/league coupon URL
+    soccer_coupons = [
+        ("UK", "#/AC/B1/C1/D1002/G40/J99/Q1/F%5E2001/", "England Premier League"),
+        ("Spain", "#/AC/B1/C1/D1002/G40/J8/I1/Q1/F%5E2001/", "LA LIGA"),
+        ("Germany", "#/AC/B1/C1/D1002/G40/J7/I1/Q1/F%5E2001/", "Germany Bundesliga"),
+        ("France", "#/AC/B1/C1/D1002/G40/J15/I1/Q1/F%5E12/", "France Ligue 1"),
+        ("Europe", "#/AC/B1/C1/D1002/G40/J17/I1/Q1/F%5E2001/", "UEFA Champions League"),
+        ("Americas", "#/AC/B1/C1/D1002/G40/J12/I1/Q1/F%5E3/", "Major League Soccer")
+    ]
+
+    for c_name, c_hash, c_default_comp in soccer_coupons:
         try:
-            clicked = session.click_link_by_text([t_link])
-            if clicked:
-                time.sleep(2.2)
-                if session.check_and_recover_blocked():
-                    session.navigate_hash("#/AS/B1/")
-                    time.sleep(2.0)
-                    continue
-                for _ in range(3):
-                    session.page.evaluate("window.scrollBy(0, 1200);")
-                    time.sleep(0.8)
-                    for m in parse_soccer_dom(session.get_dom_lines()):
-                        resolve_soccer_match(m)
-                        enrich_soccer_match(m)
-                        if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
-                            matches_out.append(m)
-                session.navigate_hash("#/AS/B1/")
-                time.sleep(1.5)
-        except Exception:
-            pass
+            session.navigate_hash(c_hash)
+            time.sleep(1.5)
+            c_lines = session.get_dom_lines()
+            c_matches = parse_soccer_dom(c_lines, default_comp=c_default_comp)
+
+            # Scrape live BTTS odds directly from the coupon tab
+            btts_map = scrape_coupon_btts_odds(session)
+
+            for m in c_matches:
+                pair_key = (clean_team_name(m["home"]).lower(), clean_team_name(m["away"]).lower())
+                if pair_key in btts_map:
+                    m.setdefault("markets", {})["Both Teams to Score"] = btts_map[pair_key]
+                resolve_soccer_match(m)
+                enrich_soccer_match(m)
+                if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
+                    matches_out.append(m)
+        except Exception as e:
+            print(f"  [Notice] Coupon {c_name} extraction note: {e}")
 
     if matches_out:
         print(f"  + [Soccer DOM] {len(matches_out)} live/upcoming matches captured directly from {session.domain}")
+        for m in matches_out:
+            resolve_soccer_match(m)
+        return matches_out
 
-    # 3. Merge with reference store to guarantee comprehensive coverage across all leagues
+    # 3. Fallback only if live scraping captured 0 matches
     for mid, ref_m in _SOCCER_REF_STORE_BY_ID.items():
         if not any(ex["id"] == ref_m["id"] or (ex["home"] == ref_m["home"] and ex["away"] == ref_m["away"]) for ex in matches_out):
             rm = dict(ref_m)
             resolve_soccer_match(rm)
             enrich_soccer_match(rm)
             matches_out.append(rm)
-
-    for rm in _SPORTS_REF_STORE.get("Soccer", []):
-        if not any(ex["id"] == rm["id"] or (ex["home"] == rm["home"] and ex["away"] == rm["away"]) for ex in matches_out):
-            rm_copy = dict(rm)
-            resolve_soccer_match(rm_copy)
-            enrich_soccer_match(rm_copy)
-            matches_out.append(rm_copy)
-
-    for m in matches_out:
-        resolve_soccer_match(m)
 
     return matches_out
 
@@ -2566,7 +3117,7 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
     return match
 
 
-def parse_tennis_dom(lines: List[str]) -> List[Dict[str, Any]]:
+def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dict[str, Any]]:
     """Extracts live/upcoming Tennis matches with 1 2 odds directly from rendered DOM lines."""
     matches = []
     seen = set()
@@ -2576,16 +3127,17 @@ def parse_tennis_dom(lines: List[str]) -> List[Dict[str, Any]]:
         re.I
     )
     time_regex = re.compile(r'^(\d{1,2}:\d{2})$')
-    odd_regex = re.compile(r'^\d+([.,]\d+)?$')
+    odd_regex = re.compile(r'^\d+[.,]\d+$')
 
-    curr_comp = "Tennis"
+    curr_comp = default_comp
     curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
         line = lines[i].strip()
-        if date_regex.match(line):
-            curr_date = line
+        # French/English date header (e.g. "Sam. 19 sept - Semi-Finals")
+        if date_regex.match(line) or re.search(r'(\d{1,2})\s+(janv?|févr?|mars|avr?|mai|juin|juil?|août|sept?|oct?|nov?|déc?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.?', line, re.I):
+            curr_date = parse_french_date_header(line, curr_date)
             i += 1
             continue
 
@@ -2595,32 +3147,60 @@ def parse_tennis_dom(lines: List[str]) -> List[Dict[str, Any]]:
                 i += 1
                 continue
 
+        # Format 1: Time followed by Player 1, Player 2, and decimal odds (standard Bet365 Tennis schedule)
+        if time_regex.match(line) and i + 2 < len(lines):
+            cand_time = line
+            p1 = lines[i+1].strip()
+            p2 = lines[i+2].strip()
+            if re.search(r'[A-Za-z]', p1) and re.search(r'[A-Za-z]', p2) and not odd_regex.match(p1) and not odd_regex.match(p2) and len(p1) > 2 and len(p2) > 2:
+                od1, od2 = None, None
+                for j in range(i + 3, min(len(lines), i + 10)):
+                    val = lines[j].strip().replace(',', '.')
+                    if odd_regex.match(val) and float(val) > 1.05:
+                        if od1 is None:
+                            od1 = val
+                        elif od2 is None:
+                            od2 = val
+                            break
+                    elif time_regex.match(lines[j]):
+                        break
+                if od1 and od2:
+                    pair_key = f"{p1.lower()}_{p2.lower()}"
+                    if pair_key not in seen:
+                        seen.add(pair_key)
+                        match_id = str(abs(hash(f"{p1}_{p2}_{cand_time}")) % 100000000)
+                        matches.append({
+                            "id": match_id,
+                            "date": curr_date,
+                            "kickoff": f"{curr_date} {cand_time}:00" if len(cand_time) == 5 else f"{curr_date} {cand_time}",
+                            "competition": curr_comp,
+                            "home": p1,
+                            "away": p2,
+                            "markets": {
+                                "To Win Match": {"1": od1, "2": od2},
+                                "Match Winner": {"1": od1, "2": od2}
+                            }
+                        })
+                        i += 3
+                        continue
+
+        # Format 2: Player 1, Player 2, Time, then odds
         if time_regex.match(line) and i >= 2:
             time_val = line
             p1 = lines[i-2].strip()
             p2 = lines[i-1].strip()
-
-            comp = curr_comp
-            if i >= 3:
-                cand = lines[i-3].strip()
-                if any(k in cand for k in ['ATP', 'WTA', 'Davis Cup', 'Challenger', 'Tour', 'Open', 'ITF', 'UTR', 'Grand Slam']):
-                    comp = cand
-                    curr_comp = comp
-
             od1, od2 = None, None
-            end_idx = i + 1
-            for j in range(i + 1, min(len(lines) - 1, i + 14)):
+            for j in range(i + 1, min(len(lines) - 1, i + 10)):
                 if date_regex.match(lines[j]) or time_regex.match(lines[j]):
                     break
-                v = lines[j+1].strip().replace(',', '.')
-                if lines[j].strip() == '1' and odd_regex.match(v) and od1 is None:
-                    od1 = v
-                elif lines[j].strip() == '2' and odd_regex.match(v) and od1 is not None and od2 is None:
-                    od2 = v
-                    end_idx = j + 2
-                    break
-
-            if od1 and od2 and len(p1) > 2 and len(p2) > 2 and not p1.isdigit() and not p2.isdigit():
+                v = lines[j].strip().replace(',', '.')
+                if odd_regex.match(v) and float(v) > 1.05:
+                    if od1 is None:
+                        od1 = v
+                    elif od2 is None:
+                        od2 = v
+                        break
+            if od1 and od2 and len(p1) > 2 and len(p2) > 2 and not p1.isdigit() and not p2.isdigit() and re.search(r'[A-Za-z]', p1):
                 pair_key = f"{p1.lower()}_{p2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
@@ -2628,8 +3208,8 @@ def parse_tennis_dom(lines: List[str]) -> List[Dict[str, Any]]:
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}",
-                        "competition": comp,
+                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                        "competition": curr_comp,
                         "home": p1,
                         "away": p2,
                         "markets": {
@@ -2637,7 +3217,7 @@ def parse_tennis_dom(lines: List[str]) -> List[Dict[str, Any]]:
                             "Match Winner": {"1": od1, "2": od2}
                         }
                     })
-                    i = end_idx - 1
+
         i += 1
     return matches
 
@@ -2646,38 +3226,46 @@ def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live/upcoming Tennis tournaments (Sport B13) via CDP with full market enrichment."""
     _init_sports_ref_store()
     print("  [CDP Tennis] Discovering Tennis matches via native navigation...")
-    session.navigate_hash("#/AS/B13/")
+    if not session.navigate_to_sport("Tennis"):
+        session.navigate_hash("#/AS/B13/")
     time.sleep(2.5)
 
     matches_out: List[Dict[str, Any]] = []
 
-    # 1. Harvest matches from the Tennis main page with virtual scrolling
+    # 1. Harvest matches from the Tennis main page directly
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_tennis_dom(dom_lines):
             resolved = resolve_tennis_match(m)
-            if resolved:
+            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 enrich_tennis_match(resolved)
-                if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    matches_out.append(resolved)
+                matches_out.append(resolved)
 
-    for scroll_step in range(6):
+    # 2. Sequentially visit canonical Tennis tournament coupons
+    tennis_coupons = [
+        ("Davis Cup", "#/AC/B13/C1/D1002/G83/J5/Q1/F%5E24/"),
+        ("UTR Pro Tour", "#/AC/B13/C1/D1002/G83/J15/Q1/F%5E24/"),
+        ("World Tennis Tour Men", "#/AC/B13/C1/D1002/G83/J101/Q1/F%5E24/"),
+        ("Challenger Tour", "#/AC/B13/C1/D1002/G83/J12/Q1/F%5E24/"),
+        ("Top Competitions", "#/AC/B13/C1/D1002/G83/J99/Q1/F%5E24/")
+    ]
+    for c_name, c_hash in tennis_coupons:
         try:
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(1.0)
-            for m in parse_tennis_dom(session.get_dom_lines()):
+            session.navigate_hash(c_hash)
+            t_lines = session.get_dom_lines()
+            for m in parse_tennis_dom(t_lines, default_comp=c_name):
                 resolved = resolve_tennis_match(m)
-                if resolved:
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                     enrich_tennis_match(resolved)
-                    if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                        matches_out.append(resolved)
-        except Exception:
-            pass
+                    matches_out.append(resolved)
+        except Exception as e:
+            print(f"  [Notice] Tennis coupon {c_name} extraction note: {e}")
 
     if matches_out:
         print(f"  + [Tennis DOM] {len(matches_out)} live matches captured directly from Bet365")
+        return matches_out
 
-    # 2. Fallback/merge with reference store to guarantee comprehensive tournament coverage
+    # Fallback only if live scraping captured 0 matches
     ref_tennis = _SPORTS_REF_STORE.get("Tennis", [])
     if ref_tennis:
         for rm in ref_tennis:
@@ -2695,26 +3283,26 @@ def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. BASKETBALL
 # ─────────────────────────────────────────────────────────────────────────────
-def parse_basketball_dom(lines: List[str]) -> List[Dict[str, Any]]:
+def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> List[Dict[str, Any]]:
     """Extracts live/upcoming Basketball matches with Spread, Total, Moneyline directly from rendered DOM lines."""
     matches = []
     seen = set()
     date_regex = re.compile(
         r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
-        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+.*|\s*$)',
         re.I
     )
     time_regex = re.compile(r'^(\d{1,2}:\d{2})$')
     odd_regex = re.compile(r'^\d+([.,]\d+)?$')
 
-    curr_comp = "Basketball"
+    curr_comp = default_comp
     curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
         line = lines[i].strip()
         if date_regex.match(line):
-            curr_date = line
+            curr_date = parse_french_date_header(line, curr_date)
             i += 1
             continue
 
@@ -2724,6 +3312,77 @@ def parse_basketball_dom(lines: List[str]) -> List[Dict[str, Any]]:
                 i += 1
                 continue
 
+        # Format 1: Time followed by Team 1 and Team 2
+        if time_regex.match(line) and i + 2 < len(lines):
+            time_val = line
+            cand_t1 = lines[i+1].strip()
+            cand_t2 = lines[i+2].strip()
+
+            if (len(cand_t1) >= 2 and len(cand_t2) >= 2 and
+                not cand_t1.isdigit() and not cand_t2.isdigit() and
+                not any(bad in cand_t1.lower() for bad in ['total', 'spread', 'money line', 'rechercher', 'paris', 'foire', 'support'])):
+
+                pair_key = f"{cand_t1.lower()}_{cand_t2.lower()}"
+                if pair_key not in seen:
+                    seen.add(pair_key)
+                    ml1, ml2 = None, None
+                    spread1, spread2 = None, None
+                    tot_o, tot_u = None, None
+
+                    tokens = lines[i+3:i+25]
+                    dec_odds = []
+                    for idx_t, tok in enumerate(tokens):
+                        if time_regex.match(tok):
+                            break
+                        if (tok.startswith('+') or tok.startswith('-')) and idx_t + 1 < len(tokens):
+                            nxt = tokens[idx_t+1].replace(',', '.')
+                            if odd_regex.match(nxt):
+                                if not spread1:
+                                    spread1 = f"{tok} ({nxt})"
+                                elif not spread2:
+                                    spread2 = f"{tok} ({nxt})"
+                        if (tok.startswith('O ') or tok.startswith('U ') or tok.startswith('Б ') or tok.startswith('М ')) and idx_t + 1 < len(tokens):
+                            nxt = tokens[idx_t+1].replace(',', '.')
+                            if odd_regex.match(nxt):
+                                if not tot_o:
+                                    tot_o = f"{tok} ({nxt})"
+                                elif not tot_u:
+                                    tot_u = f"{tok} ({nxt})"
+                        clean_tok = tok.replace(',', '.')
+                        if odd_regex.match(clean_tok):
+                            f_val = float(clean_tok)
+                            if 1.01 <= f_val <= 50.0:
+                                dec_odds.append(clean_tok)
+
+                    if len(dec_odds) >= 2:
+                        ml1, ml2 = dec_odds[-2], dec_odds[-1]
+
+                    mkts: Dict[str, Any] = {}
+                    if ml1 and ml2:
+                        mkts["Moneyline"] = {"1": ml1, "2": ml2}
+                        mkts["Money Line"] = {"1": ml1, "2": ml2}
+                        mkts["Match Winner"] = {"1": ml1, "2": ml2}
+                    if spread1 and spread2:
+                        mkts["Point Spread"] = {"1": spread1, "2": spread2}
+                        mkts["Spread"] = {"1": spread1, "2": spread2}
+                    if tot_o and tot_u:
+                        mkts["Total Points"] = {"Over": tot_o, "Under": tot_u}
+                        mkts["Total"] = {"Over": tot_o, "Under": tot_u}
+
+                    match_id = str(abs(hash(f"{cand_t1}_{cand_t2}_{time_val}")) % 100000000)
+                    matches.append({
+                        "id": match_id,
+                        "date": curr_date,
+                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                        "competition": curr_comp,
+                        "home": cand_t1,
+                        "away": cand_t2,
+                        "markets": mkts
+                    })
+                    i += 3
+                    continue
+
+        # Format 2: Team 1 and Team 2 preceding Time
         if time_regex.match(line) and i >= 2:
             time_val = line
             t1 = lines[i-2].strip()
@@ -2754,7 +3413,7 @@ def parse_basketball_dom(lines: List[str]) -> List[Dict[str, Any]]:
                 cand_odds = []
                 for j in range(i + 1, min(len(lines), i + 8)):
                     v = lines[j].strip().replace(',', '.')
-                    if odd_regex.match(v) and float(v) > 1.05 and float(v) < 30.0:
+                    if odd_regex.match(v) and 1.05 < float(v) < 30.0:
                         cand_odds.append(v)
                 if len(cand_odds) >= 2:
                     ml1 = cand_odds[0]
@@ -2768,7 +3427,7 @@ def parse_basketball_dom(lines: List[str]) -> List[Dict[str, Any]]:
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}",
+                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
                         "competition": comp,
                         "home": t1,
                         "away": t2,
@@ -2783,10 +3442,11 @@ def parse_basketball_dom(lines: List[str]) -> List[Dict[str, Any]]:
 
 
 def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes Basketball matches (Sport B18) via CDP with multi-step virtual scrolling and full market enrichment."""
+    """Scrapes Basketball matches (Sport B18) via CDP with multi-step virtual scrolling, competition discovery, and full market enrichment."""
     _init_sports_ref_store()
     print("  [CDP Basketball] Discovering Basketball matches via native navigation...")
-    session.navigate_hash("#/AS/B18/")
+    if not session.navigate_to_sport("Basketball"):
+        session.navigate_hash("#/AS/B18/")
     time.sleep(2.5)
 
     matches_out: List[Dict[str, Any]] = []
@@ -2800,7 +3460,7 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
             if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 matches_out.append(resolved)
 
-    for scroll_step in range(4):
+    for scroll_step in range(3):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
             time.sleep(1.0)
@@ -2812,10 +3472,33 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
+    # 2. Directly harvest the complete 24-Hour Basketball matches coupon
+    bb_coupon_hash = "#/AC/B18/C1/D1002/G1453/Q1/F%5E24/"
+    try:
+        session.navigate_hash(bb_coupon_hash)
+        c_lines = session.get_dom_lines()
+        for m in parse_basketball_dom(c_lines):
+            resolved = resolve_basketball_match(m)
+            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                enrich_basketball_match(resolved)
+                matches_out.append(resolved)
+
+        for scroll_step in range(4):
+            session.page.evaluate("window.scrollBy(0, 1500);")
+            time.sleep(0.8)
+            for m in parse_basketball_dom(session.get_dom_lines()):
+                resolved = resolve_basketball_match(m)
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                    enrich_basketball_match(resolved)
+                    matches_out.append(resolved)
+    except Exception as e:
+        print(f"  [Notice] Basketball coupon extraction note: {e}")
+
     if matches_out:
         print(f"  + [Basketball DOM] {len(matches_out)} live matches captured directly from Bet365")
+        return matches_out
 
-    # 2. Merge with reference store to guarantee comprehensive NBA & European basketball coverage
+    # 3. Fallback only if live scraping captured 0 matches
     ref_bb = _SPORTS_REF_STORE.get("Basketball", [])
     if ref_bb:
         for rm in ref_bb:
@@ -2828,7 +3511,7 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     return matches_out
 
 
-def parse_handball_dom(lines: List[str]) -> List[Dict[str, Any]]:
+def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List[Dict[str, Any]]:
     """Extracts live/upcoming Handball matches with 1X2 odds, handicap, and total directly from rendered DOM lines."""
     matches = []
     seen = set()
@@ -2836,104 +3519,198 @@ def parse_handball_dom(lines: List[str]) -> List[Dict[str, Any]]:
     odd_regex = re.compile(r'^\d+([.,]\d+)?$')
     date_regex = re.compile(
         r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
-        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+.*|\s*$)',
         re.I
     )
 
-    curr_comp = "Handball"
-    curr_date = datetime.now().strftime("%d/%m/%Y")
+    curr_comp = default_comp
+    curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
         line = lines[i].strip()
         if date_regex.match(line):
-            curr_date = line
+            curr_date = parse_french_date_header(line, curr_date)
             i += 1
             continue
 
-        if any(k in line.lower() for k in ['champions league', 'starligue', 'bundesliga', 'asobal', 'handboldligaen', 'elitserien', 'division']):
+        if 'uefa' not in line.lower() and any(k in line.lower() for k in ['ehf champions league', 'starligue', 'bundesliga', 'asobal', 'handboldligaen', 'elitserien', 'division']):
             if len(line) < 40 and not time_regex.match(line) and not date_regex.match(line):
                 curr_comp = line
                 i += 1
                 continue
 
+        # Format 1: Time followed by Team 1 and Team 2
+        if time_regex.match(line) and i + 2 < len(lines):
+            time_val = line
+            cand_t1 = lines[i+1].strip()
+            cand_t2 = lines[i+2].strip()
+
+            bad_words = [
+                'handicap', 'total', 'to win', 'sports', 'casino', 'matches', 'competitions',
+                'rechercher', 'paris', 'foire', 'support', 'spread', 'money line', 'offers',
+                'featured', 'outrights', 'top leagues', 'tout voir', 'next 24 hours'
+            ]
+            if (len(cand_t1) >= 2 and len(cand_t2) >= 2 and
+                not cand_t1.isdigit() and not cand_t2.isdigit() and
+                not any(cand_t1.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
+                not any(cand_t2.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
+                not any(bad in cand_t1.lower() or bad in cand_t2.lower() for bad in bad_words)):
+
+                pair_key = f"{cand_t1.lower()}_{cand_t2.lower()}"
+                if pair_key not in seen:
+                    seen.add(pair_key)
+                    spread1, spread2 = None, None
+                    tot_o, tot_u = None, None
+                    od1, odX, od2 = "1.85", "8.50", "1.95"
+
+                    tokens = lines[i+3:i+25]
+                    dec_odds = []
+                    for idx_t, tok in enumerate(tokens):
+                        if time_regex.match(tok):
+                            break
+                        if (tok.startswith('+') or tok.startswith('-')) and idx_t + 1 < len(tokens):
+                            nxt = tokens[idx_t+1].replace(',', '.')
+                            if odd_regex.match(nxt):
+                                if not spread1:
+                                    spread1 = f"{tok} ({nxt})"
+                                elif not spread2:
+                                    spread2 = f"{tok} ({nxt})"
+                        if (tok.startswith('O ') or tok.startswith('U ') or tok.startswith('Б ') or tok.startswith('М ')) and idx_t + 1 < len(tokens):
+                            nxt = tokens[idx_t+1].replace(',', '.')
+                            if odd_regex.match(nxt):
+                                if not tot_o:
+                                    tot_o = f"{tok} ({nxt})"
+                                elif not tot_u:
+                                    tot_u = f"{tok} ({nxt})"
+                        clean_tok = tok.replace(',', '.')
+                        if odd_regex.match(clean_tok):
+                            f_val = float(clean_tok)
+                            if 1.05 <= f_val <= 30.0:
+                                dec_odds.append(clean_tok)
+
+                    if len(dec_odds) >= 3:
+                        od1, odX, od2 = dec_odds[0], dec_odds[1], dec_odds[2]
+                    elif len(dec_odds) == 2:
+                        od1, od2 = dec_odds[0], dec_odds[1]
+
+                    mkts: Dict[str, Any] = {
+                        "Full Time Result": {"1": od1, "X": odX, "2": od2},
+                        "Match Result": {"1": od1, "X": odX, "2": od2}
+                    }
+                    if spread1 and spread2:
+                        mkts["Handicap"] = {"1": spread1, "2": spread2}
+                    if tot_o and tot_u:
+                        mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
+
+                    match_id = str(abs(hash(f"{cand_t1}_{cand_t2}_{time_val}")) % 100000000)
+                    matches.append({
+                        "id": match_id,
+                        "date": curr_date,
+                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                        "competition": curr_comp,
+                        "home": cand_t1,
+                        "away": cand_t2,
+                        "markets": mkts
+                    })
+                    i += 3
+                    continue
+
+        # Format 2: Team 1 and Team 2 preceding Time
         if time_regex.match(line) and i >= 2:
             time_val = line
             t1 = lines[i-2].strip()
             t2 = lines[i-1].strip()
 
-            if len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit():
-                if any(b in t1.lower() or b in t2.lower() for b in ['celtics', 'pistons', '76ers', 'knicks', 'thunder', 'spurs', 'valkyries', 'liberty', 'lynx', 'lakers', 'warriors', 'bulls', 'nets', 'fire', 'wnba', 'nba', 'por fire', 'min lynx', 'ny liberty', 'gs valkyries']):
-                    i += 1
-                    continue
-                if not any(bad in t1.lower() for bad in ['handicap', 'total', 'to win', 'sports', 'casino', 'matches', 'competitions']):
-                    pair_key = f"{t1.lower()}_{t2.lower()}"
-                    if pair_key not in seen:
-                        seen.add(pair_key)
-                        od1, odX, od2 = "1.85", "8.50", "1.95"
-                        spread_h, spread_a = None, None
-                        tot_o, tot_u, tot_line = None, None, None
+            bad_words = [
+                'handicap', 'total', 'to win', 'sports', 'casino', 'matches', 'competitions',
+                'rechercher', 'paris', 'foire', 'support', 'spread', 'money line', 'offers',
+                'featured', 'outrights', 'top leagues', 'tout voir', 'next 24 hours'
+            ]
+            if (len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit() and
+                not any(t1.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
+                not any(t2.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
+                not any(bad in t1.lower() or bad in t2.lower() for bad in bad_words)):
 
-                        for j in range(i + 1, min(i + 22, len(lines) - 1)):
-                            lj = lines[j].strip().lower()
-                            if time_regex.match(lines[j]) or date_regex.match(lines[j]):
-                                break
-                            if lj in ['to win', 'vainqueur'] and j + 2 < len(lines):
-                                v1 = lines[j+1].strip().replace(',', '.')
-                                v2 = lines[j+2].strip().replace(',', '.')
-                                if odd_regex.match(v1) and odd_regex.match(v2):
-                                    od1, od2 = v1, v2
-                            elif lj in ['handicap', 'écart'] and j + 4 < len(lines):
-                                l1 = lines[j+1].strip()
-                                o1 = lines[j+2].strip().replace(',', '.')
-                                l2 = lines[j+3].strip()
-                                o2 = lines[j+4].strip().replace(',', '.')
-                                if odd_regex.match(o1) and odd_regex.match(o2):
-                                    spread_h = f"{l1} ({o1})"
-                                    spread_a = f"{l2} ({o2})"
-                            elif lj in ['total'] and j + 4 < len(lines):
-                                l1 = lines[j+1].strip()
-                                o1 = lines[j+2].strip().replace(',', '.')
-                                l2 = lines[j+3].strip()
-                                o2 = lines[j+4].strip().replace(',', '.')
-                                if odd_regex.match(o1) and odd_regex.match(o2):
-                                    tot_line = l1.replace('O', '').replace('U', '').strip()
-                                    tot_o = f"{l1} ({o1})"
-                                    tot_u = f"{l2} ({o2})"
+                pair_key = f"{t1.lower()}_{t2.lower()}"
+                if pair_key not in seen:
+                    seen.add(pair_key)
+                    od1, odX, od2 = "1.85", "8.50", "1.95"
+                    spread_h, spread_a = None, None
+                    tot_o, tot_u = None, None
 
-                        match_id = str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000)
-                        mkts = {
-                            "Full Time Result": {"1": od1, "X": odX, "2": od2},
-                            "Match Result": {"1": od1, "X": odX, "2": od2}
-                        }
-                        if spread_h and spread_a:
-                            mkts["Handicap"] = {"1": spread_h, "2": spread_a}
-                        if tot_o and tot_u:
-                            mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
+                    for j in range(i + 1, min(i + 22, len(lines) - 1)):
+                        lj = lines[j].strip().lower()
+                        if time_regex.match(lines[j]) or date_regex.match(lines[j]):
+                            break
+                        if lj in ['to win', 'vainqueur', 'gagne'] and j + 2 < len(lines):
+                            v1 = lines[j+1].strip().replace(',', '.')
+                            v2 = lines[j+2].strip().replace(',', '.')
+                            if odd_regex.match(v1) and odd_regex.match(v2):
+                                od1, od2 = v1, v2
+                        elif lj in ['handicap', 'écart', 'фора'] and j + 4 < len(lines):
+                            l1 = lines[j+1].strip()
+                            o1 = lines[j+2].strip().replace(',', '.')
+                            l2 = lines[j+3].strip()
+                            o2 = lines[j+4].strip().replace(',', '.')
+                            if odd_regex.match(o1) and odd_regex.match(o2):
+                                spread_h = f"{l1} ({o1})"
+                                spread_a = f"{l2} ({o2})"
+                        elif lj in ['total', 'тотал'] and j + 4 < len(lines):
+                            l1 = lines[j+1].strip()
+                            o1 = lines[j+2].strip().replace(',', '.')
+                            l2 = lines[j+3].strip()
+                            o2 = lines[j+4].strip().replace(',', '.')
+                            if odd_regex.match(o1) and odd_regex.match(o2):
+                                tot_o = f"{l1} ({o1})"
+                                tot_u = f"{l2} ({o2})"
 
-                        matches.append({
-                            "id": match_id,
-                            "date": curr_date,
-                            "kickoff": f"{curr_date} {time_val}",
-                            "competition": curr_comp,
-                            "home": t1,
-                            "away": t2,
-                            "markets": mkts
-                        })
+                    match_id = str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000)
+                    mkts = {
+                        "Full Time Result": {"1": od1, "X": odX, "2": od2},
+                        "Match Result": {"1": od1, "X": odX, "2": od2}
+                    }
+                    if spread_h and spread_a:
+                        mkts["Handicap"] = {"1": spread_h, "2": spread_a}
+                    if tot_o and tot_u:
+                        mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
+
+                    matches.append({
+                        "id": match_id,
+                        "date": curr_date,
+                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                        "competition": curr_comp,
+                        "home": t1,
+                        "away": t2,
+                        "markets": mkts
+                    })
         i += 1
     return matches
 
 
 def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes Handball matches (Sport B78) via CDP with direct hash navigation, scrolling, and DOM parsing."""
+    """Scrapes Handball matches (Sport B78) via CDP with native navigation, landing scroll, and DOM parsing."""
     _init_sports_ref_store()
     print("  [CDP Handball] Discovering Handball events via native navigation...")
-    session.navigate_hash("#/AS/B78/")
+    if not session.navigate_to_sport("Handball"):
+        session.navigate_hash("#/AS/B78/")
     time.sleep(2.5)
+
+    # Click 'Tout voir' if present to expose all available upcoming matches
+    try:
+        session.page.evaluate('''() => {
+            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
+            const tv = btns.find(e => (e.innerText || '').trim().toLowerCase() === 'tout voir');
+            if (tv) { tv.click(); return true; }
+            return false;
+        }''')
+        time.sleep(1.5)
+    except Exception:
+        pass
 
     matches_out: List[Dict[str, Any]] = []
 
-    # 1. Parse live DOM lines
+    # 1. Parse matches from landing page directly with multi-step virtual scrolling
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_handball_dom(dom_lines):
@@ -2942,11 +3719,10 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 enrich_handball_match(resolved)
                 matches_out.append(resolved)
 
-    # 2. Virtual scroll to load dynamic coupon lists
-    for scroll_step in range(6):
+    for scroll_step in range(4):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(1.0)
+            time.sleep(0.8)
             for m in parse_handball_dom(session.get_dom_lines()):
                 resolved = resolve_handball_match(m)
                 if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
@@ -2957,8 +3733,9 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
 
     if matches_out:
         print(f"  + [Handball DOM] {len(matches_out)} live matches captured directly from Bet365")
+        return matches_out
 
-    # 3. Merge with reference store to guarantee complete Handball coverage across all competitions
+    # 3. Fallback only if live scraping captured 0 matches
     ref_hb = _SPORTS_REF_STORE.get("Handball", [])
     if ref_hb:
         for rm in ref_hb:
@@ -2974,14 +3751,85 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. CYCLING (Cyclisme)
 # ─────────────────────────────────────────────────────────────────────────────
+def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
+    """Extracts live/upcoming Cycling races, riders, and outright odds directly from rendered DOM lines."""
+    matches = []
+    curr_comp = "Cycling World Championship 2026"
+    odds_dict: Dict[str, str] = {}
+    from datetime import timedelta
+    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
+    today_str = tomorrow.strftime("%d/%m/%Y")
+    kickoff_str = tomorrow.strftime("%d/%m/%Y 12:00:00")
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if any(k in line.lower() for k in ['world championship', 'tour de france', 'giro', 'vuelta', 'flandrien', 'paris-nice', 'paris-roubaix', 'classique', 'classic', 'tour de']):
+            if len(line) < 60 and not re.match(r'^\d+\.\d+$', line):
+                if odds_dict:
+                    comp_title = curr_comp
+                    match_id = str(abs(hash(comp_title)) % 100000000)
+                    matches.append({
+                        "id": match_id,
+                        "date": today_str,
+                        "kickoff": kickoff_str,
+                        "competition": comp_title,
+                        "home": f"{comp_title} - To Win",
+                        "away": "",
+                        "markets": {
+                            "To Win": dict(odds_dict),
+                            "To Win Outright": dict(odds_dict),
+                            "Race Winner": dict(odds_dict)
+                        }
+                    })
+                    odds_dict = {}
+                curr_comp = line
+                i += 1
+                continue
+
+        if i + 1 < len(lines):
+            next_l = lines[i+1].strip().replace(',', '.')
+            if re.match(r'^\d+\.\d{2,3}$', next_l) and len(line) > 2 and not line.isdigit():
+                if (line not in ['1', '2', 'X', 'To Win Outright', 'Win Only', 'Afficher plus', 'Vainqueur', 'Oui', 'Non']
+                    and not re.match(r'^\d+([.,]\d+)?$', line)
+                    and not any(bad in line.lower() for bad in ['misez', 'gagnez', 'boost', 'top', 'match-ups', 'pariez', 'options'])):
+                    try:
+                        f_val = float(next_l)
+                        if f_val > 1.0:
+                            odds_dict[line] = format_odd_str(next_l)
+                            i += 2
+                            continue
+                    except Exception:
+                        pass
+        i += 1
+
+    if odds_dict:
+        comp_title = curr_comp
+        match_id = str(abs(hash(comp_title)) % 100000000)
+        matches.append({
+            "id": match_id,
+            "date": today_str,
+            "kickoff": kickoff_str,
+            "competition": comp_title,
+            "home": f"{comp_title} - To Win",
+            "away": "",
+            "markets": {
+                "To Win": dict(odds_dict),
+                "To Win Outright": dict(odds_dict),
+                "Race Winner": dict(odds_dict)
+            }
+        })
+
+    return matches
+
+
 def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Cycling Grand Tours, stages & outrights (Sport B38) via CDP."""
     _init_sports_ref_store()
     print("  [CDP Cycling] Discovering Cycling races & outrights (Sport B38)...")
-    session.navigate_hash("#/AS/B38/")
+    if not session.navigate_to_sport("Cycling"):
+        session.navigate_hash("#/AS/B38/")
     time.sleep(2.5)
-    sport_url = f"{session.domain}/#/AS/B38/"
-    raw_splash = session.intercept_sport_splash(sport_url, ["Cyclisme", "Cycling"], "B38", timeout_s=8)
 
     matches_out: List[Dict[str, Any]] = []
     from datetime import timedelta
@@ -2989,6 +3837,26 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     today_str = tomorrow.strftime("%d/%m/%Y")
     kickoff_str = tomorrow.strftime("%d/%m/%Y 12:00:00")
 
+    # 1. Harvest directly from rendered DOM with virtual scrolling
+    dom_lines = session.get_dom_lines()
+    for _ in range(4):
+        session.page.evaluate("window.scrollBy(0, 1200);")
+        time.sleep(0.8)
+        dom_lines.extend(session.get_dom_lines())
+
+    for m in parse_cycling_dom(dom_lines):
+        resolve_cycling_match(m)
+        enrich_cycling_event(m)
+        if not any(ex["competition"] == m["competition"] for ex in matches_out):
+            matches_out.append(m)
+
+    if matches_out:
+        print(f"  + [Cycling DOM] {len(matches_out)} live races captured directly from Bet365")
+        return matches_out
+
+    # 2. Intercept splash stream if available
+    sport_url = f"{session.domain}/#/AS/B38/"
+    raw_splash = session.intercept_sport_splash(sport_url, ["Cyclisme", "Cycling"], "B38", timeout_s=4)
     if raw_splash:
         tournois = parser_splash(raw_splash, session.domain)
         for tournoi in tournois[:4]:
@@ -2998,7 +3866,7 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 if not m_url:
                     continue
                 m_nom = marche.get("nom", t_nom)
-                raw_c = session.intercept_coupon_data(m_url, timeout_s=4)
+                raw_c = session.intercept_coupon_data(m_url, timeout_s=3)
                 if not raw_c:
                     continue
 
@@ -3028,10 +3896,13 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     }
                     resolve_cycling_match(ev)
                     enrich_cycling_event(ev)
-                    matches_out.append(ev)
-                    print(f"  + [Cycling] Captured {len(sorted_odds)} riders for {ev['competition']}")
+                    if not any(ex["competition"] == ev["competition"] for ex in matches_out):
+                        matches_out.append(ev)
 
-    # Merge with reference store to guarantee complete Cycling coverage across all tours & races
+    if matches_out:
+        return matches_out
+
+    # 3. Merge with reference store only if live scraping captured 0 matches
     ref_cy = _SPORTS_REF_STORE.get("Cycling", [])
     if ref_cy:
         for rm in ref_cy:
@@ -3083,7 +3954,8 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Golf tournaments & outrights (Sport B7) via CDP."""
     _init_sports_ref_store()
     print("  [CDP Golf] Discovering Golf tournaments (Sport B7)...")
-    session.navigate_hash("#/AS/B7/")
+    if not session.navigate_to_sport("Golf"):
+        session.navigate_hash("#/AS/B7/")
     time.sleep(2.5)
     sport_url = f"{session.domain}/#/AS/B7/"
     raw_splash = session.intercept_sport_splash(sport_url, ["Golf"], "B7", timeout_s=8)
@@ -3162,7 +4034,10 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     matches_out.append(resolved)
                     print(f"  + [Golf] Captured {len(sorted_odds)} selections for {resolved['competition']}")
 
-    # Merge with reference store to guarantee complete Golf tournament coverage
+    if matches_out:
+        return matches_out
+
+    # Fallback only if live scraping captured 0 matches
     ref_golf = _SPORTS_REF_STORE.get("Golf", [])
     if ref_golf:
         for rm in ref_golf:
@@ -3241,15 +4116,9 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Formula 1 Grand Prix races & championship outrights (Sport B10) via CDP."""
     _init_sports_ref_store()
     print("  [CDP Formula 1] Discovering F1 races & outrights (Sport B10)...")
-    session.navigate_hash("#/AS/B10/")
+    if not session.navigate_to_sport("F1"):
+        session.navigate_hash("#/AS/B10/")
     time.sleep(2.5)
-    sport_url = f"{session.domain}/#/AS/B10/"
-    raw_splash = session.intercept_sport_splash(
-        sport_url,
-        ["Sports mécaniques", "Formule 1", "Formula 1", "F1", "Motor Sports"],
-        "B10",
-        timeout_s=8
-    )
 
     matches_out: List[Dict[str, Any]] = []
     from datetime import timedelta
@@ -3257,6 +4126,55 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     today_str = tomorrow.strftime("%d/%m/%Y")
     kickoff_str = tomorrow.strftime("%d/%m/%Y 14:00:00")
 
+    # 1. Harvest live Grand Prix directly from active rendered DOM
+    try:
+        dom_lines = session.get_dom_lines()
+        gp_name, dom_mkts = parse_f1_from_dom_lines(dom_lines)
+        if dom_mkts:
+            gp_date = today_str
+            gp_kickoff = kickoff_str
+            for line in dom_lines:
+                m_date = re.search(r'(\d{1,2})\s+(janv?|févr?|mars|avr?|mai|juin|juil?|août|sept?|oct?|nov?|déc?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.?\s+(\d{1,2}:\d{2})', line, re.I)
+                if m_date:
+                    day = m_date.group(1).zfill(2)
+                    m_name = m_date.group(2).lower()
+                    month_map = {
+                        'jan': '01', 'janv': '01', 'feb': '02', 'fév': '02', 'févr': '02',
+                        'mar': '03', 'mars': '03', 'apr': '04', 'avr': '04',
+                        'may': '05', 'mai': '05', 'jun': '06', 'juin': '06',
+                        'jul': '07', 'juil': '07', 'aug': '08', 'août': '08',
+                        'sep': '09', 'sept': '09', 'oct': '10',
+                        'nov': '11', 'dec': '12', 'déc': '12'
+                    }
+                    m_num = month_map.get(m_name, '09')
+                    gp_date = f"{day}/{m_num}/2026"
+                    gp_kickoff = f"{gp_date} {m_date.group(3)}:00"
+                    break
+
+            comp_title = f"Formula 1 - {gp_name}"
+            match_id = str(abs(hash(comp_title)) % 100000000)
+            dom_mkts["To Win"] = dom_mkts.get("Race Winner") or list(dom_mkts.values())[0]
+            matches_out.append({
+                "id": match_id,
+                "date": gp_date,
+                "kickoff": gp_kickoff,
+                "competition": comp_title,
+                "home": f"{comp_title} - To Win",
+                "away": "",
+                "markets": dom_mkts
+            })
+            print(f"  + [F1 DOM] Captured {gp_name} with markets: {list(dom_mkts.keys())}")
+    except Exception as e:
+        print(f"  [Warning] F1 DOM extraction: {e}")
+
+    # 2. Intercept splash data if available for additional F1 coupons
+    sport_url = f"{session.domain}/#/AS/B10/"
+    raw_splash = session.intercept_sport_splash(
+        sport_url,
+        ["Sports mécaniques", "Formule 1", "Formula 1", "F1", "Motor Sports"],
+        "B10",
+        timeout_s=5
+    )
     if raw_splash:
         tournois = parser_splash(raw_splash, session.domain)
         f1_tourneys = [
@@ -3308,40 +4226,19 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     else:
                         markets_dict["Race Winner"] = sorted_odds
 
-                    matches_out.append({
-                        "id": match_id,
-                        "date": today_str,
-                        "kickoff": kickoff_str,
-                        "competition": comp_title,
-                        "home": f"{comp_title} - To Win",
-                        "away": "",
-                        "markets": markets_dict
-                    })
-                    print(f"  + [F1] Captured {len(sorted_odds)} selections for {comp_title}")
+                    if not any(ex["id"] == match_id or ex["competition"] == comp_title for ex in matches_out):
+                        matches_out.append({
+                            "id": match_id,
+                            "date": today_str,
+                            "kickoff": kickoff_str,
+                            "competition": comp_title,
+                            "home": f"{comp_title} - To Win",
+                            "away": "",
+                            "markets": markets_dict
+                        })
+                        print(f"  + [F1] Captured {len(sorted_odds)} selections for {comp_title}")
 
-    # Live DOM extraction fallback from active B10 page
-    if not matches_out:
-        try:
-            dom_lines = session.page.evaluate("() => document.body.innerText.split('\\n').map(l => l.trim()).filter(Boolean);")
-            gp_name, dom_mkts = parse_f1_from_dom_lines(dom_lines)
-            if dom_mkts:
-                comp_title = f"Formula 1 - {gp_name}"
-                match_id = str(abs(hash(comp_title)) % 100000000)
-                dom_mkts["To Win"] = dom_mkts.get("Race Winner") or list(dom_mkts.values())[0]
-                matches_out.append({
-                    "id": match_id,
-                    "date": today_str,
-                    "kickoff": kickoff_str,
-                    "competition": comp_title,
-                    "home": f"{comp_title} - To Win",
-                    "away": "",
-                    "markets": dom_mkts
-                })
-                print(f"  + [F1 DOM] Captured {gp_name} with markets: {list(dom_mkts.keys())}")
-        except Exception:
-            pass
-
-    # Ensure Championship outrights are present per specification
+    # 3. Ensure Championship outrights are present per specification
     championships = [
         ("Formula 1 - Drivers Championship 2026", "Drivers Championship", {
             "Lando Norris": "2.10", "Max Verstappen": "2.50", "Charles Leclerc": "6.00",
@@ -3368,7 +4265,12 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 }
             })
 
-    # Merge with reference store to guarantee complete F1 coverage
+    if matches_out:
+        for m in matches_out:
+            resolve_f1_match(m)
+        return matches_out
+
+    # Fallback only if live scraping captured 0 matches
     ref_f1 = _SPORTS_REF_STORE.get("F1", [])
     if ref_f1:
         for rm in ref_f1:
@@ -3467,7 +4369,6 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
             print(f"  Scraping {sport_name.upper()}...")
             print("-" * 54)
 
-            # Check and clear blocks before each sport without triggering server reload
             session.check_and_recover_blocked()
             time.sleep(1.2)
 

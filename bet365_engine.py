@@ -41,10 +41,53 @@ try:
         ensure_chrome_cdp,
         is_upcoming_pre_match,
         scrape_cdp_pipeline,
+        resolve_soccer_match,
+        enrich_soccer_match,
+        resolve_basketball_match,
+        enrich_basketball_match,
+        resolve_handball_match,
+        enrich_handball_match,
+        resolve_tennis_match,
+        enrich_tennis_match,
+        resolve_cycling_match,
+        enrich_cycling_event,
+        resolve_golf_match,
+        enrich_golf_tournament,
+        resolve_f1_match,
     )
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_internal: {exc}")
     sys.exit(1)
+
+
+def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any]]:
+    """Applies canonical competition resolution and market calibration per sport."""
+    if not m:
+        return None
+    m_copy = dict(m)
+    if sport == "Soccer":
+        m_copy = resolve_soccer_match(m_copy)
+        m_copy = enrich_soccer_match(m_copy)
+    elif sport == "Basketball":
+        m_copy = resolve_basketball_match(m_copy)
+        m_copy = enrich_basketball_match(m_copy)
+    elif sport == "Handball":
+        m_copy = resolve_handball_match(m_copy)
+        if m_copy:
+            m_copy = enrich_handball_match(m_copy)
+    elif sport == "Tennis":
+        m_copy = resolve_tennis_match(m_copy)
+        if m_copy:
+            m_copy = enrich_tennis_match(m_copy)
+    elif sport == "Cycling":
+        m_copy = resolve_cycling_match(m_copy)
+        m_copy = enrich_cycling_event(m_copy)
+    elif sport == "Golf":
+        m_copy = resolve_golf_match(m_copy)
+        m_copy = enrich_golf_tournament(m_copy)
+    elif sport == "F1":
+        m_copy = resolve_f1_match(m_copy)
+    return m_copy
 
 
 def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -69,7 +112,9 @@ def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[st
         for m in sport_group.get("matches", []):
             if m.get("id") and m.get("home") and m.get("markets"):
                 if is_upcoming_pre_match(m.get("date"), m.get("kickoff"), sp_name):
-                    valid_matches.append(m)
+                    processed = process_sport_match(m, sp_name)
+                    if processed:
+                        valid_matches.append(processed)
 
         if valid_matches:
             cleaned_results.append({
@@ -131,11 +176,19 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
         merged_results = []
         canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
 
+        import re
+        from datetime import timedelta
+
         for sp in canonical_order:
             live_matches = data_by_sport.get(sp, [])
             old_matches = existing_by_sport.get(sp, [])
 
-            combined = list(live_matches)
+            combined = []
+            for lm in live_matches:
+                proc = process_sport_match(lm, sp)
+                if proc:
+                    combined.append(proc)
+
             for om in old_matches:
                 om_id = om.get("id")
                 om_comp = om.get("competition")
@@ -143,7 +196,7 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                 om_away = om.get("away")
 
                 updated_live = False
-                for lm in live_matches:
+                for lm in combined:
                     if om_id and lm.get("id") == om_id:
                         updated_live = True
                         break
@@ -155,13 +208,23 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                         break
 
                 if not updated_live:
+                    _tpart = (om.get("kickoff") or "20:00:00").split()[-1]
+                    if not re.match(r"^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$", _tpart):
+                        _tpart = "20:00:00"
+                    elif len(_tpart.split(":")) == 2:
+                        _tpart = f"{_tpart}:00"
+
                     if not is_upcoming_pre_match(om.get("date"), om.get("kickoff"), sp):
-                        from datetime import timedelta
                         _tom = datetime.now() + timedelta(days=1)
-                        _tpart = (om.get("kickoff") or "20:00:00").split()[-1]
                         om["date"] = _tom.strftime("%d/%m/%Y")
                         om["kickoff"] = f"{om['date']} {_tpart}"
-                    combined.append(om)
+                    else:
+                        om_date = om.get("date") or datetime.now().strftime("%d/%m/%Y")
+                        om["kickoff"] = f"{om_date} {_tpart}"
+
+                    proc = process_sport_match(om, sp)
+                    if proc:
+                        combined.append(proc)
 
             if combined:
                 merged_results.append({
@@ -180,6 +243,7 @@ def main():
     parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf, F1)")
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list (e.g. Soccer,Golf,F1)")
     parser.add_argument("--port", type=int, default=CDP_PORT, help=f"Chrome CDP port (default: {CDP_PORT})")
+    parser.add_argument("--merge-seed", action="store_true", default=False, help="Merge with seed_matches.json fallback")
     args = parser.parse_args()
 
     target_sports = None
@@ -190,8 +254,19 @@ def main():
 
     data = scrape_all_sports(target_sports=target_sports)
 
-    # Safely merge with existing output file or seed database to preserve verified fixtures across all 7 sports
-    data = safe_merge_matches(data, out_path=args.out)
+    # Only merge with seed database if explicitly requested by user
+    if args.merge_seed:
+        print("  [*] Merging with seed database and existing output file...")
+        data = safe_merge_matches(data, out_path=args.out)
+    else:
+        print("  [*] Fresh scrape mode: saving exclusively fresh live-scraped matches directly from Bet365 (no cache).")
+
+    # Final filter: ensure strictly upcoming pre-match fixtures
+    for s in data:
+        s["matches"] = [
+            m for m in s["matches"]
+            if is_upcoming_pre_match(m.get("date"), m.get("kickoff"), s.get("sport", ""))
+        ]
 
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 
