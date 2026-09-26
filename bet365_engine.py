@@ -21,15 +21,15 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 if sys.platform == "win32":
     try:
         if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
         if hasattr(sys.stderr, "reconfigure"):
-            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
     except Exception:
         pass
 
@@ -54,6 +54,7 @@ try:
         resolve_golf_match,
         enrich_golf_tournament,
         resolve_f1_match,
+        validate_market,
     )
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_internal: {exc}")
@@ -61,7 +62,7 @@ except ImportError as exc:
 
 
 def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any]]:
-    """Applies canonical competition resolution and market calibration per sport."""
+    """Applies canonical competition resolution, market calibration, and structural validation."""
     if not m:
         return None
     m_copy = dict(m)
@@ -87,6 +88,23 @@ def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any
         m_copy = enrich_golf_tournament(m_copy)
     elif sport == "F1":
         m_copy = resolve_f1_match(m_copy)
+
+    if not m_copy:
+        return None
+
+    # Structural market validation gate
+    valid_markets = {}
+    for mkt_name, mkt_data in m_copy.get("markets", {}).items():
+        ok, why = validate_market(mkt_name, mkt_data)
+        if ok:
+            valid_markets[mkt_name] = mkt_data
+        else:
+            print(f"  [Validator Filter] {m_copy.get('home')} vs {m_copy.get('away')} :: {why}")
+
+    if not valid_markets:
+        return None
+
+    m_copy["markets"] = valid_markets
     return m_copy
 
 

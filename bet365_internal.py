@@ -21,6 +21,7 @@ Key Principles:
 - Output: Standard all_matches.json schema containing match odds and details odds.
 """
 
+import hashlib
 import json
 import math
 import os
@@ -35,12 +36,18 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    from zoneinfo import ZoneInfo
+    PARIS_TZ = ZoneInfo("Europe/Paris")
+except Exception:
+    PARIS_TZ = timezone(timedelta(hours=1))
+
 if sys.platform == "win32":
     try:
         if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
         if hasattr(sys.stderr, "reconfigure"):
-            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
     except Exception:
         pass
 
@@ -143,10 +150,13 @@ except Exception:
 # ─────────────────────────────────────────────────────────────────────────────
 def request_delay(base_s: float = DEFAULT_DELAY, jitter: float = DEFAULT_JITTER) -> None:
     """
-    Pacing delay between requests to prevent Bet365 rate limiting
-    and avoid 'Impossible to display this content' error screens.
+    Pacing delay between requests using randomized human-like timing distributions
+    (log-normal jitter + occasional realistic pause) to prevent robotic fingerprinting.
     """
-    sleep_time = max(1.2, base_s + random.uniform(-jitter, jitter))
+    factor = random.lognormvariate(0.0, 0.35)
+    sleep_time = max(1.5, base_s * factor)
+    if random.random() < 0.12:
+        sleep_time += random.uniform(1.8, 3.8)
     time.sleep(sleep_time)
 
 
@@ -183,8 +193,17 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
         "/usr/bin/chromium"
     ]
     chrome_bin = next((c for c in chrome_candidates if os.path.exists(c)), None)
+    proxy_server = os.environ.get("BET365_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+    if not proxy_server:
+        try:
+            if os.path.exists("config.json"):
+                with open("config.json", encoding="utf-8") as _cfg_f:
+                    proxy_server = json.load(_cfg_f).get("proxy")
+        except Exception:
+            pass
+
     if chrome_bin:
-        profile_dir = os.path.join(tempfile.gettempdir(), "bet365_cdp_profile")
+        profile_dir = os.path.join(os.path.expanduser("~"), ".bet365_chrome_profile")
         cmd = [
             chrome_bin,
             f"--remote-debugging-port={cdp_port}",
@@ -193,8 +212,13 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
             "--start-maximized",
             "--no-first-run",
             "--no-default-browser-check",
-            target_domain,
+            "--disable-blink-features=AutomationControlled",
+            "--lang=fr-FR,fr",
         ]
+        if proxy_server:
+            print(f"  [*] Using configured proxy server: {proxy_server}")
+            cmd.append(f"--proxy-server={proxy_server}")
+        cmd.append(target_domain)
         try:
             flags = 0x00000008 if sys.platform == "win32" else 0
             subprocess.Popen(cmd, creationflags=flags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -249,6 +273,126 @@ def format_odd_str(val: Any) -> str:
     except Exception:
         return str(val)
 
+def stable_id(*parts) -> str:
+    """Generate a deterministic, process-stable 8-digit match ID using MD5."""
+    clean = [str(p).strip().lower() for p in parts if str(p).strip()]
+    h = hashlib.md5("_".join(clean).encode("utf-8")).hexdigest()
+    return str(int(h, 16) % 100000000)
+
+
+def get_now_paris() -> datetime:
+    """Returns current datetime aligned with Bet365 European schedule (Europe/Paris)."""
+    return datetime.now(PARIS_TZ)
+
+
+MARKET_STRUCTURE = {
+    # market_key: (min_outcomes, max_outcomes, min_odds, max_odds)
+    "Match Result": (2, 3, 1.00, 501.0),
+    "Both Teams to Score": (2, 2, 1.01, 25.0),
+    "Goals Over/Under": (2, 2, 1.01, 25.0),
+    "Double Chance": (3, 3, 1.01, 20.0),
+    "Draw No Bet": (2, 2, 1.01, 25.0),
+    "Half Time/Full Time": (9, 9, 1.10, 501.0),
+    "Correct Score": (6, 60, 1.01, 501.0),
+    "Set Betting": (2, 4, 1.01, 50.0),
+    "First Set Winner": (2, 2, 1.01, 20.0),
+    "Total Games": (2, 2, 1.01, 25.0),
+    "Point Spread": (2, 2, 1.01, 25.0),
+    "Total Points": (2, 2, 1.01, 25.0),
+    "Moneyline": (2, 2, 1.00, 100.0),
+    "Money Line": (2, 2, 1.00, 100.0),
+    "To Win Match": (2, 2, 1.00, 100.0),
+    "Match Winner": (2, 2, 1.00, 100.0),
+    "Handicap / Spread": (2, 2, 1.01, 25.0),
+    "Handicap": (2, 2, 1.01, 25.0),
+    "Total Goals": (2, 2, 1.01, 25.0),
+    "Full Time Result": (2, 3, 1.00, 501.0),
+}
+
+
+def validate_market(name: str, outcomes: Dict[str, Any]) -> Tuple[bool, str]:
+    """
+    Validates structural integrity, outcome counts, and authentic odds ranges for a market.
+    Rejects corrupted, shifted, or mislabeled outcome sets.
+    """
+    if not isinstance(outcomes, dict):
+        return False, f"{name}: outcomes must be a dictionary"
+    spec = MARKET_STRUCTURE.get(name)
+    if not spec:
+        return True, ""
+    lo, hi, omin, omax = spec
+    vals = []
+    for k, v in outcomes.items():
+        if isinstance(v, dict):
+            val_cand = v.get("odds") or v.get("1") or v.get("2")
+        else:
+            val_cand = v
+        str_val = str(val_cand).strip()
+        # Extract numeric odds if formatted as line + odds e.g. "+1.5 (1.83)" or "Over 176.5 (1.83)"
+        m_paren = re.search(r'\(([\d.,]+)\)', str_val)
+        if m_paren:
+            clean_str = m_paren.group(1).replace(",", ".")
+        else:
+            # Strip leading O / U if present
+            clean_str = re.sub(r'^[OUou]\s+', '', str_val).replace(",", ".")
+        try:
+            f_val = float(clean_str)
+            vals.append(f_val)
+        except (ValueError, TypeError):
+            return False, f"{name}: invalid outcome price '{val_cand}'"
+
+    if not (lo <= len(vals) <= hi):
+        return False, f"{name}: {len(vals)} outcomes, expected {lo}-{hi}"
+
+    for v in vals:
+        if not (omin <= v <= omax):
+            return False, f"{name}: odd {v} outside realistic bounds [{omin}, {omax}]"
+
+    return True, ""
+
+
+def wait_for_view_change(session, timeout: float = 5.0, settle: float = 0.35) -> bool:
+    """Polls until coupon DOM signature changes and settles after a tab click."""
+    def get_sig():
+        lines = session.get_dom_lines()
+        return hashlib.md5("|".join(lines).encode("utf-8")).hexdigest()
+    try:
+        baseline = get_sig()
+        deadline = time.time() + timeout
+        last_change = 0.0
+        while time.time() < deadline:
+            time.sleep(0.1)
+            cur = get_sig()
+            if cur != baseline:
+                last_change = time.time()
+                baseline = cur
+            elif last_change and (time.time() - last_change >= settle):
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def active_subheader_text(session) -> str:
+    """Returns the text of the currently active subheader button or tab."""
+    try:
+        return session.page.evaluate("""() => {
+            const selectors = [
+                '.wcl-PageSubHeader_Button.wcl-PageSubHeader_Active',
+                '.wcl-PageSubHeader_Button[class*="Active"]',
+                '.gl-MarketGroupButton[class*="Active"]',
+                '[aria-selected="true"]',
+                '.selected'
+            ];
+            for (const s of selectors) {
+                const el = document.querySelector(s);
+                if (el && el.innerText) return el.innerText.trim().toLowerCase();
+            }
+            return '';
+        }""")
+    except Exception:
+        return ""
+
 
 def parse_bet365(raw: str) -> List[Dict[str, str]]:
     """Parse Bet365 delimited protocol: blocks separated by |, fields by ;."""
@@ -285,6 +429,18 @@ class CDPSession:
     def __init__(self, page, domain: str = "https://www.bet365.com"):
         self.page = page
         self._domain = domain
+        try:
+            self.page.evaluate("""() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                window.chrome = window.chrome || { runtime: {} };
+            }""")
+            if hasattr(self.page, "context") and hasattr(self.page.context, "add_init_script"):
+                self.page.context.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    window.chrome = window.chrome || { runtime: {} };
+                """)
+        except Exception:
+            pass
 
     @property
     def domain(self) -> str:
@@ -304,6 +460,9 @@ class CDPSession:
 
     def reset_to_home(self) -> None:
         """Clean navigation to root domain / #/HO/ to reset SPA router state and clear blocks."""
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return
         try:
             loc = self.page.locator('text=Tous les Sports').first
             if loc.count() > 0 and loc.is_visible():
@@ -318,11 +477,42 @@ class CDPSession:
         except Exception:
             pass
 
+    def is_geo_blocked(self) -> bool:
+        """Detect if current page is geo-restricted (e.g. Hungarian IP block 'Ez az oldal nem érhető el az Ön országából') or blocked by antivirus or 403 Forbidden."""
+        try:
+            body_text = (self.page.inner_text("body") or "").lower()
+            title_text = (self.page.title() or "").lower()
+            combined = f"{title_text} {body_text}"
+            geo_keywords = [
+                "nem érhető el az ön országából",
+                "ez az oldal nem érhető el",
+                "not available in your country",
+                "country restrictions",
+                "web protection by bitdefender",
+                "suspicious page blocked",
+                "access denied",
+                "error 1020",
+                "403 forbidden",
+                "403 - forbidden",
+                "forbidden"
+            ]
+            for kw in geo_keywords:
+                if kw in combined:
+                    return True
+        except Exception:
+            pass
+        return False
+
     def check_and_recover_blocked(self) -> bool:
         """Detect if real WAF / Cloudflare block screen or error screen is shown and recover."""
         try:
+            if self.is_geo_blocked():
+                if not getattr(self, "geo_blocked", False):
+                    print("  [Geo-Block Notice] Bet365 displays geo-restriction: 'Ez az oldal nem érhető el az Ön országából'.")
+                    self.geo_blocked = True
+                return True
+
             body_text = (self.page.inner_text("body") or "").lower()
-            # Real WAF / Cloudflare blocks replace the entire page with a minimal error screen
             if len(body_text) < 1500:
                 block_keywords = [
                     "access denied",
@@ -336,7 +526,7 @@ class CDPSession:
                     print("  [Anti-Detection] Real WAF Block detected on page. Resetting to home...")
                     self.reset_to_home()
                     return True
-            if "désolé, cette page n'est plus disponible" in body_text or "impossible d'afficher ce contenu" in body_text:
+            if not getattr(self, "geo_blocked", False) and ("désolé, cette page n'est plus disponible" in body_text or "impossible d'afficher ce contenu" in body_text):
                 print("  [Router Recovery] Bet365 'Désolé' or 'Impossible d'afficher' detected. Reloading page...")
                 try:
                     self.page.reload(wait_until="commit", timeout=12000)
@@ -350,6 +540,9 @@ class CDPSession:
 
     def navigate_to_sport(self, sport_name: str) -> bool:
         """Navigate to sport via direct hash route or sidebar click, ensuring clean SPA state."""
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return False
         self.check_and_recover_blocked()
         request_delay(base_s=1.0, jitter=0.2)
 
@@ -460,14 +653,21 @@ class CDPSession:
             target_hash = "#/" + target_url_or_hash.split("#/")[-1] if "#/" in target_url_or_hash else target_url_or_hash
         if not target_hash.startswith("#/"):
             target_hash = "#/" + target_hash.lstrip("#/")
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return
+
         try:
             full_url = f"{self.domain}/{target_hash}"
             self.page.goto(full_url, wait_until="commit", timeout=12000)
-            time.sleep(2.5)
+            time.sleep(1.5)
+            if self.is_geo_blocked():
+                self.geo_blocked = True
+                return
             lines = self.get_dom_lines()
-            if len(lines) < 130 or any("Impossible d'afficher" in l or "Désolé" in l for l in lines):
-                self.page.reload(wait_until="commit", timeout=15000)
-                time.sleep(2.5)
+            if any("Impossible d'afficher" in l or "Désolé" in l for l in lines):
+                self.page.reload(wait_until="commit", timeout=12000)
+                time.sleep(1.5)
         except Exception:
             try:
                 self.page.evaluate('''(h) => {
@@ -536,6 +736,9 @@ class CDPSession:
 
     def intercept_sport_splash(self, sport_url: str, sport_names: List[str], sport_code: str, timeout_s: int = 8) -> Optional[str]:
         """Navigate to sport splash and capture delimited data stream."""
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return None
         raw = [None]
         raw_secours = []
         ok = [False]
@@ -604,6 +807,9 @@ class CDPSession:
 
     def intercept_coupon_data(self, url: str, timeout_s: int = 4) -> Optional[str]:
         """Navigate to coupon URL and intercept data stream with clean listener handling."""
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return None
         self.check_and_recover_blocked()
         request_delay(base_s=DEFAULT_DELAY, jitter=DEFAULT_JITTER)
 
@@ -611,6 +817,8 @@ class CDPSession:
         ok = [False]
 
         def handler(response):
+            if ok[0] and raw[0]:
+                return
             if response.request.resource_type not in ("fetch", "xhr"):
                 return
             try:
@@ -774,16 +982,11 @@ def parser_page_universel(raw: str, nom_sport: str, nom_event_fallback: str = "C
 
             elif od:
                 hd_clean = b.get("HD", "").strip()
-                participant = hd_clean or na
+                participant = na or hd_clean
 
-                if not participant and current_team:
-                    participant = current_team
                 if not participant:
-                    participant = dict_participants.get(clean_id, "")
-                if not participant and row_index < len(row_headers):
-                    participant = row_headers[row_index]
-                if not participant:
-                    participant = "Inconnu"
+                    row_index += 1
+                    continue
 
                 participant = participant.replace(" - Oui", "").strip()
                 marche_final = current_mg
@@ -811,10 +1014,15 @@ def rows_to_matches(rows: List[Dict[str, Any]], sport_name: str, default_comp: s
     Converts extracted rows from parser_page_universel into structured match objects
     adhering to the all_matches.json schema (match odds and details markets).
     """
-    today_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
-    kickoff_str = datetime.now(timezone.utc).strftime("%d/%m/%Y 15:00:00")
+    today_str = get_now_paris().strftime("%d/%m/%Y")
+    kickoff_str = get_now_paris().strftime("%d/%m/%Y 15:00:00")
 
     matches_dict: Dict[str, Dict[str, Any]] = {}
+
+    tourney_skip_keywords = [
+        "challenger", "tour", "open", "cup", "outright", "markets",
+        "championship", "grand prix", "masters", "classic", "league", "serie", "division", "coupe"
+    ]
 
     for r in rows:
         tournoi = r.get("Tournoi", "").strip() or default_comp
@@ -833,9 +1041,14 @@ def rows_to_matches(rows: List[Dict[str, Any]], sport_name: str, default_comp: s
         match_title = ""
         sub_market = marche
 
-        if " v " in tournoi or " - " in tournoi or " / " in tournoi:
+        if " v " in tournoi:
             match_title = tournoi
-        elif " v " in marche or " - " in marche or " / " in marche:
+        elif " - " in tournoi and not any(k in tournoi.lower() for k in tourney_skip_keywords):
+            match_title = tournoi
+        elif " v " in marche:
+            match_title = marche
+            sub_market = "Match Result"
+        elif " - " in marche and not any(k in marche.lower() for k in tourney_skip_keywords):
             match_title = marche
             sub_market = "Match Result"
 
@@ -845,7 +1058,7 @@ def rows_to_matches(rows: List[Dict[str, Any]], sport_name: str, default_comp: s
             home = p_split[0].strip()
             away = p_split[1].strip()
 
-            match_id = str(abs(hash(f"{sport_name}_{match_title}")) % 100000000)
+            match_id = stable_id(sport_name, home, away)
 
             if match_id not in matches_dict:
                 matches_dict[match_id] = {
@@ -914,7 +1127,7 @@ def rows_to_matches(rows: List[Dict[str, Any]], sport_name: str, default_comp: s
         else:
             # Outright event (like Golf, Cycling, F1, or Outright tournament winners)
             comp_title = f"{default_comp} - {marche}" if marche != default_comp else default_comp
-            match_id = str(abs(hash(f"{sport_name}_{comp_title}")) % 100000000)
+            match_id = stable_id(sport_name, comp_title)
 
             if match_id not in matches_dict:
                 matches_dict[match_id] = {
@@ -995,7 +1208,7 @@ def unpack_game_lines(raw_dict: Dict[str, str], sport: str = "Basketball") -> Di
 
 def parse_french_date_header(line: str, default_date: Optional[str] = None) -> str:
     """Converts French/English day/date strings (e.g. 'Sam. 19 sept', 'Dim. 14:00', 'Demain', 'Aujourd\'hui') to DD/MM/YYYY."""
-    now = datetime.now()
+    now = get_now_paris()
     t = line.strip().lower()
     if 'demain' in t or 'tomorrow' in t:
         return (now + timedelta(days=1)).strftime("%d/%m/%Y")
@@ -1736,10 +1949,12 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
         m['competition'] = curr
         return m
 
-    if curr and curr not in ['Soccer', 'Football', 'France', 'New England']:
+    if curr and curr not in ['Soccer', 'Football', 'France']:
+        m['competition'] = curr
+    elif curr:
         m['competition'] = curr
     else:
-        m['competition'] = 'UEFA Champions League'
+        m['competition'] = 'Unknown Competition'
     return m
 
 
@@ -1964,149 +2179,95 @@ def resolve_f1_match(m: Dict[str, Any]) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────────
 # Soccer Deep Markets Engine (HT/FT, BTTS, Correct Score)
 # ─────────────────────────────────────────────────────────────────────────────
-_SPORTS_REF_STORE: Dict[str, List[Dict[str, Any]]] = {}
-_SOCCER_REF_STORE_BY_ID: Dict[str, Dict[str, Any]] = {}
-_SOCCER_REF_STORE_BY_PAIR: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
 
 def enrich_basketball_match(match: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Ensures Basketball match conforms strictly to BET365 DISPLAY SPECIFICATION:
-    - Point Spread (Handicap): 1 [ +/- line ] [ odds ] | 2 [ +/- line ] [ odds ]
-    - Total Points (Over/Under): Over [ line ] [ odds ] | Under [ line ] [ odds ]
-    - Moneyline (To Win Match): 1 [ odds ] | 2 [ odds ]
+    Normalizes and formats genuinely scraped Basketball market data.
+    DOES NOT fabricate or calculate any odds.
+    Only formats existing scraped values to canonical form.
     """
     mkts = match.setdefault("markets", {})
     gl = mkts.get("Game Lines", {})
 
-    # 1. Moneyline
+    # 1. Moneyline - normalize from various scraped keys
     ml = mkts.get("Moneyline") or mkts.get("Money Line") or gl.get("Money Line") or mkts.get("Match Winner") or mkts.get("Match Result")
-    od_1, od_2 = "1.85", "1.95"
-    if ml and isinstance(ml, dict):
-        od_1 = format_odd_str(ml.get("1", od_1))
-        od_2 = format_odd_str(ml.get("2", od_2))
-    elif any(k in mkts for k in ["1", "2"]):
-        od_1 = format_odd_str(mkts.get("1", od_1))
-        od_2 = format_odd_str(mkts.get("2", od_2))
+    if ml and isinstance(ml, dict) and ml.get("1") and ml.get("2"):
+        od_1 = format_odd_str(ml["1"])
+        od_2 = format_odd_str(ml["2"])
+        mkts["Moneyline"] = {"1": od_1, "2": od_2}
+        mkts["Money Line"] = {"1": od_1, "2": od_2}
 
-    mkts["Moneyline"] = {"1": od_1, "2": od_2}
-    mkts["Money Line"] = {"1": od_1, "2": od_2}
-
-    # 2. Point Spread
+    # 2. Point Spread - only format if genuinely scraped
     ps = mkts.get("Point Spread") or mkts.get("Spread") or gl.get("Spread")
     if ps and isinstance(ps, dict) and "1" in ps and "2" in ps:
         mkts["Point Spread"] = ps
         mkts["Spread"] = ps
-    else:
-        try:
-            f1, f2 = float(od_1), float(od_2)
-            if f1 < f2:
-                diff = max(1.5, min(14.5, round((f2 - f1) * 3.5 * 2) / 2))
-                spread = {
-                    "1": {"line": f"-{diff}", "odds": "1.90"},
-                    "2": {"line": f"+{diff}", "odds": "1.90"}
-                }
-            else:
-                diff = max(1.5, min(14.5, round((f1 - f2) * 3.5 * 2) / 2))
-                spread = {
-                    "1": {"line": f"+{diff}", "odds": "1.90"},
-                    "2": {"line": f"-{diff}", "odds": "1.90"}
-                }
-        except Exception:
-            spread = {
-                "1": {"line": "-4.5", "odds": "1.90"},
-                "2": {"line": "+4.5", "odds": "1.90"}
-            }
-        mkts["Point Spread"] = spread
-        mkts["Spread"] = spread
 
-    # 3. Total Points
+    # 3. Total Points - only format if genuinely scraped
     tp = mkts.get("Total Points") or mkts.get("Total") or gl.get("Total")
     if tp and isinstance(tp, dict) and any(k in tp for k in ["Over", "over", "Under", "under"]):
         mkts["Total Points"] = tp
         mkts["Total"] = tp
-    else:
-        total = {
-            "Over": {"line": "214.5", "odds": "1.90"},
-            "Under": {"line": "214.5", "odds": "1.90"}
-        }
-        mkts["Total Points"] = total
-        mkts["Total"] = total
 
-    mkts["Game Lines"] = {
-        "Spread": mkts["Point Spread"],
-        "Total": mkts["Total Points"],
-        "Money Line": mkts["Moneyline"]
-    }
+    # Build Game Lines only from genuinely scraped data
+    game_lines = {}
+    if "Point Spread" in mkts:
+        game_lines["Spread"] = mkts["Point Spread"]
+    if "Total Points" in mkts:
+        game_lines["Total"] = mkts["Total Points"]
+    if "Moneyline" in mkts:
+        game_lines["Money Line"] = mkts["Moneyline"]
+    if game_lines:
+        mkts["Game Lines"] = game_lines
     return match
 
 
 def enrich_handball_match(match: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Ensures Handball match conforms strictly to BET365 DISPLAY SPECIFICATION:
-    - Full Time Result (1X2): 1 [ odds ] | X [ odds ] | 2 [ odds ]
-    - Total Goals (Over/Under): Over [ line ] [ odds ] | Under [ line ] [ odds ]
-    - Handicap / Spread: 1 (+/-line) [ odds ] | 2 (+/-line) [ odds ]
+    Normalizes and formats genuinely scraped Handball market data.
+    DOES NOT fabricate or calculate any odds.
+    Only formats existing scraped values to canonical form.
     """
     mkts = match.setdefault("markets", {})
     gl = mkts.get("Game Lines", {})
 
-    # 1. Full Time Result (1X2)
+    # 1. Full Time Result (1X2) - normalize from various scraped keys
     ftr = mkts.get("Full Time Result") or mkts.get("Match Result") or gl.get("Money Line") or mkts.get("Money Line")
-    od_1, od_x, od_2 = "1.45", "8.50", "3.20"
     if ftr and isinstance(ftr, dict):
-        od_1 = format_odd_str(ftr.get("1", od_1))
-        od_2 = format_odd_str(ftr.get("2", od_2))
-        od_x = format_odd_str(ftr.get("X") or ftr.get("x") or od_x)
+        result = {}
+        if ftr.get("1"):
+            result["1"] = format_odd_str(ftr["1"])
+        if ftr.get("X") or ftr.get("x"):
+            result["X"] = format_odd_str(ftr.get("X") or ftr.get("x"))
+        if ftr.get("2"):
+            result["2"] = format_odd_str(ftr["2"])
+        if result:
+            mkts["Full Time Result"] = result
+            mkts["Match Result"] = result
 
-    mkts["Full Time Result"] = {"1": od_1, "X": od_x, "2": od_2}
-    mkts["Match Result"] = {"1": od_1, "X": od_x, "2": od_2}
-
-    # 2. Total Goals
+    # 2. Total Goals - only format if genuinely scraped
     tg = mkts.get("Total Goals") or mkts.get("Total") or gl.get("Total")
     if tg and isinstance(tg, dict) and any(k in tg for k in ["Over", "over", "Under", "under"]):
         mkts["Total Goals"] = tg
         mkts["Total"] = tg
-    else:
-        total = {
-            "Over": {"line": "56.5", "odds": "1.85"},
-            "Under": {"line": "56.5", "odds": "1.85"}
-        }
-        mkts["Total Goals"] = total
-        mkts["Total"] = total
 
-    # 3. Handicap / Spread
+    # 3. Handicap / Spread - only format if genuinely scraped
     hs = mkts.get("Handicap / Spread") or mkts.get("Spread") or mkts.get("Handicap") or gl.get("Spread")
     if hs and isinstance(hs, dict) and "1" in hs and "2" in hs:
         mkts["Handicap / Spread"] = hs
         mkts["Spread"] = hs
-    else:
-        try:
-            f1, f2 = float(od_1), float(od_2)
-            diff = 2.5 if abs(f1 - f2) < 2.0 else 4.5
-            if f1 < f2:
-                spread = {
-                    "1": {"line": f"-{diff}", "odds": "1.85"},
-                    "2": {"line": f"+{diff}", "odds": "1.85"}
-                }
-            else:
-                spread = {
-                    "1": {"line": f"+{diff}", "odds": "1.85"},
-                    "2": {"line": f"-{diff}", "odds": "1.85"}
-                }
-        except Exception:
-            spread = {
-                "1": {"line": "-2.5", "odds": "1.85"},
-                "2": {"line": "+2.5", "odds": "1.85"}
-            }
-        mkts["Handicap / Spread"] = spread
-        mkts["Spread"] = spread
 
-    mkts["Game Lines"] = {
-        "Spread": mkts["Handicap / Spread"],
-        "Total": mkts["Total Goals"],
-        "Money Line": mkts["Full Time Result"]
-    }
+    # Build Game Lines only from genuinely scraped data
+    game_lines = {}
+    if "Handicap / Spread" in mkts:
+        game_lines["Spread"] = mkts["Handicap / Spread"]
+    if "Total Goals" in mkts:
+        game_lines["Total"] = mkts["Total Goals"]
+    if "Full Time Result" in mkts:
+        game_lines["Money Line"] = mkts["Full Time Result"]
+    if game_lines:
+        mkts["Game Lines"] = game_lines
     return match
 
 
@@ -2144,603 +2305,422 @@ def enrich_golf_tournament(match: Dict[str, Any]) -> Dict[str, Any]:
     return match
 
 
-VERIFIED_FRANCE_LIGUE1_MATCHES = [
-    {
-        "id": "200116426",
-        "date": "27/09/2026",
-        "kickoff": "27/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Brest",
-        "away": "PSG",
-        "markets": {"Match Result": {"1": "11.00", "X": "7.00", "2": "1.22"}}
-    },
-    {
-        "id": "200549135",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Monaco",
-        "away": "Lens",
-        "markets": {"Match Result": {"1": "1.90", "X": "3.60", "2": "3.80"}}
-    },
-    {
-        "id": "200549138",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 16:15:00",
-        "competition": "France Ligue 1",
-        "home": "Paris FC",
-        "away": "Strasbourg",
-        "markets": {"Match Result": {"1": "2.60", "X": "3.30", "2": "2.70"}}
-    },
-    {
-        "id": "200549141",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Angers",
-        "away": "Troyes",
-        "markets": {"Match Result": {"1": "2.20", "X": "3.25", "2": "3.30"}}
-    },
-    {
-        "id": "200549144",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Le Mans",
-        "away": "Lorient",
-        "markets": {"Match Result": {"1": "2.40", "X": "3.20", "2": "3.00"}}
-    },
-    {
-        "id": "200549146",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Lyon",
-        "away": "Rennes",
-        "markets": {"Match Result": {"1": "2.05", "X": "3.60", "2": "3.40"}}
-    },
-    {
-        "id": "200549150",
-        "date": "19/09/2026",
-        "kickoff": "19/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Toulouse",
-        "away": "Le Havre",
-        "markets": {"Match Result": {"1": "1.95", "X": "3.40", "2": "3.90"}}
-    },
-    {
-        "id": "200549166",
-        "date": "20/09/2026",
-        "kickoff": "20/09/2026 14:00:00",
-        "competition": "France Ligue 1",
-        "home": "Auxerre",
-        "away": "Brest",
-        "markets": {"Match Result": {"1": "2.50", "X": "3.20", "2": "2.90"}}
-    },
-    {
-        "id": "200549168",
-        "date": "20/09/2026",
-        "kickoff": "20/09/2026 16:15:00",
-        "competition": "France Ligue 1",
-        "home": "Nice",
-        "away": "Lille",
-        "markets": {"Match Result": {"1": "2.45", "X": "3.25", "2": "2.90"}}
-    },
-    {
-        "id": "200549170",
-        "date": "20/09/2026",
-        "kickoff": "20/09/2026 19:45:00",
-        "competition": "France Ligue 1",
-        "home": "Marseille",
-        "away": "PSG",
-        "markets": {"Match Result": {"1": "3.60", "X": "3.80", "2": "1.95"}}
-    },
-]
 
+def scrape_coupon_secondary_markets(session: CDPSession) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """
+    Sequentially clicks through secondary market tabs on a Bet365 coupon page:
+    - Both Teams to Score (Les deux équipes marquent)
+    - Goals Over/Under (Plus / Moins de buts / Total de buts)
+    - Double Chance (Double chance)
+    - Draw No Bet (Remboursé si match nul)
+    - Half Time/Full Time (Mi-temps/Fin de match)
+    Extracts authentic Bet365 odds for all fixtures in the table, and restores the view to Match Result.
+    """
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return {}
 
-VERIFIED_GOLF_TOURNAMENTS = [
-    {
-        "id": "14018827",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 08:00:00",
-        "competition": "Sanford International - Outright Markets",
-        "home": "Sanford International - Outright Markets - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Zach Johnson": "3.25", "Retief Goosen": "10.00", "Miguel Angel Jimenez": "15.00", "Darren Fichardt": "17.00", "Henrik Stenson": "17.00", "Jerry Kelly": "17.00", "Freddie Jacobson": "19.00", "Jamie Donaldson": "19.00", "George McNeill": "21.00", "Michael Block": "21.00", "Soren Kjeldsen": "23.00", "Alex Cejka": "29.00"},
-            "To Win Outright": {"Zach Johnson": "3.25", "Retief Goosen": "10.00", "Miguel Angel Jimenez": "15.00", "Darren Fichardt": "17.00", "Henrik Stenson": "17.00", "Jerry Kelly": "17.00", "Freddie Jacobson": "19.00", "Jamie Donaldson": "19.00", "George McNeill": "21.00", "Michael Block": "21.00", "Soren Kjeldsen": "23.00", "Alex Cejka": "29.00"},
-        }
-    },
-    {
-        "id": "60593106",
-        "date": "18/09/2026",
-        "kickoff": "18/09/2026 08:00:00",
-        "competition": "Solheim Cup 2026 - To Win Outright",
-        "home": "Solheim Cup 2026 - To Win Outright - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"USA": "1.91", "Europe": "2.00", "Tie": "12.00"},
-            "To Win Outright": {"USA": "1.91", "Europe": "2.00", "Tie": "12.00"},
-        }
-    },
-    {
-        "id": "93880274",
-        "date": "24/09/2026",
-        "kickoff": "24/09/2026 08:00:00",
-        "competition": "Presidents Cup 2026 - To Win Outright",
-        "home": "Presidents Cup 2026 - To Win Outright - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"USA": "1.25", "Internationals": "4.50", "Tie": "15.00"},
-            "To Win Outright": {"USA": "1.25", "Internationals": "4.50", "Tie": "15.00"},
-        }
-    },
-    {
-        "id": "4254082",
-        "date": "08/04/2027",
-        "kickoff": "08/04/2027 08:00:00",
-        "competition": "2027 US Masters - Outright Markets",
-        "home": "2027 US Masters - Outright Markets - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Scottie Scheffler": "5.00", "Rory McIlroy": "7.50", "Jon Rahm": "15.00", "Bryson DeChambeau": "19.00", "Cameron Young": "19.00", "Xander Schauffele": "19.00", "Ludvig Aberg": "21.00", "Collin Morikawa": "23.00", "Matt Fitzpatrick": "26.00", "Tommy Fleetwood": "26.00", "Justin Rose": "29.00", "Brooks Koepka": "34.00"},
-            "To Win Outright": {"Scottie Scheffler": "5.00", "Rory McIlroy": "7.50", "Jon Rahm": "15.00", "Bryson DeChambeau": "19.00", "Cameron Young": "19.00", "Xander Schauffele": "19.00", "Ludvig Aberg": "21.00", "Collin Morikawa": "23.00", "Matt Fitzpatrick": "26.00", "Tommy Fleetwood": "26.00", "Justin Rose": "29.00", "Brooks Koepka": "34.00"},
-        }
-    },
-    {
-        "id": "17115195",
-        "date": "20/05/2027",
-        "kickoff": "20/05/2027 08:00:00",
-        "competition": "2027 PGA Championship - Outright Markets",
-        "home": "2027 PGA Championship - Outright Markets - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Scottie Scheffler": "5.50", "Rory McIlroy": "9.50", "Jon Rahm": "13.00", "Cameron Young": "15.00", "Xander Schauffele": "17.00", "Ludvig Aberg": "19.00", "Bryson DeChambeau": "26.00", "Matt Fitzpatrick": "31.00", "Tommy Fleetwood": "31.00", "Collin Morikawa": "34.00", "Justin Thomas": "34.00", "Sam Burns": "34.00"},
-            "To Win Outright": {"Scottie Scheffler": "5.50", "Rory McIlroy": "9.50", "Jon Rahm": "13.00", "Cameron Young": "15.00", "Xander Schauffele": "17.00", "Ludvig Aberg": "19.00", "Bryson DeChambeau": "26.00", "Matt Fitzpatrick": "31.00", "Tommy Fleetwood": "31.00", "Collin Morikawa": "34.00", "Justin Thomas": "34.00", "Sam Burns": "34.00"},
-        }
-    },
-    {
-        "id": "81782283",
-        "date": "17/06/2027",
-        "kickoff": "17/06/2027 08:00:00",
-        "competition": "2027 US Open - Outright Markets",
-        "home": "2027 US Open - Outright Markets - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Scottie Scheffler": "5.50", "Rory McIlroy": "9.00", "Jon Rahm": "15.00", "Xander Schauffele": "19.00", "Ludvig Aberg": "21.00", "Matt Fitzpatrick": "23.00", "Tommy Fleetwood": "23.00", "Cameron Young": "26.00", "Bryson DeChambeau": "29.00", "Wyndham Clark": "29.00", "Sam Burns": "31.00", "Tyrrell Hatton": "34.00"},
-            "To Win Outright": {"Scottie Scheffler": "5.50", "Rory McIlroy": "9.00", "Jon Rahm": "15.00", "Xander Schauffele": "19.00", "Ludvig Aberg": "21.00", "Matt Fitzpatrick": "23.00", "Tommy Fleetwood": "23.00", "Cameron Young": "26.00", "Bryson DeChambeau": "29.00", "Wyndham Clark": "29.00", "Sam Burns": "31.00", "Tyrrell Hatton": "34.00"},
-        }
-    },
-    {
-        "id": "60351262",
-        "date": "15/07/2027",
-        "kickoff": "15/07/2027 08:00:00",
-        "competition": "2027 Open Championship - Outright Markets",
-        "home": "2027 Open Championship - Outright Markets - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Scottie Scheffler": "6.50", "Rory McIlroy": "10.00", "Jon Rahm": "19.00", "Tommy Fleetwood": "21.00", "Cameron Young": "26.00", "Ludvig Aberg": "26.00", "Matt Fitzpatrick": "26.00", "Xander Schauffele": "26.00", "Tyrrell Hatton": "29.00", "Bryson DeChambeau": "34.00", "Collin Morikawa": "34.00", "Robert MacIntyre": "34.00"},
-            "To Win Outright": {"Scottie Scheffler": "6.50", "Rory McIlroy": "10.00", "Jon Rahm": "19.00", "Tommy Fleetwood": "21.00", "Cameron Young": "26.00", "Ludvig Aberg": "26.00", "Matt Fitzpatrick": "26.00", "Xander Schauffele": "26.00", "Tyrrell Hatton": "29.00", "Bryson DeChambeau": "34.00", "Collin Morikawa": "34.00", "Robert MacIntyre": "34.00"},
-        }
-    },
-    {
-        "id": "69812355",
-        "date": "24/09/2027",
-        "kickoff": "24/09/2027 08:00:00",
-        "competition": "Ryder Cup 2027 - To Win Outright",
-        "home": "Ryder Cup 2027 - To Win Outright - To Win",
-        "away": "",
-        "markets": {
-            "To Win": {"Europe": "1.727", "USA": "2.375", "Tie": "12.00"},
-            "To Win Outright": {"Europe": "1.727", "USA": "2.375", "Tie": "12.00"},
-        }
-    },
-]
+    merged_markets: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    odd_re = re.compile(r'^\d+([.,]\d+)?$')
 
+    market_tabs = [
+        ("Both Teams to Score", ["both teams to score", "les deux équipes marquent", "les 2 équipes marquent"], "btts"),
+        ("Goals Over/Under", ["plus / moins de buts", "total de buts", "goals over/under", "plus/moins de buts"], "ou"),
+        ("Double Chance", ["double chance"], "dc"),
+        ("Draw No Bet", ["remboursé si match nul", "draw no bet", "mise remboursée si match nul"], "dnb"),
+        ("Half Time/Full Time", ["mi-temps/fin de match", "half time/full time"], "htft")
+    ]
 
-def _init_sports_ref_store() -> None:
-    global _SPORTS_REF_STORE, _SOCCER_REF_STORE_BY_ID, _SOCCER_REF_STORE_BY_PAIR
-    if _SPORTS_REF_STORE:
-        return
+    for mkt_name, tab_terms, mkt_type in market_tabs:
+        try:
+            clicked = session.page.evaluate("""(terms) => {
+                const els = Array.from(document.querySelectorAll('div, span, button, a, .wcl-PageSubHeader_Button, .gl-MarketGroupButton'));
+                const target = els.find(e => {
+                    const t = (e.innerText || '').trim().toLowerCase();
+                    return terms.some(term => t === term || (term.length > 5 && t.includes(term)));
+                });
+                if (target) {
+                    target.scrollIntoView({ block: 'center' });
+                    target.click();
+                    return true;
+                }
+                return false;
+            }""", tab_terms)
 
-    # Seed reference store directly from active repository fixtures
-    try:
-        cur_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), "all_matches.json")
-        seed_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed_matches.json")
-        head_data: List[Dict[str, Any]] = []
-        # 1. Load seed fixtures
-        if os.path.exists(seed_json):
-            try:
-                with open(seed_json, "r", encoding="utf-8") as f:
-                    seed_content = json.load(f)
-                    if isinstance(seed_content, list):
-                        head_data.extend(seed_content)
-            except Exception:
-                pass
+            if not clicked:
+                continue
 
-        # 2. Supplement with any additional fixtures from all_matches.json
-        if os.path.exists(cur_json):
-            try:
-                with open(cur_json, "r", encoding="utf-8") as f:
-                    cur_content = json.load(f)
-                    if isinstance(cur_content, list):
-                        for cs in cur_content:
-                            csp = cs.get("sport")
-                            existing_s = next((s for s in head_data if s.get("sport") == csp), None)
-                            if not existing_s:
-                                head_data.append(cs)
+            # Wait for coupon DOM to change and stabilize
+            changed = wait_for_view_change(session, timeout=5.0, settle=0.35)
+            if not changed:
+                print(f"  [Skip] {mkt_name}: DOM did not change within timeout, skipping to prevent reading stale market.")
+                continue
+
+            # Confirm intended tab is actually active to prevent reading previous market
+            active_tab = active_subheader_text(session)
+            if not active_tab:
+                print(f"  [Warning] {mkt_name}: could not detect active subheader class on page")
+            elif not any(term in active_tab for term in tab_terms):
+                print(f"  [Skip] {mkt_name}: active tab '{active_tab}' does not match target, skipping.")
+                continue
+
+            lines = session.get_dom_lines()
+
+            if mkt_type == "btts":
+                for i in range(len(lines) - 3):
+                    t1 = lines[i].strip()
+                    t2 = lines[i+1].strip()
+                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                        idx = i + 2
+                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                            idx += 1
+                        if idx + 1 < len(lines):
+                            o_yes = lines[idx].strip().replace(',', '.')
+                            o_no = lines[idx+1].strip().replace(',', '.')
+                            if odd_re.match(o_yes) and odd_re.match(o_no):
+                                cand_mkt = {"Yes": o_yes, "No": o_no}
+                                ok, why = validate_market("Both Teams to Score", cand_mkt)
+                                if ok:
+                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                                    merged_markets.setdefault(pair, {})["Both Teams to Score"] = cand_mkt
+                                else:
+                                    print(f"  [Reject] Both Teams to Score: {why}")
+
+            elif mkt_type == "ou":
+                for i in range(len(lines) - 3):
+                    t1 = lines[i].strip()
+                    t2 = lines[i+1].strip()
+                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                        idx = i + 2
+                        line_val = "2.5"
+                        if idx < len(lines) and any(l_cand in lines[idx] for l_cand in ["1.5", "2.5", "3.5"]):
+                            line_val = lines[idx].strip()
+                            idx += 1
+                        elif idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                            idx += 1
+                        if idx + 1 < len(lines):
+                            o_over = lines[idx].strip().replace(',', '.')
+                            o_under = lines[idx+1].strip().replace(',', '.')
+                            if odd_re.match(o_over) and odd_re.match(o_under):
+                                cand_mkt = {
+                                    "Over": {"line": line_val, "odds": o_over},
+                                    "Under": {"line": line_val, "odds": o_under}
+                                }
+                                ok, why = validate_market("Goals Over/Under", cand_mkt)
+                                if ok:
+                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                                    merged_markets.setdefault(pair, {})["Goals Over/Under"] = cand_mkt
+                                else:
+                                    print(f"  [Reject] Goals Over/Under: {why}")
+
+            elif mkt_type == "dc":
+                for i in range(len(lines) - 4):
+                    t1 = lines[i].strip()
+                    t2 = lines[i+1].strip()
+                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                        idx = i + 2
+                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                            idx += 1
+                        if idx + 2 < len(lines):
+                            o_1x = lines[idx].strip().replace(',', '.')
+                            o_12 = lines[idx+1].strip().replace(',', '.')
+                            o_x2 = lines[idx+2].strip().replace(',', '.')
+                            if odd_re.match(o_1x) and odd_re.match(o_12) and odd_re.match(o_x2):
+                                cand_mkt = {"1X": o_1x, "12": o_12, "X2": o_x2}
+                                ok, why = validate_market("Double Chance", cand_mkt)
+                                if ok:
+                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                                    merged_markets.setdefault(pair, {})["Double Chance"] = cand_mkt
+                                else:
+                                    print(f"  [Reject] Double Chance: {why}")
+
+            elif mkt_type == "dnb":
+                for i in range(len(lines) - 3):
+                    t1 = lines[i].strip()
+                    t2 = lines[i+1].strip()
+                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                        idx = i + 2
+                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                            idx += 1
+                        if idx + 1 < len(lines):
+                            o_1 = lines[idx].strip().replace(',', '.')
+                            o_2 = lines[idx+1].strip().replace(',', '.')
+                            if odd_re.match(o_1) and odd_re.match(o_2):
+                                cand_mkt = {"1": o_1, "2": o_2}
+                                ok, why = validate_market("Draw No Bet", cand_mkt)
+                                if ok:
+                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                                    merged_markets.setdefault(pair, {})["Draw No Bet"] = cand_mkt
+                                else:
+                                    print(f"  [Reject] Draw No Bet: {why}")
+
+            elif mkt_type == "htft":
+                for i in range(len(lines) - 10):
+                    t1 = lines[i].strip()
+                    t2 = lines[i+1].strip()
+                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                        idx = i + 2
+                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                            idx += 1
+                        cand_odds = []
+                        for k in range(idx, min(idx + 12, len(lines))):
+                            val = lines[k].strip().replace(',', '.')
+                            if odd_re.match(val) and 1.10 <= float(val) <= 150.0:
+                                cand_odds.append(val)
                             else:
-                                for cm in cs.get("matches", []):
-                                    if not any(ex.get("id") == cm.get("id") for ex in existing_s.get("matches", [])):
-                                        existing_s.setdefault("matches", []).append(cm)
-            except Exception:
-                pass
+                                break
+                        if len(cand_odds) == 9:
+                            htft_labels = ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]
+                            cand_mkt = {
+                                htft_labels[m]: cand_odds[m] for m in range(9)
+                            }
+                            ok, why = validate_market("Half Time/Full Time", cand_mkt)
+                            if ok:
+                                pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                                merged_markets.setdefault(pair, {})["Half Time/Full Time"] = cand_mkt
+                            else:
+                                print(f"  [Reject] Half Time/Full Time: {why}")
+        except Exception:
+            pass
 
-        for s in head_data:
-            sp = s.get("sport", "")
-            matches = s.get("matches", [])
-            target = None
-            if sp in ("Soccer", "EPL", "Football"):
-                target = "Soccer"
-                for m in matches:
-                    resolve_soccer_match(m)
-                    enrich_soccer_match(m)
-                    if sp == "EPL":
-                        m["competition"] = "England Premier League"
-                    # Ensure rolling upcoming future date so fixture never expires
-                    _tpart = (m.get("kickoff") or "20:00:00").split()[-1]
-                    _tm = re.match(r'^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$', _tpart)
-                    if not _tm:
-                        _tpart = "20:00:00"
-                    elif len(_tpart) == 5:
-                        _tpart = f"{_tpart}:00"
-
-                    if not is_upcoming_pre_match(m.get("date"), m.get("kickoff"), "Soccer"):
-                        _tom = datetime.now() + timedelta(days=1)
-                        m["date"] = _tom.strftime("%d/%m/%Y")
-                        m["kickoff"] = f"{m['date']} {_tpart}"
-                    else:
-                        m["kickoff"] = f"{m.get('date', datetime.now().strftime('%d/%m/%Y'))} {_tpart}"
-                    mid = str(m.get("id"))
-                    if mid not in _SOCCER_REF_STORE_BY_ID:
-                        _SOCCER_REF_STORE_BY_ID[mid] = m
-                    pair = (m.get("home", "").strip().lower(), m.get("away", "").strip().lower())
-                    if pair not in _SOCCER_REF_STORE_BY_PAIR:
-                        _SOCCER_REF_STORE_BY_PAIR[pair] = m
-            elif sp in ("Tennis", "US Open", "US Open Women"):
-                target = "Tennis"
-            elif sp in ("Basketball", "NBA"):
-                target = "Basketball"
-            elif sp == "Handball":
-                target = "Handball"
-            elif sp in ("Cycling", "Cyclisme"):
-                target = "Cycling"
-            elif sp == "Golf":
-                target = "Golf"
-            elif sp in ("F1", "Formula 1"):
-                target = "F1"
-
-            if target:
-                if target not in _SPORTS_REF_STORE:
-                    _SPORTS_REF_STORE[target] = []
-                for m in matches:
-                    if target == "Soccer":
-                        resolve_soccer_match(m)
-                        enrich_soccer_match(m)
-                    elif target == "Tennis":
-                        if sp in ("US Open", "US Open Women"):
-                            m["competition"] = "US Open"
-                        resolved = resolve_tennis_match(m)
-                        if not resolved:
-                            continue
-                        enrich_tennis_match(m)
-                    elif target == "Basketball":
-                        resolve_basketball_match(m)
-                        enrich_basketball_match(m)
-                    elif target == "Handball":
-                        resolved = resolve_handball_match(m)
-                        if not resolved:
-                            continue
-                        enrich_handball_match(m)
-                    elif target == "Cycling":
-                        c = m.get("competition", "")
-                        if c in CYCLING_TITLES_EN:
-                            m["competition"] = CYCLING_TITLES_EN[c]
-                            m["home"] = f"{m['competition']} - To Win"
-                        if "2027" in m.get("competition", ""):
-                            m["date"] = "03/07/2027"
-                            m["kickoff"] = "03/07/2027 12:00:00"
-                        else:
-                            m["date"] = "27/09/2026"
-                            m["kickoff"] = "27/09/2026 10:00:00"
-                        enrich_cycling_event(m)
-                    elif target == "Golf":
-                        c = m.get("competition", "")
-                        if "Grand Prix" in c or "Formula" in c:
-                            continue
-                        d_str, k_str = get_golf_event_schedule(c)
-                        m["date"] = d_str
-                        m["kickoff"] = k_str
-                        enrich_golf_tournament(m)
-                    elif target == "F1":
-                        resolve_f1_match(m)
-
-                    # Ensure rolling upcoming future date so fixture remains upcoming
-                    if not is_upcoming_pre_match(m.get("date"), m.get("kickoff"), target):
-                        from datetime import timedelta
-                        _tom = datetime.now() + timedelta(days=1)
-                        _tpart = (m.get("kickoff") or "20:00:00").split()[-1]
-                        m["date"] = _tom.strftime("%d/%m/%Y")
-                        m["kickoff"] = f"{m['date']} {_tpart}"
-
-                    if is_upcoming_pre_match(m.get("date"), m.get("kickoff"), target):
-                        _SPORTS_REF_STORE[target].append(m)
-
-        # Seed France Ligue 1 fixtures directly into Soccer stores
-        if "Soccer" not in _SPORTS_REF_STORE:
-            _SPORTS_REF_STORE["Soccer"] = []
-        for l1 in VERIFIED_FRANCE_LIGUE1_MATCHES:
-            resolve_soccer_match(l1)
-            enrich_soccer_match(l1)
-            mid = str(l1.get("id"))
-            if not is_upcoming_pre_match(l1.get("date"), l1.get("kickoff"), "Soccer"):
-                from datetime import timedelta
-                _tom = datetime.now() + timedelta(days=1)
-                _tpart = (l1.get("kickoff") or "20:00:00").split()[-1]
-                l1["date"] = _tom.strftime("%d/%m/%Y")
-                l1["kickoff"] = f"{l1['date']} {_tpart}"
-            if mid not in _SOCCER_REF_STORE_BY_ID:
-                _SOCCER_REF_STORE_BY_ID[mid] = l1
-            pair = (l1.get("home", "").strip().lower(), l1.get("away", "").strip().lower())
-            if pair not in _SOCCER_REF_STORE_BY_PAIR:
-                _SOCCER_REF_STORE_BY_PAIR[pair] = l1
-            if is_upcoming_pre_match(l1.get("date"), l1.get("kickoff"), "Soccer"):
-                if not any(ex.get("id") == mid for ex in _SPORTS_REF_STORE["Soccer"]):
-                    _SPORTS_REF_STORE["Soccer"].append(dict(l1))
-
-        # Seed Golf tournaments directly into stores with genuine future dates
-        if "Golf" not in _SPORTS_REF_STORE or len(_SPORTS_REF_STORE["Golf"]) < 6:
-            if "Golf" not in _SPORTS_REF_STORE:
-                _SPORTS_REF_STORE["Golf"] = []
-            for gt in VERIFIED_GOLF_TOURNAMENTS:
-                resolve_golf_match(gt)
-                enrich_golf_tournament(gt)
-                gid = str(gt.get("id"))
-                d_str, k_str = get_golf_event_schedule(gt.get("competition", ""))
-                gt["date"] = d_str
-                gt["kickoff"] = k_str
-                if is_upcoming_pre_match(gt.get("date"), gt.get("kickoff"), "Golf"):
-                    if not any(ex.get("id") == gid or ex.get("competition") == gt.get("competition") for ex in _SPORTS_REF_STORE["Golf"]):
-                        _SPORTS_REF_STORE["Golf"].append(dict(gt))
+    # Restore coupon view to Match Result
+    try:
+        session.page.evaluate("""() => {
+            const all = Array.from(document.querySelectorAll('div, span, button, a, .wcl-PageSubHeader_Button, .gl-MarketGroupButton'));
+            const target = all.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'full time result' || t === 'résultat du match' || t === 'resultat du match';
+            });
+            if (target) {
+                target.scrollIntoView({ block: 'center' });
+                target.click();
+            }
+        }""")
+        time.sleep(0.5)
     except Exception:
         pass
 
-
-def _init_soccer_ref_store() -> None:
-    _init_sports_ref_store()
+    return merged_markets
 
 
-def _solve_soccer_lambdas(od_1: float, od_x: float, od_2: float) -> Tuple[float, float]:
-    raw_p1 = 1.0 / od_1
-    raw_px = 1.0 / od_x
-    raw_p2 = 1.0 / od_2
-    s = raw_p1 + raw_px + raw_p2
-    p1 = raw_p1 / s
-    px = raw_px / s
-    p2 = raw_p2 / s
-    
-    mu = max(1.8, min(3.8, 2.7 - 2.5 * (px - 0.26)))
-    ratio = max(0.2, min(5.0, math.sqrt(p1 / max(p2, 0.01))))
-    lh = mu * ratio / (1.0 + ratio)
-    la = mu / (1.0 + ratio)
-    return lh, la
-
-
-def solve_poisson_lambdas(od_1: float, od_x: float, od_2: float):
-    """Calibrates team scoring intensities (expected goals lambda_h, lambda_a) directly from 1X2 market."""
-    q1, qx, q2 = 1.0 / od_1, 1.0 / od_x, 1.0 / od_2
-    s = q1 + qx + q2
-    p1, px, p2 = q1 / s, qx / s, q2 / s
-
-    t_est = max(1.8, min(3.6, 2.70 - 1.2 * (px - 0.27)))
-    ratio = max(0.05, min(20.0, p1 / max(0.001, p2)))
-
-    def compute_probs(l_h, l_a):
-        max_g = 10
-        poi_h = [math.exp(-l_h) * (l_h ** i) / math.factorial(i) for i in range(max_g + 1)]
-        poi_a = [math.exp(-l_a) * (l_a ** j) / math.factorial(j) for j in range(max_g + 1)]
-        rho = -0.05
-        p_h = p_d = p_a = 0.0
-        for x in range(max_g + 1):
-            for y in range(max_g + 1):
-                tau = 1.0
-                if x == 0 and y == 0: tau = 1.0 - l_h * l_a * rho
-                elif x == 1 and y == 0: tau = 1.0 + l_a * rho
-                elif x == 0 and y == 1: tau = 1.0 + l_h * rho
-                elif x == 1 and y == 1: tau = 1.0 - rho
-                prob = max(0.0, poi_h[x] * poi_a[y] * tau)
-                if x > y: p_h += prob
-                elif x == y: p_d += prob
-                else: p_a += prob
-        tot = p_h + p_d + p_a
-        return p_h / tot, p_d / tot, p_a / tot
-
-    best_l = t_est * ratio / (1.0 + ratio)
-    best_m = t_est / (1.0 + ratio)
-    best_err = 999.0
-
-    for d_t in [-0.4, -0.2, 0.0, 0.2, 0.4]:
-        cur_t = max(1.6, min(3.8, t_est + d_t))
-        for r_adj in [0.7, 0.85, 1.0, 1.15, 1.3]:
-            cur_r = ratio * r_adj
-            cur_l = cur_t * cur_r / (1.0 + cur_r)
-            cur_m = cur_t / (1.0 + cur_r)
-            cp1, cpx, cp2 = compute_probs(cur_l, cur_m)
-            err = (cp1 - p1)**2 + (cpx - px)**2 + (cp2 - p2)**2
-            if err < best_err:
-                best_err = err
-                best_l, best_m = cur_l, cur_m
-
-    step = 0.04
-    for _ in range(8):
-        improved = False
-        for dl, dm in [(-step, 0), (step, 0), (0, -step), (0, step)]:
-            nl, nm = best_l + dl, best_m + dm
-            if nl > 0.2 and nm > 0.2:
-                cp1, cpx, cp2 = compute_probs(nl, nm)
-                err = (cp1 - p1)**2 + (cpx - px)**2 + (cp2 - p2)**2
-                if err < best_err:
-                    best_err = err
-                    best_l, best_m = nl, nm
-                    improved = True
-        if not improved:
-            step *= 0.5
-
-    return best_l, best_m
-
-
-def compute_soccer_detailed_markets(match_result: Dict[str, str]) -> Dict[str, Any]:
+def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], sport: str) -> None:
     """
-    Computes Both Teams to Score, Half Time/Full Time (9 outcomes), and
-    Correct Score (all 29 scorelines) calibrated directly to live Match Result (1X2)
-    using the quantitative Dixon-Coles bivariate Poisson goal distribution model.
-    Eliminates all static, uncalibrated, or heuristic odds. All outputs strictly match
-    official Bet365 bookmaker board price ladders.
+    Clicks into an individual match event page on Bet365 to scrape deep
+    authentic secondary markets:
+    - Soccer: Correct Score, Half Time/Full Time, Both Teams to Score, Goals Over/Under, Double Chance, Draw No Bet
+    - Tennis: Set Betting, First Set Winner, Total Games, Handicap
+    - Basketball: Point Spread, Total Points, Moneyline
+    - Handball: Handicap, Total Goals, Full Time Result
+    Only authentic Bet365 odds are recorded. Never invents missing markets.
     """
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return
+
+    home = match.get("home", "")
+    if not home:
+        return
+
     try:
-        od_1 = float(match_result.get("1", 0))
-        od_x = float(match_result.get("X", 0))
-        od_2 = float(match_result.get("2", 0))
-        if od_1 <= 1.0 or od_x <= 1.0 or od_2 <= 1.0:
-            return {}
+        clicked = session.page.evaluate("""(homeName) => {
+            const all = Array.from(document.querySelectorAll('.rcl-ParticipantFixtureDetails_TeamNames, .rcl-ParticipantFixtureDetails, .src-ParticipantFixtureDetailsHigher_TeamNames, a, button, div'));
+            const target = all.find(e => {
+                const t = (e.innerText || '').toLowerCase();
+                return t.includes(homeName.toLowerCase()) && (e.className.includes('Participant') || e.closest('.rcl-ParticipantFixtureDetails') || e.closest('a'));
+            });
+            if (target) {
+                const clickable = target.closest('.rcl-ParticipantFixtureDetails_TeamNames') || target.closest('a') || target;
+                clickable.scrollIntoView({ block: 'center' });
+                clickable.click();
+                return true;
+            }
+            return false;
+        }""", home)
 
-        l_h, l_a = solve_poisson_lambdas(od_1, od_x, od_2)
-        max_g = 10
-        poi_h = [math.exp(-l_h) * (l_h ** i) / math.factorial(i) for i in range(max_g + 1)]
-        poi_a = [math.exp(-l_a) * (l_a ** j) / math.factorial(j) for j in range(max_g + 1)]
-        rho = -0.06
+        if not clicked:
+            return
 
-        joint_probs = {}
-        tot_p = 0.0
-        p_btts_yes = 0.0
-        for x in range(max_g + 1):
-            for y in range(max_g + 1):
-                tau = 1.0
-                if x == 0 and y == 0: tau = 1.0 - l_h * l_a * rho
-                elif x == 1 and y == 0: tau = 1.0 + l_a * rho
-                elif x == 0 and y == 1: tau = 1.0 + l_h * rho
-                elif x == 1 and y == 1: tau = 1.0 - rho
-                p = max(0.0, poi_h[x] * poi_a[y] * tau)
-                joint_probs[(x, y)] = p
-                tot_p += p
-                if x >= 1 and y >= 1:
-                    p_btts_yes += p
+        time.sleep(1.8)
+        lines = session.get_dom_lines()
+        odd_re = re.compile(r'^\d+([.,]\d+)?$')
+        mkts = match.setdefault("markets", {})
 
-        for k in joint_probs:
-            joint_probs[k] /= tot_p
-        p_btts_yes /= tot_p
-        p_btts_no = 1.0 - p_btts_yes
+        if sport == "Soccer":
+            # Correct Score (Score exact)
+            cs_data = {}
+            for i in range(len(lines) - 2):
+                l_cur = lines[i].strip()
+                m_cs = re.match(r'^(\d+)\s*[-–—:]\s*(\d+)$', l_cur)
+                if m_cs:
+                    nxt = lines[i+1].strip().replace(',', '.')
+                    if odd_re.match(nxt) and 1.5 <= float(nxt) <= 501.0:
+                        cs_key = f"{m_cs.group(1)}-{m_cs.group(2)}"
+                        cs_data[cs_key] = nxt
+            if cs_data:
+                mkts["Correct Score"] = cs_data
 
-        # 1. Both Teams to Score (BTTS) with bookmaker overround (~6-7%)
-        margin_btts = 1.07
-        raw_yes = 1.0 / (p_btts_yes * margin_btts)
-        raw_no = 1.0 / (p_btts_no * margin_btts)
-        btts = {
-            "Yes": bet365_round(max(1.10, min(10.0, raw_yes))),
-            "No": bet365_round(max(1.10, min(10.0, raw_no)))
-        }
+            # Half Time/Full Time
+            htft_data = {}
+            htft_pairs = ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]
+            for i in range(len(lines) - 2):
+                l_cur = lines[i].strip()
+                if l_cur in htft_pairs:
+                    nxt = lines[i+1].strip().replace(',', '.')
+                    if odd_re.match(nxt) and 1.10 <= float(nxt) <= 250.0:
+                        htft_data[l_cur] = nxt
+            if len(htft_data) >= 7:
+                mkts["Half Time/Full Time"] = htft_data
 
-        # 2. Correct Score (symmetric standard Bet365 scorelines up to 6 goals)
-        cs_margin = 1.18
-        cs_outcomes = [
-            "1-0", "2-0", "2-1", "3-0", "3-1", "3-2",
-            "4-0", "4-1", "4-2", "4-3",
-            "5-0", "5-1", "5-2", "6-0", "6-1", "6-2",
-            "0-0", "1-1", "2-2", "3-3", "4-4",
-            "0-1", "0-2", "1-2", "0-3", "1-3", "2-3",
-            "0-4", "1-4", "2-4", "3-4",
-            "0-5", "1-5", "2-5", "0-6", "1-6", "2-6"
-        ]
-        cs_odds = {}
-        for score_str in cs_outcomes:
-            x, y = map(int, score_str.split("-"))
-            p = joint_probs.get((x, y), 0.0001)
-            raw_odd = 1.0 / (p * cs_margin)
-            raw_odd = max(4.50, min(501.0, raw_odd))
-            cs_odds[score_str] = bet365_round(raw_odd)
+            if "Both Teams to Score" not in mkts:
+                for i in range(len(lines) - 3):
+                    l_cur = lines[i].strip().lower()
+                    if l_cur in ["les deux équipes marquent", "both teams to score"]:
+                        o_y, o_n = None, None
+                        for y_idx in range(i + 1, min(i + 8, len(lines) - 1)):
+                            if lines[y_idx].strip().lower() in ["oui", "yes"]:
+                                o_y = lines[y_idx+1].strip().replace(',', '.')
+                                break
+                        for n_idx in range(i + 1, min(i + 8, len(lines) - 1)):
+                            if lines[n_idx].strip().lower() in ["non", "no"]:
+                                o_n = lines[n_idx+1].strip().replace(',', '.')
+                                break
+                        if o_y and o_n and odd_re.match(o_y) and odd_re.match(o_n):
+                            mkts["Both Teams to Score"] = {"Yes": o_y, "No": o_n}
 
-        # 3. Half Time / Full Time (9 combinations with state-dependent conditional 2nd half dynamics)
-        lh1, la1 = l_h * 0.45, l_a * 0.45
-        lh2_base, la2_base = l_h * 0.55, l_a * 0.55
-        max_h = 6
-        poi_h1 = [math.exp(-lh1) * (lh1 ** i) / math.factorial(i) for i in range(max_h + 1)]
-        poi_a1 = [math.exp(-la1) * (la1 ** j) / math.factorial(j) for j in range(max_h + 1)]
+            if "Goals Over/Under" not in mkts:
+                for i in range(len(lines) - 4):
+                    l_cur = lines[i].strip().lower()
+                    if any(term in l_cur for term in ["total de buts", "plus / moins de buts", "goals over/under"]):
+                        for j in range(i + 1, min(i + 15, len(lines) - 2)):
+                            line_cand = lines[j].strip()
+                            if "2.5" in line_cand or line_cand in ["Plus de 2.5", "Over 2.5"]:
+                                nxt = lines[j+1].strip().replace(',', '.')
+                                if odd_re.match(nxt):
+                                    for k in range(j + 1, min(j + 10, len(lines) - 1)):
+                                        if "Moins de 2.5" in lines[k] or "Under 2.5" in lines[k] or lines[k].strip() == "2.5":
+                                            u_odd = lines[k+1].strip().replace(',', '.')
+                                            if odd_re.match(u_odd):
+                                                mkts["Goals Over/Under"] = {
+                                                    "Over": {"line": "2.5", "odds": nxt},
+                                                    "Under": {"line": "2.5", "odds": u_odd}
+                                                }
+                                                break
 
-        htft_probs = {k: 0.0 for k in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]}
-        for x1 in range(max_h + 1):
-            for y1 in range(max_h + 1):
-                p_ht = poi_h1[x1] * poi_a1[y1]
-                if x1 > y1:
-                    ht_state = "1"
-                    l2_h = lh2_base * 0.88
-                    l2_a = la2_base * 1.15
-                elif x1 < y1:
-                    ht_state = "2"
-                    l2_h = lh2_base * 1.15
-                    l2_a = la2_base * 0.88
-                else:
-                    ht_state = "X"
-                    l2_h = lh2_base * 1.00
-                    l2_a = la2_base * 1.00
+        elif sport == "Tennis":
+            sb_data = {}
+            for i in range(len(lines) - 2):
+                l_cur = lines[i].strip()
+                if l_cur in ["2-0", "2-1", "0-2", "1-2", "3-0", "3-1", "3-2", "0-3", "1-3", "2-3"]:
+                    nxt = lines[i+1].strip().replace(',', '.')
+                    if odd_re.match(nxt) and 1.05 <= float(nxt) <= 50.0:
+                        sb_data[l_cur] = nxt
+            if sb_data:
+                mkts["Set Betting"] = sb_data
 
-                poi_h2 = [math.exp(-l2_h) * (l2_h ** i) / math.factorial(i) for i in range(max_h + 1)]
-                poi_a2 = [math.exp(-l2_a) * (l2_a ** j) / math.factorial(j) for j in range(max_h + 1)]
+            if "First Set Winner" not in mkts:
+                for i in range(len(lines) - 4):
+                    l_cur = lines[i].strip().lower()
+                    if any(k in l_cur for k in ["vainqueur du 1er set", "first set winner", "1er set"]):
+                        cand_odds = []
+                        for j in range(i + 1, min(i + 10, len(lines))):
+                            val = lines[j].strip().replace(',', '.')
+                            if odd_re.match(val) and 1.05 <= float(val) <= 25.0:
+                                cand_odds.append(val)
+                        if len(cand_odds) >= 2:
+                            mkts["First Set Winner"] = {"1": cand_odds[0], "2": cand_odds[1]}
+                            break
 
-                for x2 in range(max_h + 1):
-                    for y2 in range(max_h + 1):
-                        p_2h = poi_h2[x2] * poi_a2[y2]
-                        xt, yt = x1 + x2, y1 + y2
-                        ft_state = "1" if xt > yt else ("X" if xt == yt else "2")
-                        htft_probs[f"{ht_state}/{ft_state}"] += p_ht * p_2h
+            if "Total Games" not in mkts:
+                for i in range(len(lines) - 4):
+                    l_cur = lines[i].strip().lower()
+                    if any(k in l_cur for k in ["total des jeux", "total games"]):
+                        for j in range(i + 1, min(i + 12, len(lines) - 2)):
+                            tok = lines[j].strip()
+                            if re.match(r'^\d+\.5$', tok):
+                                o_odd = lines[j+1].strip().replace(',', '.') if j + 1 < len(lines) else ""
+                                u_odd = lines[j+2].strip().replace(',', '.') if j + 2 < len(lines) else ""
+                                if odd_re.match(o_odd) and odd_re.match(u_odd):
+                                    mkts["Total Games"] = {
+                                        "Over": {"line": tok, "odds": o_odd},
+                                        "Under": {"line": tok, "odds": u_odd}
+                                    }
+                                    break
 
-        tot_htft = sum(htft_probs.values())
-        for k in htft_probs:
-            htft_probs[k] /= tot_htft
+        elif sport == "Basketball":
+            for i in range(len(lines) - 4):
+                l_cur = lines[i].strip().lower()
+                if l_cur in ["handicap", "spread"] and "Point Spread" not in mkts:
+                    for j in range(i + 1, min(i + 10, len(lines) - 3)):
+                        l1 = lines[j].strip()
+                        o1 = lines[j+1].strip().replace(',', '.')
+                        l2 = lines[j+2].strip()
+                        o2 = lines[j+3].strip().replace(',', '.')
+                        if (l1.startswith('+') or l1.startswith('-')) and odd_re.match(o1) and odd_re.match(o2):
+                            mkts["Point Spread"] = {"1": {"line": l1, "odds": o1}, "2": {"line": l2, "odds": o2}}
+                            mkts["Spread"] = mkts["Point Spread"]
+                            break
 
-        htft_margin = 1.15
-        htft_odds = {}
-        for pair in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]:
-            p = htft_probs[pair]
-            raw_odd = 1.0 / (p * htft_margin)
-            raw_odd = max(1.20, min(81.0, raw_odd))
-            htft_odds[pair] = bet365_round(raw_odd)
-
-        return {
-            "Both Teams to Score": btts,
-            "Half Time/Full Time": htft_odds,
-            "Correct Score": cs_odds
-        }
+        session.page.go_back(wait_until="commit", timeout=8000)
+        time.sleep(1.2)
     except Exception:
-        return {}
+        try:
+            session.page.go_back(wait_until="commit", timeout=5000)
+            time.sleep(1.0)
+        except Exception:
+            pass
 
 
 def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Ensures that a soccer match contains all four required markets:
-    - Match Result
-    - Half Time/Full Time (9 outcomes)
-    - Both Teams to Score (Yes / No)
-    - Correct Score (23 outcomes)
+    Normalizes and formats genuinely scraped Soccer market data.
+    DOES NOT fabricate or calculate any odds.
+    Only formats existing scraped values to canonical form.
     """
-    mr = match.get("markets", {}).get("Match Result")
-    if mr:
-        detailed = compute_soccer_detailed_markets(mr)
-        if "Half Time/Full Time" in detailed:
-            match["markets"]["Half Time/Full Time"] = detailed["Half Time/Full Time"]
-        if "Correct Score" in detailed:
-            match["markets"]["Correct Score"] = detailed["Correct Score"]
-        if "Both Teams to Score" in detailed:
-            match["markets"]["Both Teams to Score"] = detailed["Both Teams to Score"]
+    mkts = match.setdefault("markets", {})
+    mr = mkts.get("Match Result") or mkts.get("Full Time Result")
+    if mr and isinstance(mr, dict):
+        od_1 = format_odd_str(mr.get("1")) if mr.get("1") else None
+        od_x = format_odd_str(mr.get("X") or mr.get("x")) if (mr.get("X") or mr.get("x")) else None
+        od_2 = format_odd_str(mr.get("2")) if mr.get("2") else None
+        if od_1 and od_2:
+            result = {"1": od_1, "2": od_2}
+            if od_x:
+                result["X"] = od_x
+            mkts["Match Result"] = result
+    # Format BTTS if scraped
+    btts = mkts.get("Both Teams to Score")
+    if btts and isinstance(btts, dict):
+        formatted = {}
+        for k, v in btts.items():
+            formatted[k] = format_odd_str(v)
+        mkts["Both Teams to Score"] = formatted
+    # Format Over/Under if scraped
+    for ou_key in ["Goals Over/Under", "Total Goals", "Total"]:
+        ou = mkts.get(ou_key)
+        if ou and isinstance(ou, dict):
+            for side in ["Over", "Under"]:
+                if side in ou and isinstance(ou[side], dict) and "odds" in ou[side]:
+                    ou[side]["odds"] = format_odd_str(ou[side]["odds"])
+    # Format Correct Score if scraped
+    cs = mkts.get("Correct Score")
+    if cs and isinstance(cs, dict):
+        for k in cs:
+            cs[k] = format_odd_str(cs[k])
+    # Format HT/FT if scraped
+    htft = mkts.get("Half Time/Full Time")
+    if htft and isinstance(htft, dict):
+        for k in htft:
+            htft[k] = format_odd_str(htft[k])
+    # Format Double Chance if scraped
+    dc = mkts.get("Double Chance")
+    if dc and isinstance(dc, dict):
+        for k in dc:
+            dc[k] = format_odd_str(dc[k])
+    # Format Draw No Bet if scraped
+    dnb = mkts.get("Draw No Bet")
+    if dnb and isinstance(dnb, dict):
+        for k in dnb:
+            dnb[k] = format_odd_str(dnb[k])
     return match
 
 
@@ -2768,7 +2748,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
     }
 
     curr_comp = default_comp
-    curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    curr_date = get_now_paris().strftime("%d/%m/%Y")
     curr_time = "15:00"
 
     i = 0
@@ -2865,14 +2845,13 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                             o2 = v
                             end_idx = j + 2
                             break
-                    if o1 and o2:
-                        ox = ox or "3.50"
+                    if o1 and ox and o2:
                         pair_key = f"{t1.lower()}_{t2.lower()}"
                         if pair_key not in seen:
                             seen.add(pair_key)
                             kickoff_val = f"{curr_date} {time_val}:00"
                             matches.append({
-                                "id": str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000),
+                                "id": stable_id(t1, t2, time_val),
                                 "date": curr_date,
                                 "kickoff": kickoff_val,
                                 "competition": curr_comp,
@@ -2898,7 +2877,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                                 seen.add(pair_key)
                                 kickoff_val = f"{curr_date} {curr_time}:00"
                                 matches.append({
-                                    "id": str(abs(hash(f"{t1}_{t2}_{curr_time}")) % 100000000),
+                                    "id": stable_id(t1, t2, curr_time),
                                     "date": curr_date,
                                     "kickoff": kickoff_val,
                                     "competition": curr_comp,
@@ -2974,13 +2953,18 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """
     Scrapes Soccer matches across European and World leagues via CDP with multi-step virtual scrolling,
     canonical multi-coupon discovery across top target leagues, live DOM extraction, live BTTS extraction,
-    and full analytical market expansion.
+    and full secondary market extraction (BTTS, Over/Under, Double Chance, Draw No Bet, Half Time/Full Time).
     """
     _init_soccer_ref_store()
     print(f"  [CDP Soccer] Discovering Soccer matches on {session.domain} via native navigation...")
     matches_out: List[Dict[str, Any]] = []
 
-    # 1. Scrape matches from the Football main page with virtual scrolling
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
+    # 1. Scrape matches from the Football main page with deep virtual scrolling (8 scroll steps)
     if not session.navigate_to_sport("Soccer"):
         session.navigate_hash("#/AS/B1/")
     time.sleep(2.5)
@@ -2993,10 +2977,10 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
             if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
                 matches_out.append(m)
 
-    for scroll_step in range(4):
+    for scroll_step in range(8):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.8)
+            time.sleep(0.7)
             for m in parse_soccer_dom(session.get_dom_lines(), default_comp="Football"):
                 resolve_soccer_match(m)
                 enrich_soccer_match(m)
@@ -3007,12 +2991,23 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
 
     # 2. Sequentially visit each canonical country/league coupon URL
     soccer_coupons = [
-        ("UK", "#/AC/B1/C1/D1002/G40/J99/Q1/F%5E2001/", "England Premier League"),
-        ("Spain", "#/AC/B1/C1/D1002/G40/J8/I1/Q1/F%5E2001/", "LA LIGA"),
-        ("Germany", "#/AC/B1/C1/D1002/G40/J7/I1/Q1/F%5E2001/", "Germany Bundesliga"),
-        ("France", "#/AC/B1/C1/D1002/G40/J15/I1/Q1/F%5E12/", "France Ligue 1"),
-        ("Europe", "#/AC/B1/C1/D1002/G40/J17/I1/Q1/F%5E2001/", "UEFA Champions League"),
-        ("Americas", "#/AC/B1/C1/D1002/G40/J12/I1/Q1/F%5E3/", "Major League Soccer")
+        ("UK Premier League", "#/AC/B1/C1/D1002/G40/J99/Q1/F%5E2001/", "England Premier League"),
+        ("England Championship", "#/AC/B1/C1/D1002/G40/J99/I2/Q1/F%5E2001/", "England Championship"),
+        ("Spain La Liga", "#/AC/B1/C1/D1002/G40/J8/I1/Q1/F%5E2001/", "LA LIGA"),
+        ("Spain Segunda", "#/AC/B1/C1/D1002/G40/J8/I2/Q1/F%5E2001/", "Spain Segunda Division"),
+        ("Germany Bundesliga", "#/AC/B1/C1/D1002/G40/J7/I1/Q1/F%5E2001/", "Germany Bundesliga"),
+        ("Germany 2. Bundesliga", "#/AC/B1/C1/D1002/G40/J7/I2/Q1/F%5E2001/", "Germany 2. Bundesliga"),
+        ("Italy Serie A", "#/AC/B1/C1/D1002/G40/J10/I1/Q1/F%5E2001/", "Italy Serie A"),
+        ("Italy Serie B", "#/AC/B1/C1/D1002/G40/J10/I2/Q1/F%5E2001/", "Italy Serie B"),
+        ("France Ligue 1", "#/AC/B1/C1/D1002/G40/J15/I1/Q1/F%5E12/", "France Ligue 1"),
+        ("France Ligue 2", "#/AC/B1/C1/D1002/G40/J15/I2/Q1/F%5E12/", "France Ligue 2"),
+        ("UEFA Champions League", "#/AC/B1/C1/D1002/G40/J17/I1/Q1/F%5E2001/", "UEFA Champions League"),
+        ("UEFA Europa League", "#/AC/B1/C1/D1002/G40/J17/I2/Q1/F%5E2001/", "UEFA Europa League"),
+        ("UEFA Conference League", "#/AC/B1/C1/D1002/G40/J17/I3/Q1/F%5E2001/", "UEFA Europa Conference League"),
+        ("Netherlands Eredivisie", "#/AC/B1/C1/D1002/G40/J14/I1/Q1/F%5E2001/", "Netherlands Eredivisie"),
+        ("Portugal Primeira Liga", "#/AC/B1/C1/D1002/G40/J21/I1/Q1/F%5E2001/", "Portugal Primeira Liga"),
+        ("Americas MLS", "#/AC/B1/C1/D1002/G40/J12/I1/Q1/F%5E3/", "Major League Soccer"),
+        ("Weekend Matches", "#/AC/B1/C1/D1002/G40/", "Football")
     ]
 
     for c_name, c_hash, c_default_comp in soccer_coupons:
@@ -3022,13 +3017,13 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
             c_lines = session.get_dom_lines()
             c_matches = parse_soccer_dom(c_lines, default_comp=c_default_comp)
 
-            # Scrape live BTTS odds directly from the coupon tab
-            btts_map = scrape_coupon_btts_odds(session)
+            # Extract secondary markets directly across all coupon fixtures
+            coupon_secondary = scrape_coupon_secondary_markets(session)
 
             for m in c_matches:
                 pair_key = (clean_team_name(m["home"]).lower(), clean_team_name(m["away"]).lower())
-                if pair_key in btts_map:
-                    m.setdefault("markets", {})["Both Teams to Score"] = btts_map[pair_key]
+                if pair_key in coupon_secondary:
+                    m.setdefault("markets", {}).update(coupon_secondary[pair_key])
                 resolve_soccer_match(m)
                 enrich_soccer_match(m)
                 if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
@@ -3036,21 +3031,25 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"  [Notice] Coupon {c_name} extraction note: {e}")
 
+    # 3. For top marquee matches lacking Correct Score, attempt deep match detail scraping
+    detail_count = 0
+    for m in matches_out:
+        if detail_count >= 5:
+            break
+        if "Correct Score" not in m.get("markets", {}) and m.get("home"):
+            try:
+                scrape_match_detail_markets(session, m, "Soccer")
+                detail_count += 1
+            except Exception:
+                pass
+
     if matches_out:
         print(f"  + [Soccer DOM] {len(matches_out)} live/upcoming matches captured directly from {session.domain}")
         for m in matches_out:
             resolve_soccer_match(m)
         return matches_out
 
-    # 3. Fallback only if live scraping captured 0 matches
-    for mid, ref_m in _SOCCER_REF_STORE_BY_ID.items():
-        if not any(ex["id"] == ref_m["id"] or (ex["home"] == ref_m["home"] and ex["away"] == ref_m["away"]) for ex in matches_out):
-            rm = dict(ref_m)
-            resolve_soccer_match(rm)
-            enrich_soccer_match(rm)
-            matches_out.append(rm)
-
-    return matches_out
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3058,61 +3057,44 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
 # ─────────────────────────────────────────────────────────────────────────────
 def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Ensures Tennis match has the markets specified in Bet365 Display Specification:
-    - To Win Match (Moneyline): 1 [odds] | 2 [odds]
-    - Set Betting: 2-0, 2-1, 0-2, 1-2
-    - First Set Winner: 1 [odds] | 2 [odds]
-    - Total Games (Over / Under): Over [line] [odds] | Under [line] [odds]
+    Normalizes and formats genuinely scraped Tennis market data.
+    DOES NOT fabricate or calculate any odds.
+    Only formats existing scraped values to canonical form.
     """
     mkts = match.setdefault("markets", {})
     mw = mkts.get("To Win Match") or mkts.get("Match Winner") or mkts.get("Money Line") or mkts.get("Match Result")
 
-    od_1 = 1.85
-    od_2 = 1.95
-    if mw and isinstance(mw, dict):
-        try:
-            od_1 = float(mw.get("1", 1.85))
-            od_2 = float(mw.get("2", 1.95))
-        except Exception:
-            pass
+    if mw and isinstance(mw, dict) and mw.get("1") and mw.get("2"):
+        od_1 = format_odd_str(mw["1"])
+        od_2 = format_odd_str(mw["2"])
+        mkts["To Win Match"] = {"1": od_1, "2": od_2}
+        mkts["Match Winner"] = {"1": od_1, "2": od_2}
 
-    mkts["To Win Match"] = {"1": f"{od_1:.2f}", "2": f"{od_2:.2f}"}
-    mkts["Match Winner"] = {"1": f"{od_1:.2f}", "2": f"{od_2:.2f}"}
+    # Format Set Betting if scraped
+    sb = mkts.get("Set Betting")
+    if sb and isinstance(sb, dict):
+        for k in sb:
+            sb[k] = format_odd_str(sb[k])
 
-    if "Set Betting" not in mkts:
-        raw_p1 = 1.0 / od_1
-        raw_p2 = 1.0 / od_2
-        s = raw_p1 + raw_p2
-        p1 = raw_p1 / s
-        p2 = raw_p2 / s
-        margin = 1.14
-        mkts["Set Betting"] = {
-            "2-0": f"{max(1.30, min(25.0, round(margin / max(0.02, p1 * 0.63), 2))):.2f}",
-            "2-1": f"{max(1.60, min(30.0, round(margin / max(0.02, p1 * 0.37), 2))):.2f}",
-            "0-2": f"{max(1.30, min(25.0, round(margin / max(0.02, p2 * 0.63), 2))):.2f}",
-            "1-2": f"{max(1.60, min(30.0, round(margin / max(0.02, p2 * 0.37), 2))):.2f}",
-        }
+    # Format First Set Winner if scraped
+    fsw = mkts.get("First Set Winner")
+    if fsw and isinstance(fsw, dict):
+        for k in fsw:
+            fsw[k] = format_odd_str(fsw[k])
 
-    if "First Set Winner" not in mkts:
-        raw_p1 = 1.0 / od_1
-        raw_p2 = 1.0 / od_2
-        s = raw_p1 + raw_p2
-        p1 = raw_p1 / s
-        p2 = raw_p2 / s
-        margin = 1.08
-        pow_p1 = max(0.01, p1) ** 0.85
-        pow_p2 = max(0.01, p2) ** 0.85
-        fs_s = pow_p1 + pow_p2
-        mkts["First Set Winner"] = {
-            "1": f"{max(1.10, min(15.0, round(margin / (pow_p1 / fs_s), 2))):.2f}",
-            "2": f"{max(1.10, min(15.0, round(margin / (pow_p2 / fs_s), 2))):.2f}",
-        }
+    # Format Total Games if scraped
+    tg = mkts.get("Total Games") or mkts.get("Total")
+    if tg and isinstance(tg, dict):
+        for side in ["Over", "Under"]:
+            if side in tg and isinstance(tg[side], dict) and "odds" in tg[side]:
+                tg[side]["odds"] = format_odd_str(tg[side]["odds"])
 
-    if "Total Games" not in mkts and "Total" not in mkts:
-        mkts["Total Games"] = {
-            "Over": {"line": "21.5", "odds": "1.83"},
-            "Under": {"line": "21.5", "odds": "1.95"}
-        }
+    # Format Handicap if scraped
+    hc = mkts.get("Handicap")
+    if hc and isinstance(hc, dict):
+        for k in ["1", "2"]:
+            if k in hc and isinstance(hc[k], dict) and "odds" in hc[k]:
+                hc[k]["odds"] = format_odd_str(hc[k]["odds"])
 
     return match
 
@@ -3168,7 +3150,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                     pair_key = f"{p1.lower()}_{p2.lower()}"
                     if pair_key not in seen:
                         seen.add(pair_key)
-                        match_id = str(abs(hash(f"{p1}_{p2}_{cand_time}")) % 100000000)
+                        match_id = stable_id(p1, p2, cand_time)
                         matches.append({
                             "id": match_id,
                             "date": curr_date,
@@ -3204,7 +3186,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                 pair_key = f"{p1.lower()}_{p2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    match_id = str(abs(hash(f"{p1}_{p2}_{time_val}")) % 100000000)
+                    match_id = stable_id(p1, p2, time_val)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3225,14 +3207,19 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
 def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live/upcoming Tennis tournaments (Sport B13) via CDP with full market enrichment."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Tennis] Discovering Tennis matches via native navigation...")
     if not session.navigate_to_sport("Tennis"):
         session.navigate_hash("#/AS/B13/")
     time.sleep(2.5)
 
-    matches_out: List[Dict[str, Any]] = []
-
-    # 1. Harvest matches from the Tennis main page directly
+    # 1. Harvest matches from the Tennis main page directly with virtual scrolling
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_tennis_dom(dom_lines):
@@ -3241,19 +3228,36 @@ def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 enrich_tennis_match(resolved)
                 matches_out.append(resolved)
 
+    for scroll_step in range(6):
+        try:
+            session.page.evaluate("window.scrollBy(0, 1500);")
+            time.sleep(0.7)
+            for m in parse_tennis_dom(session.get_dom_lines()):
+                resolved = resolve_tennis_match(m)
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                    enrich_tennis_match(resolved)
+                    matches_out.append(resolved)
+        except Exception:
+            pass
+
     # 2. Sequentially visit canonical Tennis tournament coupons
     tennis_coupons = [
-        ("Davis Cup", "#/AC/B13/C1/D1002/G83/J5/Q1/F%5E24/"),
-        ("UTR Pro Tour", "#/AC/B13/C1/D1002/G83/J15/Q1/F%5E24/"),
-        ("World Tennis Tour Men", "#/AC/B13/C1/D1002/G83/J101/Q1/F%5E24/"),
-        ("Challenger Tour", "#/AC/B13/C1/D1002/G83/J12/Q1/F%5E24/"),
-        ("Top Competitions", "#/AC/B13/C1/D1002/G83/J99/Q1/F%5E24/")
+        ("ATP Tour", "#/AC/B13/C1/D1002/G83/J1/Q1/F%5E24/", "ATP"),
+        ("WTA Tour", "#/AC/B13/C1/D1002/G83/J2/Q1/F%5E24/", "WTA"),
+        ("Challenger Tour", "#/AC/B13/C1/D1002/G83/J12/Q1/F%5E24/", "Challenger Tour"),
+        ("Davis Cup", "#/AC/B13/C1/D1002/G83/J5/Q1/F%5E24/", "Davis Cup"),
+        ("UTR Pro Tour", "#/AC/B13/C1/D1002/G83/J15/Q1/F%5E24/", "UTR Pro Tour"),
+        ("World Tennis Tour Men", "#/AC/B13/C1/D1002/G83/J101/Q1/F%5E24/", "World Tennis Tour"),
+        ("Grand Slams", "#/AC/B13/C1/D1002/G83/J10/Q1/F%5E24/", "Grand Slam"),
+        ("Top Competitions", "#/AC/B13/C1/D1002/G83/J99/Q1/F%5E24/", "Tennis"),
+        ("Tennis Matches 24h", "#/AC/B13/C1/D1002/G83/", "Tennis")
     ]
-    for c_name, c_hash in tennis_coupons:
+    for c_name, c_hash, c_comp in tennis_coupons:
         try:
             session.navigate_hash(c_hash)
+            time.sleep(1.2)
             t_lines = session.get_dom_lines()
-            for m in parse_tennis_dom(t_lines, default_comp=c_name):
+            for m in parse_tennis_dom(t_lines, default_comp=c_comp):
                 resolved = resolve_tennis_match(m)
                 if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                     enrich_tennis_match(resolved)
@@ -3261,23 +3265,23 @@ def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"  [Notice] Tennis coupon {c_name} extraction note: {e}")
 
+    # 3. For top tennis matches, attempt deep match detail scraping for Set Betting & First Set Winner
+    detail_count = 0
+    for m in matches_out:
+        if detail_count >= 4:
+            break
+        if "Set Betting" not in m.get("markets", {}) and m.get("home"):
+            try:
+                scrape_match_detail_markets(session, m, "Tennis")
+                detail_count += 1
+            except Exception:
+                pass
+
     if matches_out:
         print(f"  + [Tennis DOM] {len(matches_out)} live matches captured directly from Bet365")
         return matches_out
 
-    # Fallback only if live scraping captured 0 matches
-    ref_tennis = _SPORTS_REF_STORE.get("Tennis", [])
-    if ref_tennis:
-        for rm in ref_tennis:
-            resolved = resolve_tennis_match(dict(rm))
-            if not resolved:
-                continue
-            if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                resolved["markets"] = dict(rm.get("markets", {}))
-                enrich_tennis_match(resolved)
-                matches_out.append(resolved)
-
-    return matches_out
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3369,7 +3373,7 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
                         mkts["Total Points"] = {"Over": tot_o, "Under": tot_u}
                         mkts["Total"] = {"Over": tot_o, "Under": tot_u}
 
-                    match_id = str(abs(hash(f"{cand_t1}_{cand_t2}_{time_val}")) % 100000000)
+                    match_id = stable_id(cand_t1, cand_t2, time_val)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3423,7 +3427,7 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
                 pair_key = f"{t1.lower()}_{t2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    match_id = str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000)
+                    match_id = stable_id(t1, t2, time_val)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3444,14 +3448,19 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
 def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Basketball matches (Sport B18) via CDP with multi-step virtual scrolling, competition discovery, and full market enrichment."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Basketball] Discovering Basketball matches via native navigation...")
     if not session.navigate_to_sport("Basketball"):
         session.navigate_hash("#/AS/B18/")
     time.sleep(2.5)
 
-    matches_out: List[Dict[str, Any]] = []
-
-    # 1. Harvest matches from the Basketball main page with virtual scrolling
+    # 1. Harvest matches from the Basketball main page with virtual scrolling (6 scroll steps)
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_basketball_dom(dom_lines):
@@ -3460,10 +3469,10 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
             if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 matches_out.append(resolved)
 
-    for scroll_step in range(3):
+    for scroll_step in range(6):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(1.0)
+            time.sleep(0.8)
             for m in parse_basketball_dom(session.get_dom_lines()):
                 resolved = resolve_basketball_match(m)
                 enrich_basketball_match(resolved)
@@ -3472,43 +3481,47 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # 2. Directly harvest the complete 24-Hour Basketball matches coupon
-    bb_coupon_hash = "#/AC/B18/C1/D1002/G1453/Q1/F%5E24/"
-    try:
-        session.navigate_hash(bb_coupon_hash)
-        c_lines = session.get_dom_lines()
-        for m in parse_basketball_dom(c_lines):
-            resolved = resolve_basketball_match(m)
-            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                enrich_basketball_match(resolved)
-                matches_out.append(resolved)
-
-        for scroll_step in range(4):
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.8)
-            for m in parse_basketball_dom(session.get_dom_lines()):
+    # 2. Directly harvest major Basketball competition coupons
+    bb_coupons = [
+        ("NBA", "#/AC/B18/C20604387/D48/E1453/F10/", "NBA"),
+        ("Basketball 24h", "#/AC/B18/C1/D1002/G1453/Q1/F%5E24/", "Basketball"),
+        ("EuroLeague", "#/AC/B18/C1/D1002/G1453/J17/Q1/", "EuroLeague"),
+        ("Spain Liga ACB", "#/AC/B18/C1/D1002/G1453/J8/Q1/", "Spain Liga ACB"),
+        ("France Pro A", "#/AC/B18/C1/D1002/G1453/J15/Q1/", "France Pro A"),
+        ("Germany BBL", "#/AC/B18/C1/D1002/G1453/J7/Q1/", "Germany BBL"),
+        ("Italy Serie A Basket", "#/AC/B18/C1/D1002/G1453/J10/Q1/", "Italy Serie A"),
+        ("Top Competitions", "#/AC/B18/C1/D1002/G1453/J99/Q1/", "Basketball")
+    ]
+    for c_name, c_hash, c_comp in bb_coupons:
+        try:
+            session.navigate_hash(c_hash)
+            time.sleep(1.2)
+            c_lines = session.get_dom_lines()
+            for m in parse_basketball_dom(c_lines, default_comp=c_comp):
                 resolved = resolve_basketball_match(m)
                 if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                     enrich_basketball_match(resolved)
                     matches_out.append(resolved)
-    except Exception as e:
-        print(f"  [Notice] Basketball coupon extraction note: {e}")
+        except Exception as e:
+            print(f"  [Notice] Basketball coupon {c_name} extraction note: {e}")
+
+    # 3. For matches lacking Spread/Total, attempt deep match detail scraping
+    detail_count = 0
+    for m in matches_out:
+        if detail_count >= 3:
+            break
+        if "Point Spread" not in m.get("markets", {}) and m.get("home"):
+            try:
+                scrape_match_detail_markets(session, m, "Basketball")
+                detail_count += 1
+            except Exception:
+                pass
 
     if matches_out:
         print(f"  + [Basketball DOM] {len(matches_out)} live matches captured directly from Bet365")
         return matches_out
 
-    # 3. Fallback only if live scraping captured 0 matches
-    ref_bb = _SPORTS_REF_STORE.get("Basketball", [])
-    if ref_bb:
-        for rm in ref_bb:
-            resolved = resolve_basketball_match(dict(rm))
-            if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                resolved["markets"] = dict(rm.get("markets", {}))
-                enrich_basketball_match(resolved)
-                matches_out.append(resolved)
-
-    return matches_out
+    return []
 
 
 def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List[Dict[str, Any]]:
@@ -3562,7 +3575,7 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                     seen.add(pair_key)
                     spread1, spread2 = None, None
                     tot_o, tot_u = None, None
-                    od1, odX, od2 = "1.85", "8.50", "1.95"
+                    od1, odX, od2 = None, None, None
 
                     tokens = lines[i+3:i+25]
                     dec_odds = []
@@ -3594,16 +3607,18 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                     elif len(dec_odds) == 2:
                         od1, od2 = dec_odds[0], dec_odds[1]
 
-                    mkts: Dict[str, Any] = {
-                        "Full Time Result": {"1": od1, "X": odX, "2": od2},
-                        "Match Result": {"1": od1, "X": odX, "2": od2}
-                    }
+                    mkts: Dict[str, Any] = {}
+                    if od1 and od2:
+                        res = {"1": od1, "2": od2}
+                        if odX: res["X"] = odX
+                        mkts["Full Time Result"] = res
+                        mkts["Match Result"] = res
                     if spread1 and spread2:
                         mkts["Handicap"] = {"1": spread1, "2": spread2}
                     if tot_o and tot_u:
                         mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
 
-                    match_id = str(abs(hash(f"{cand_t1}_{cand_t2}_{time_val}")) % 100000000)
+                    match_id = stable_id(cand_t1, cand_t2, time_val)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3635,7 +3650,7 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                 pair_key = f"{t1.lower()}_{t2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    od1, odX, od2 = "1.85", "8.50", "1.95"
+                    od1, odX, od2 = None, None, None
                     spread_h, spread_a = None, None
                     tot_o, tot_u = None, None
 
@@ -3665,11 +3680,13 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                                 tot_o = f"{l1} ({o1})"
                                 tot_u = f"{l2} ({o2})"
 
-                    match_id = str(abs(hash(f"{t1}_{t2}_{time_val}")) % 100000000)
-                    mkts = {
-                        "Full Time Result": {"1": od1, "X": odX, "2": od2},
-                        "Match Result": {"1": od1, "X": odX, "2": od2}
-                    }
+                    match_id = stable_id(t1, t2, time_val)
+                    mkts = {}
+                    if od1 and od2:
+                        res = {"1": od1, "2": od2}
+                        if odX: res["X"] = odX
+                        mkts["Full Time Result"] = res
+                        mkts["Match Result"] = res
                     if spread_h and spread_a:
                         mkts["Handicap"] = {"1": spread_h, "2": spread_a}
                     if tot_o and tot_u:
@@ -3691,6 +3708,13 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
 def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Handball matches (Sport B78) via CDP with native navigation, landing scroll, and DOM parsing."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Handball] Discovering Handball events via native navigation...")
     if not session.navigate_to_sport("Handball"):
         session.navigate_hash("#/AS/B78/")
@@ -3708,9 +3732,7 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     except Exception:
         pass
 
-    matches_out: List[Dict[str, Any]] = []
-
-    # 1. Parse matches from landing page directly with multi-step virtual scrolling
+    # 1. Parse matches from landing page directly with multi-step virtual scrolling (6 scroll steps)
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_handball_dom(dom_lines):
@@ -3719,7 +3741,7 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 enrich_handball_match(resolved)
                 matches_out.append(resolved)
 
-    for scroll_step in range(4):
+    for scroll_step in range(6):
         try:
             session.page.evaluate("window.scrollBy(0, 1500);")
             time.sleep(0.8)
@@ -3731,21 +3753,33 @@ def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
+    # 2. Visit canonical Handball competition coupons
+    hb_coupons = [
+        ("Champions League", "#/AC/B78/C20414098/D48/E780001/F10/", "EHF Champions League"),
+        ("Handball 24h", "#/AC/B78/C1/D1002/G78/Q1/F%5E24/", "Handball"),
+        ("France Starligue", "#/AC/B78/C1/D1002/G78/J15/Q1/", "France Starligue"),
+        ("Germany Bundesliga", "#/AC/B78/C1/D1002/G78/J7/Q1/", "Germany Bundesliga"),
+        ("Spain Liga ASOBAL", "#/AC/B78/C1/D1002/G78/J8/Q1/", "Spain Liga ASOBAL"),
+        ("Top Competitions", "#/AC/B78/C1/D1002/G78/J99/Q1/", "Handball")
+    ]
+    for c_name, c_hash, c_comp in hb_coupons:
+        try:
+            session.navigate_hash(c_hash)
+            time.sleep(1.2)
+            c_lines = session.get_dom_lines()
+            for m in parse_handball_dom(c_lines, default_comp=c_comp):
+                resolved = resolve_handball_match(m)
+                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                    enrich_handball_match(resolved)
+                    matches_out.append(resolved)
+        except Exception as e:
+            print(f"  [Notice] Handball coupon {c_name} extraction note: {e}")
+
     if matches_out:
         print(f"  + [Handball DOM] {len(matches_out)} live matches captured directly from Bet365")
         return matches_out
 
-    # 3. Fallback only if live scraping captured 0 matches
-    ref_hb = _SPORTS_REF_STORE.get("Handball", [])
-    if ref_hb:
-        for rm in ref_hb:
-            resolved = resolve_handball_match(dict(rm))
-            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                resolved["markets"] = dict(rm.get("markets", {}))
-                enrich_handball_match(resolved)
-                matches_out.append(resolved)
-
-    return matches_out
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3756,7 +3790,6 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
     matches = []
     curr_comp = "Cycling World Championship 2026"
     odds_dict: Dict[str, str] = {}
-    from datetime import timedelta
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     today_str = tomorrow.strftime("%d/%m/%Y")
     kickoff_str = tomorrow.strftime("%d/%m/%Y 12:00:00")
@@ -3768,7 +3801,7 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
             if len(line) < 60 and not re.match(r'^\d+\.\d+$', line):
                 if odds_dict:
                     comp_title = curr_comp
-                    match_id = str(abs(hash(comp_title)) % 100000000)
+                    match_id = stable_id(comp_title)
                     matches.append({
                         "id": match_id,
                         "date": today_str,
@@ -3805,7 +3838,7 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
 
     if odds_dict:
         comp_title = curr_comp
-        match_id = str(abs(hash(comp_title)) % 100000000)
+        match_id = stable_id(comp_title)
         matches.append({
             "id": match_id,
             "date": today_str,
@@ -3826,13 +3859,17 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
 def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Cycling Grand Tours, stages & outrights (Sport B38) via CDP."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Cycling] Discovering Cycling races & outrights (Sport B38)...")
     if not session.navigate_to_sport("Cycling"):
         session.navigate_hash("#/AS/B38/")
     time.sleep(2.5)
-
-    matches_out: List[Dict[str, Any]] = []
-    from datetime import timedelta
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     today_str = tomorrow.strftime("%d/%m/%Y")
     kickoff_str = tomorrow.strftime("%d/%m/%Y 12:00:00")
@@ -3881,7 +3918,7 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 if odds_dict:
                     sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
                     comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
-                    match_id = str(abs(hash(comp_title)) % 100000000)
+                    match_id = stable_id(comp_title)
                     ev = {
                         "id": match_id,
                         "date": today_str,
@@ -3902,18 +3939,7 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     if matches_out:
         return matches_out
 
-    # 3. Merge with reference store only if live scraping captured 0 matches
-    ref_cy = _SPORTS_REF_STORE.get("Cycling", [])
-    if ref_cy:
-        for rm in ref_cy:
-            if not any(ex["id"] == rm["id"] or ex["competition"] == rm["competition"] for ex in matches_out):
-                m_copy = dict(rm)
-                m_copy["markets"] = dict(rm.get("markets", {}))
-                resolve_cycling_match(m_copy)
-                enrich_cycling_event(m_copy)
-                matches_out.append(m_copy)
-
-    return matches_out
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3953,6 +3979,13 @@ def parser_golf_splash(raw: str, domain: str = DEFAULT_DOMAIN) -> Dict[str, List
 def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Golf tournaments & outrights (Sport B7) via CDP."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Golf] Discovering Golf tournaments (Sport B7)...")
     if not session.navigate_to_sport("Golf"):
         session.navigate_hash("#/AS/B7/")
@@ -4014,7 +4047,7 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
             if odds_dict:
                 sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
                 comp_title = f"{tourney_name} - {m_name}" if m_name != tourney_name else tourney_name
-                match_id = str(abs(hash(comp_title)) % 100000000)
+                match_id = stable_id(comp_title)
                 ev = {
                     "id": match_id,
                     "date": date_str,
@@ -4037,20 +4070,7 @@ def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     if matches_out:
         return matches_out
 
-    # Fallback only if live scraping captured 0 matches
-    ref_golf = _SPORTS_REF_STORE.get("Golf", [])
-    if ref_golf:
-        for rm in ref_golf:
-            resolved = resolve_golf_match(dict(rm))
-            if resolved and not any(ex["id"] == resolved["id"] or ex["competition"] == resolved["competition"] for ex in matches_out):
-                resolved["markets"] = dict(rm.get("markets", {}))
-                d_str, k_str = get_golf_event_schedule(resolved.get("competition", ""))
-                resolved["date"] = d_str
-                resolved["kickoff"] = k_str
-                enrich_golf_tournament(resolved)
-                matches_out.append(resolved)
-
-    return matches_out
+    return []
 
 
 def parse_f1_from_dom_lines(lines: List[str]) -> Tuple[str, Dict[str, Dict[str, str]]]:
@@ -4115,13 +4135,17 @@ def parse_f1_from_dom_lines(lines: List[str]) -> Tuple[str, Dict[str, Dict[str, 
 def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Formula 1 Grand Prix races & championship outrights (Sport B10) via CDP."""
     _init_sports_ref_store()
+    matches_out: List[Dict[str, Any]] = []
+
+    # Quick geo-block check
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        session.geo_blocked = True
+        return []
+
     print("  [CDP Formula 1] Discovering F1 races & outrights (Sport B10)...")
     if not session.navigate_to_sport("F1"):
         session.navigate_hash("#/AS/B10/")
     time.sleep(2.5)
-
-    matches_out: List[Dict[str, Any]] = []
-    from datetime import timedelta
     tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
     today_str = tomorrow.strftime("%d/%m/%Y")
     kickoff_str = tomorrow.strftime("%d/%m/%Y 14:00:00")
@@ -4152,7 +4176,7 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                     break
 
             comp_title = f"Formula 1 - {gp_name}"
-            match_id = str(abs(hash(comp_title)) % 100000000)
+            match_id = stable_id(comp_title)
             dom_mkts["To Win"] = dom_mkts.get("Race Winner") or list(dom_mkts.values())[0]
             matches_out.append({
                 "id": match_id,
@@ -4208,7 +4232,7 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 if odds_dict:
                     sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
                     comp_title = f"{t_nom} - {m_nom}" if m_nom != t_nom else t_nom
-                    match_id = str(abs(hash(comp_title)) % 100000000)
+                    match_id = stable_id(comp_title)
 
                     markets_dict: Dict[str, Any] = {
                         "To Win": sorted_odds
@@ -4238,49 +4262,12 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                         })
                         print(f"  + [F1] Captured {len(sorted_odds)} selections for {comp_title}")
 
-    # 3. Ensure Championship outrights are present per specification
-    championships = [
-        ("Formula 1 - Drivers Championship 2026", "Drivers Championship", {
-            "Lando Norris": "2.10", "Max Verstappen": "2.50", "Charles Leclerc": "6.00",
-            "Lewis Hamilton": "12.00", "George Russell": "15.00", "Oscar Piastri": "18.00"
-        }),
-        ("Formula 1 - Constructors Championship 2026", "Constructors Championship", {
-            "McLaren": "1.72", "Red Bull": "2.40", "Ferrari": "5.50", "Mercedes": "11.00"
-        })
-    ]
-    for c_title, mkt_key, c_odds in championships:
-        if not any(ex["competition"] == c_title for ex in matches_out):
-            c_id = str(abs(hash(c_title)) % 100000000)
-            matches_out.append({
-                "id": c_id,
-                "date": today_str,
-                "kickoff": kickoff_str,
-                "competition": c_title,
-                "home": f"{c_title} - To Win",
-                "away": "",
-                "markets": {
-                    mkt_key: c_odds,
-                    "Race Winner": c_odds,
-                    "To Win": c_odds
-                }
-            })
-
     if matches_out:
         for m in matches_out:
             resolve_f1_match(m)
         return matches_out
 
-    # Fallback only if live scraping captured 0 matches
-    ref_f1 = _SPORTS_REF_STORE.get("F1", [])
-    if ref_f1:
-        for rm in ref_f1:
-            if not any(ex.get("competition") == rm.get("competition") or ex.get("id") == rm.get("id") for ex in matches_out):
-                matches_out.append(dict(rm))
-
-    for m in matches_out:
-        resolve_f1_match(m)
-
-    return matches_out
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -4360,6 +4347,12 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
         except Exception:
             pass
         session = CDPSession(page, target_domain)
+        if session.is_geo_blocked():
+            session.geo_blocked = True
+            print("\n  [Geo-Block Notice] Bet365 returned 403 Forbidden / geo-restriction ('Ez az oldal nem érhető el az Ön országából').")
+            print("  [Geo-Block Notice] Real live scraping cannot proceed while Bet365 displays the geo-restriction page.")
+            print("  [Geo-Block Notice] Please connect through a working VPN or set a valid residential proxy in config.json.\n")
+            return []
 
         for sport_name, handler in ALL_SPORT_HANDLERS:
             if not want(sport_name):
@@ -4369,8 +4362,9 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
             print(f"  Scraping {sport_name.upper()}...")
             print("-" * 54)
 
-            session.check_and_recover_blocked()
-            time.sleep(1.2)
+            if not getattr(session, "geo_blocked", False):
+                session.check_and_recover_blocked()
+                time.sleep(1.2)
 
             try:
                 matches = handler(session)
@@ -4385,7 +4379,8 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
             except Exception as e:
                 print(f"  [Error] {sport_name} handler exception: {e}")
 
-            # Natural inter-sport delay
-            request_delay(base_s=3.0, jitter=0.5)
+            # Natural inter-sport delay (only when live scraping)
+            if not getattr(session, "geo_blocked", False):
+                request_delay(base_s=3.0, jitter=0.5)
 
     return results

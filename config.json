@@ -3,6 +3,7 @@
   "request_delay_seconds": 2.5,
   "delay_jitter": 0.5,
   "default_domain": "auto",
+  "proxy": "",
   "sports": [
     "Soccer",
     "Tennis",
