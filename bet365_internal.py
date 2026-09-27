@@ -527,25 +527,70 @@ class CDPSession:
                     self.reset_to_home()
                     return True
             if not getattr(self, "geo_blocked", False) and ("désolé, cette page n'est plus disponible" in body_text or "impossible d'afficher ce contenu" in body_text):
-                print("  [Router Recovery] Bet365 'Désolé' or 'Impossible d'afficher' detected. Reloading page...")
-                try:
-                    self.page.reload(wait_until="commit", timeout=12000)
-                    time.sleep(2.5)
-                except Exception:
-                    pass
+                print("  [Router Recovery] Bet365 'Désolé' or 'Impossible d'afficher' detected. Resetting to home...")
+                self.reset_to_home()
+                time.sleep(2.0)
                 return True
         except Exception:
             pass
         return False
 
     def navigate_to_sport(self, sport_name: str) -> bool:
-        """Navigate to sport via direct hash route or sidebar click, ensuring clean SPA state."""
+        """Navigate to sport via sidebar click or clean SPA state navigation."""
         if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
             self.geo_blocked = True
             return False
         self.check_and_recover_blocked()
         request_delay(base_s=1.0, jitter=0.2)
 
+        search_terms = {
+            "soccer": ["football", "football du week-end", "soccer"],
+            "football": ["football", "football du week-end", "soccer"],
+            "tennis": ["tennis", "tennis à venir"],
+            "basketball": ["basket-ball", "basketball", "basket", "wnba", "nba"],
+            "handball": ["handball"],
+            "cycling": ["cyclisme", "cycling"],
+            "cyclisme": ["cyclisme", "cycling"],
+            "golf": ["golf"],
+            "f1": ["formule 1", "formula 1", "sports mécaniques", "f1"],
+            "formula 1": ["formule 1", "formula 1", "sports mécaniques", "f1"]
+        }
+        terms = search_terms.get(sport_name.lower(), [sport_name.lower()])
+        # 1. First try exact match (e.g. ^Tennis$)
+        for term in terms:
+            try:
+                loc = self.page.locator('.lhs-2d, .wn-Classification, [class*="Classification"]').filter(has_text=re.compile(f"^{re.escape(term)}$", re.I)).first
+                if loc.count() > 0 and loc.is_visible():
+                    loc.scroll_into_view_if_needed()
+                    loc.click(timeout=3500)
+                    time.sleep(2.5)
+                    lines = self.get_dom_lines()
+                    if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                        return True
+            except Exception:
+                pass
+        # 2. Try prefix/contains match
+        for term in terms:
+            try:
+                loc = self.page.locator('.lhs-2d, .wn-Classification, [class*="Classification"]').filter(has_text=re.compile(f"^{re.escape(term)}$|{re.escape(term)}", re.I)).first
+                if loc.count() > 0 and loc.is_visible():
+                    loc.scroll_into_view_if_needed()
+                    loc.click(timeout=3500)
+                    time.sleep(2.5)
+                    lines = self.get_dom_lines()
+                    if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                        return True
+            except Exception:
+                pass
+
+        # 3. JS TreeWalker click on sidebar classification
+        if self.click_sidebar_term(terms):
+            time.sleep(2.5)
+            lines = self.get_dom_lines()
+            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                return True
+
+        # 4. SPA in-memory hash dispatch (clean internal router transition without WAF page reload)
         sport_routes = {
             "soccer": "#/AS/B1/",
             "football": "#/AS/B1/",
@@ -561,48 +606,16 @@ class CDPSession:
         target_route = sport_routes.get(sport_name.lower())
         if target_route:
             try:
-                target_url = f"{self.domain}/{target_route}"
-                self.page.goto(target_url, wait_until="commit", timeout=10000)
+                self.page.evaluate('''(h) => {
+                    if (window.location.hash !== h) {
+                        window.location.hash = h;
+                    }
+                    window.dispatchEvent(new HashChangeEvent("hashchange"));
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                }''', target_route)
                 time.sleep(2.0)
                 lines = self.get_dom_lines()
-                if any("Impossible d'afficher ce contenu" in l for l in lines):
-                    self.page.reload(wait_until="commit", timeout=15000)
-                    time.sleep(2.0)
-                return True
-            except Exception:
-                pass
-
-        search_terms = {
-            "soccer": ["football du week-end", "football"],
-            "football": ["football du week-end", "football"],
-            "tennis": ["tennis"],
-            "basketball": ["wnba", "basketball"],
-            "handball": ["handball"],
-            "cycling": ["cyclisme", "cycling"],
-            "golf": ["golf"],
-            "f1": ["formule 1", "formula 1", "sports mécaniques"],
-            "formula 1": ["formule 1", "formula 1"]
-        }
-        terms = search_terms.get(sport_name.lower(), [sport_name.lower()])
-        # 1. First try exact match (e.g. ^Tennis$)
-        for term in terms:
-            try:
-                loc = self.page.locator('.lhs-2d').filter(has_text=re.compile(f"^{re.escape(term)}$", re.I)).first
-                if loc.count() > 0 and loc.is_visible():
-                    loc.scroll_into_view_if_needed()
-                    loc.click(timeout=4000)
-                    time.sleep(3.0)
-                    return True
-            except Exception:
-                pass
-        # 2. Try prefix/contains match
-        for term in terms:
-            try:
-                loc = self.page.locator('.lhs-2d').filter(has_text=re.compile(f"^{re.escape(term)}$|{re.escape(term)}", re.I)).first
-                if loc.count() > 0 and loc.is_visible():
-                    loc.scroll_into_view_if_needed()
-                    loc.click(timeout=4000)
-                    time.sleep(3.0)
+                if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
                     return True
             except Exception:
                 pass
@@ -645,7 +658,7 @@ class CDPSession:
             return []
 
     def navigate_hash(self, target_url_or_hash: str) -> None:
-        """Smooth hash navigation with auto-hydration reload if page lines are truncated or router stalled."""
+        """Smooth hash navigation with in-memory dispatch first, avoiding destructive full page reloads."""
         self.check_and_recover_blocked()
         request_delay(base_s=1.0, jitter=0.2)
         target_hash = target_url_or_hash
@@ -657,29 +670,32 @@ class CDPSession:
             self.geo_blocked = True
             return
 
+        # 1. Prefer client-side SPA in-memory hash dispatch to avoid triggering full page reloads and WAF
+        try:
+            self.page.evaluate('''(h) => {
+                if (window.location.hash !== h) {
+                    window.location.hash = h;
+                }
+                window.dispatchEvent(new HashChangeEvent("hashchange"));
+                window.dispatchEvent(new PopStateEvent("popstate"));
+            }''', target_hash)
+            time.sleep(1.8)
+            lines = self.get_dom_lines()
+            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                return
+        except Exception:
+            pass
+
+        # 2. Fallback: page.goto only if in-memory dispatch did not change view
         try:
             full_url = f"{self.domain}/{target_hash}"
             self.page.goto(full_url, wait_until="commit", timeout=12000)
             time.sleep(1.5)
-            if self.is_geo_blocked():
-                self.geo_blocked = True
-                return
             lines = self.get_dom_lines()
-            if any("Impossible d'afficher" in l or "Désolé" in l for l in lines):
-                self.page.reload(wait_until="commit", timeout=12000)
-                time.sleep(1.5)
+            if any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                self.reset_to_home()
         except Exception:
-            try:
-                self.page.evaluate('''(h) => {
-                    if (window.location.hash !== h) {
-                        window.location.hash = h;
-                    }
-                    window.dispatchEvent(new HashChangeEvent("hashchange"));
-                    window.dispatchEvent(new PopStateEvent("popstate"));
-                }''', target_hash)
-                time.sleep(2.0)
-            except Exception:
-                pass
+            pass
 
     def click_sidebar_term(self, terms: List[str]) -> bool:
         """Click sidebar sport classification link using JS TreeWalker."""
@@ -2969,6 +2985,21 @@ def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         session.navigate_hash("#/AS/B1/")
     time.sleep(2.5)
 
+    # Click 'Tout voir' or 'Matchs' if present to expose full football schedule
+    try:
+        session.page.evaluate('''() => {
+            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
+            const tv = btns.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
+            });
+            if (tv) { tv.click(); return true; }
+            return false;
+        }''')
+        time.sleep(1.5)
+    except Exception:
+        pass
+
     dom_lines = session.get_dom_lines()
     if dom_lines:
         for m in parse_soccer_dom(dom_lines, default_comp="Football"):
@@ -3219,6 +3250,21 @@ def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
         session.navigate_hash("#/AS/B13/")
     time.sleep(2.5)
 
+    # Click 'Tout voir' or 'Matchs' if present to expose full schedule
+    try:
+        session.page.evaluate('''() => {
+            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
+            const tv = btns.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
+            });
+            if (tv) { tv.click(); return true; }
+            return false;
+        }''')
+        time.sleep(1.5)
+    except Exception:
+        pass
+
     # 1. Harvest matches from the Tennis main page directly with virtual scrolling
     dom_lines = session.get_dom_lines()
     if dom_lines:
@@ -3459,6 +3505,21 @@ def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     if not session.navigate_to_sport("Basketball"):
         session.navigate_hash("#/AS/B18/")
     time.sleep(2.5)
+
+    # Click 'Tout voir' or 'Matchs' if present to expose full basketball schedule
+    try:
+        session.page.evaluate('''() => {
+            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
+            const tv = btns.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
+            });
+            if (tv) { tv.click(); return true; }
+            return false;
+        }''')
+        time.sleep(1.5)
+    except Exception:
+        pass
 
     # 1. Harvest matches from the Basketball main page with virtual scrolling (6 scroll steps)
     dom_lines = session.get_dom_lines()

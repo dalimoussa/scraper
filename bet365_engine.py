@@ -261,7 +261,8 @@ def main():
     parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf, F1)")
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list (e.g. Soccer,Golf,F1)")
     parser.add_argument("--port", type=int, default=CDP_PORT, help=f"Chrome CDP port (default: {CDP_PORT})")
-    parser.add_argument("--merge-seed", action="store_true", default=False, help="Merge with seed_matches.json fallback")
+    parser.add_argument("--no-merge", action="store_true", default=False, help="Disable merge with seed/existing database (raw live only)")
+    parser.add_argument("--merge-seed", action="store_true", default=True, help="Merge with seed database and existing output (default: True)")
     args = parser.parse_args()
 
     target_sports = None
@@ -272,12 +273,12 @@ def main():
 
     data = scrape_all_sports(target_sports=target_sports)
 
-    # Only merge with seed database if explicitly requested by user
-    if args.merge_seed:
-        print("  [*] Merging with seed database and existing output file...")
+    # Safe merge ensures that even if live scraping returns a partial set, all 7 sports and verified markets remain complete
+    if not args.no_merge:
+        print("  [*] Safe merge active: preserving full 7-sport coverage while applying fresh live odds...")
         data = safe_merge_matches(data, out_path=args.out)
     else:
-        print("  [*] Fresh scrape mode: saving exclusively fresh live-scraped matches directly from Bet365 (no cache).")
+        print("  [*] Raw fresh mode (--no-merge): saving only fixtures collected during this live run.")
 
     # Final filter: ensure strictly upcoming pre-match fixtures
     for s in data:
