@@ -3277,13 +3277,22 @@ def scrape_coupon_btts_odds(session: CDPSession) -> Dict[Tuple[str, str], Dict[s
     return btts_map
 
 
+def _init_soccer_ref_store() -> None:
+    """Safe no-op helper for backwards compatibility."""
+    pass
+
+
+def _init_sports_ref_store() -> None:
+    """Safe no-op helper for backwards compatibility."""
+    pass
+
+
 def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """
     Scrapes Soccer matches across European and World leagues via CDP with multi-step virtual scrolling,
     canonical multi-coupon discovery across top target leagues, live DOM extraction, live BTTS extraction,
     and full secondary market extraction (BTTS, Over/Under, Double Chance, Draw No Bet, Half Time/Full Time).
     """
-    _init_soccer_ref_store()
     print(f"  [CDP Soccer] Discovering Soccer matches on {session.domain} via native navigation...")
     matches_out: List[Dict[str, Any]] = []
 
@@ -3589,7 +3598,6 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
 
 def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live/upcoming Tennis tournaments (Sport B13) via CDP with full market enrichment."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
@@ -3845,7 +3853,6 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
 
 def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Basketball matches (Sport B18) via CDP with multi-step virtual scrolling, competition discovery, and full market enrichment."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
@@ -4120,7 +4127,6 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
 
 def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Handball matches (Sport B78) via CDP with native navigation, landing scroll, and DOM parsing."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
@@ -4271,7 +4277,6 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
 
 def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Cycling Grand Tours, stages & outrights (Sport B38) via CDP."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
@@ -4391,7 +4396,6 @@ def parser_golf_splash(raw: str, domain: str = DEFAULT_DOMAIN) -> Dict[str, List
 
 def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Golf tournaments & outrights (Sport B7) via CDP."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
@@ -4547,7 +4551,6 @@ def parse_f1_from_dom_lines(lines: List[str]) -> Tuple[str, Dict[str, Dict[str, 
 
 def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Formula 1 Grand Prix races & championship outrights (Sport B10) via CDP."""
-    _init_sports_ref_store()
     matches_out: List[Dict[str, Any]] = []
 
     # Quick geo-block check
