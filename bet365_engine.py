@@ -203,6 +203,24 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
 
             combined = []
             for lm in live_matches:
+                matched_om = None
+                for om in old_matches:
+                    if (om.get("id") and lm.get("id") == om.get("id")) or \
+                       (om.get("home") and om.get("away") and lm.get("home") == om.get("home") and lm.get("away") == om.get("away")) or \
+                       (not om.get("away") and not lm.get("away") and om.get("competition") and lm.get("competition") == om.get("competition") and om.get("home") == lm.get("home")):
+                        matched_om = om
+                        break
+
+                if matched_om:
+                    # Inherit existing secondary markets so live scrape never downgrades to 1X2 only
+                    base_mkts = dict(matched_om.get("markets", {}))
+                    base_mkts.update(lm.get("markets", {}))
+                    lm["markets"] = base_mkts
+                    if not lm.get("kickoff") or lm.get("kickoff") == "20:00:00":
+                        lm["kickoff"] = matched_om.get("kickoff", lm.get("kickoff"))
+                    if not lm.get("date"):
+                        lm["date"] = matched_om.get("date", lm.get("date"))
+
                 proc = process_sport_match(lm, sp)
                 if proc:
                     combined.append(proc)
