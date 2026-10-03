@@ -1,8 +1,9 @@
 {
   "cdp_port": 9222,
-  "request_delay_seconds": 2.5,
-  "delay_jitter": 0.5,
+  "request_delay_seconds": 3.5,
+  "delay_jitter": 0.8,
   "default_domain": "auto",
+  "keep_unverified_matches": true,
   "proxy": "",
   "sports": [
     "Soccer",

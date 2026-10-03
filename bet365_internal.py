@@ -61,8 +61,8 @@ except ImportError:
 # Global Settings & Pacing
 # ─────────────────────────────────────────────────────────────────────────────
 CDP_PORT = 9222
-DEFAULT_DELAY = 2.5
-DEFAULT_JITTER = 0.5
+DEFAULT_DELAY = 3.5
+DEFAULT_JITTER = 0.8
 
 _DETECTED_DOMAIN: Optional[str] = None
 
@@ -131,7 +131,8 @@ def get_bet365_domain() -> str:
     return _DETECTED_DOMAIN
 
 
-DEFAULT_DOMAIN = get_bet365_domain()
+# Lazy default domain; resolved dynamically without blocking import
+DEFAULT_DOMAIN = "https://www.bet365.fr" if os.environ.get("BET365_DOMAIN") and "bet365.fr" in os.environ.get("BET365_DOMAIN", "").lower() else "https://www.bet365.com"
 
 # Load config if present
 try:
@@ -146,18 +147,109 @@ except Exception:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Spacing & Anti-Detection
+# Spacing & Anti-Detection (Adaptive Pacer & Circuit Breaker)
 # ─────────────────────────────────────────────────────────────────────────────
+class AdaptivePacer:
+    """Exponential backoff driven by real block events + per-sport circuit breaker."""
+    def __init__(self, base_s: float = DEFAULT_DELAY, jitter: float = DEFAULT_JITTER):
+        self.base_s = base_s
+        self.jitter = jitter
+        self.factor = 1.0
+        self.consecutive_blocks = 0
+        self.total_blocks = 0
+        self.sport_consecutive_blocks: Dict[str, int] = {}
+        self.tripped_sports: set = set()
+
+    def wait(self, mult: float = 1.0) -> None:
+        """Adaptive delay using log-normal jitter and exponential factor."""
+        log_jitter = random.lognormvariate(0.0, 0.3)
+        sleep_time = min(45.0, max(1.8, self.base_s * self.factor * mult * log_jitter))
+        if random.random() < 0.10:
+            sleep_time += random.uniform(1.2, 2.5)
+        time.sleep(sleep_time)
+
+    def on_success(self, sport: str = "") -> None:
+        self.consecutive_blocks = 0
+        if sport and sport in self.sport_consecutive_blocks:
+            self.sport_consecutive_blocks[sport] = 0
+        self.factor = max(1.0, self.factor * 0.7)
+
+    def on_block(self, sport: str = "", sleep: bool = True) -> None:
+        self.total_blocks += 1
+        self.consecutive_blocks += 1
+        if sport:
+            cnt = self.sport_consecutive_blocks.get(sport, 0) + 1
+            self.sport_consecutive_blocks[sport] = cnt
+            if cnt >= 5:
+                self.tripped_sports.add(sport)
+                print(f"  [Circuit Breaker] Trip limit reached for {sport} ({cnt} consecutive blocks). Aborting this sport.")
+        self.factor = min(10.0, self.factor * 1.8)
+        cooldown = min(45.0, 5.0 * self.factor)
+        print(f"  [Pacer] Block #{self.total_blocks}. Cooldown {cooldown:.1f}s (backoff factor: x{self.factor:.1f})")
+        if sleep:
+            time.sleep(cooldown)
+
+    def is_sport_circuit_open(self, sport: str) -> bool:
+        return sport in self.tripped_sports or self.sport_consecutive_blocks.get(sport, 0) >= 5
+
+    @property
+    def is_global_circuit_open(self) -> bool:
+        return len(self.tripped_sports) >= 3
+
+
+GLOBAL_PACER = AdaptivePacer(base_s=DEFAULT_DELAY, jitter=DEFAULT_JITTER)
+
+STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scraper_state.json")
+
+
+def load_scraper_state() -> Dict[str, Any]:
+    """Loads state (dead hashes, run count, etc.) with TTL cleanup."""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                state = json.load(f)
+            now_ts = time.time()
+            dead_hashes = state.get("dead_hashes", {})
+            cleaned = {h: ts for h, ts in dead_hashes.items() if now_ts - ts < 86400}
+            state["dead_hashes"] = cleaned
+            return state
+        except Exception:
+            pass
+    return {"dead_hashes": {}, "runs": 0}
+
+
+def save_scraper_state(state: Dict[str, Any]) -> None:
+    """Atomically saves scraper state."""
+    try:
+        tmp = f"{STATE_FILE}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+        os.replace(tmp, STATE_FILE)
+    except Exception:
+        pass
+
+
+def mark_dead_hash(target_hash: str) -> None:
+    """Records a coupon hash as dead with current timestamp."""
+    state = load_scraper_state()
+    state.setdefault("dead_hashes", {})[target_hash] = time.time()
+    save_scraper_state(state)
+
+
+def is_dead_hash(target_hash: str) -> bool:
+    """Checks if hash is marked as dead and still within TTL (24h)."""
+    state = load_scraper_state()
+    dead = state.get("dead_hashes", {})
+    if target_hash in dead:
+        if time.time() - dead[target_hash] < 86400:
+            return True
+    return False
+
+
 def request_delay(base_s: float = DEFAULT_DELAY, jitter: float = DEFAULT_JITTER) -> None:
-    """
-    Pacing delay between requests using randomized human-like timing distributions
-    (log-normal jitter + occasional realistic pause) to prevent robotic fingerprinting.
-    """
-    factor = random.lognormvariate(0.0, 0.35)
-    sleep_time = max(1.5, base_s * factor)
-    if random.random() < 0.12:
-        sleep_time += random.uniform(1.8, 3.8)
-    time.sleep(sleep_time)
+    """Delegates to AdaptivePacer with smooth pacing."""
+    mult = base_s / max(0.1, DEFAULT_DELAY)
+    GLOBAL_PACER.wait(mult=mult)
 
 
 def is_port_in_use(port: int = CDP_PORT) -> bool:
@@ -208,6 +300,7 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
             chrome_bin,
             f"--remote-debugging-port={cdp_port}",
             f"--user-data-dir={profile_dir}",
+            "--remote-allow-origins=*",
             "--window-size=1920,1080",
             "--start-maximized",
             "--no-first-run",
@@ -351,6 +444,115 @@ def validate_market(name: str, outcomes: Dict[str, Any]) -> Tuple[bool, str]:
     return True, ""
 
 
+def _extract_prices(outcomes: Dict[str, Any]) -> List[float]:
+    """Helper to extract positive numeric decimal odds from any market outcome mapping."""
+    if not isinstance(outcomes, dict):
+        return []
+    vals = []
+    for k, v in outcomes.items():
+        if isinstance(v, dict):
+            val_cand = v.get("odds") or v.get("1") or v.get("2")
+        else:
+            val_cand = v
+        str_val = str(val_cand).strip()
+        m_paren = re.search(r'\(([\d.,]+)\)', str_val)
+        if m_paren:
+            clean_str = m_paren.group(1).replace(",", ".")
+        else:
+            clean_str = re.sub(r'^[OUou]\s+', '', str_val).replace(",", ".")
+        try:
+            f_val = float(clean_str)
+            if f_val > 0:
+                vals.append(f_val)
+        except (ValueError, TypeError):
+            pass
+    return vals
+
+
+def check_market_overround(name: str, outcomes: Dict[str, Any]) -> Tuple[bool, str]:
+    """
+    Mathematical overround validation: checks that the sum of implied probabilities
+    (1 / odd) falls within realistic bookmaker margins:
+    - 2-way: [0.80, 1.35]
+    - 3-way: [0.80, 1.40]
+    - Double Chance: [1.70, 2.50]
+    - Half Time/Full Time (9-way): [1.00, 1.55]
+    - Set Betting (best of 3, 4 outcomes): [0.80, 1.45]
+    - Correct Score: skipped
+    """
+    if name in ("Correct Score",):
+        return True, ""
+
+    prices = _extract_prices(outcomes)
+    if not prices:
+        return True, ""
+
+    # Set Betting best-of-3 has 4 outcomes
+    if name == "Set Betting":
+        if len(prices) == 4:
+            overround = sum(1.0 / p for p in prices)
+            if not (0.80 <= overround <= 1.45):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [0.80, 1.45]"
+        return True, ""
+
+    if name == "Double Chance":
+        if len(prices) == 3:
+            overround = sum(1.0 / p for p in prices)
+            if not (1.70 <= overround <= 2.50):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [1.70, 2.50]"
+        return True, ""
+
+    if name == "Half Time/Full Time":
+        if len(prices) == 9:
+            overround = sum(1.0 / p for p in prices)
+            if not (1.00 <= overround <= 1.55):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [1.00, 1.55]"
+        return True, ""
+
+    # 3-way markets
+    if name in ("Match Result", "Full Time Result"):
+        if len(prices) == 3:
+            overround = sum(1.0 / p for p in prices)
+            if not (0.80 <= overround <= 1.40):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [0.80, 1.40]"
+        elif len(prices) == 2:
+            overround = sum(1.0 / p for p in prices)
+            if not (0.80 <= overround <= 1.35):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [0.80, 1.35]"
+        return True, ""
+
+    # 2-way markets
+    two_way_names = {
+        "Both Teams to Score", "Goals Over/Under", "Moneyline", "Money Line",
+        "Draw No Bet", "Point Spread", "Spread", "Total Points", "Total",
+        "Handicap", "Handicap / Spread", "Total Goals", "To Win Match",
+        "Match Winner", "First Set Winner", "Total Games"
+    }
+    if name in two_way_names or len(prices) == 2:
+        if len(prices) == 2:
+            overround = sum(1.0 / p for p in prices)
+            if not (0.80 <= overround <= 1.35):
+                return False, f"{name}: overround {overround:.3f} outside sanity bounds [0.80, 1.35]"
+
+    return True, ""
+
+
+def mark_market_source(match: Dict[str, Any], market_name: str, source: str) -> None:
+    """Tags market with source ('live' or 'computed'). Live never gets downgraded to computed."""
+    src_map = match.setdefault("market_source", {})
+    if src_map.get(market_name) == "live" and source == "computed":
+        return
+    src_map[market_name] = source
+
+
+def init_live_market_sources(match: Dict[str, Any]) -> None:
+    """Marks all currently existing markets on match as 'live' if not already tagged."""
+    src_map = match.setdefault("market_source", {})
+    for m_name in match.get("markets", {}):
+        if m_name not in src_map:
+            src_map[m_name] = "live"
+
+
 def wait_for_view_change(session, timeout: float = 5.0, settle: float = 0.35) -> bool:
     """Polls until coupon DOM signature changes and settles after a tab click."""
     def get_sig():
@@ -398,14 +600,15 @@ def parse_bet365(raw: str) -> List[Dict[str, str]]:
     """Parse Bet365 delimited protocol: blocks separated by |, fields by ;."""
     blocs = []
     for block in raw.split("|"):
-        if not block.strip():
+        block = block.strip()
+        if not block:
             continue
         parts = block.split(";")
-        d = {"_type": parts[0]}
+        d = {"_type": parts[0].strip()}
         for part in parts[1:]:
             if "=" in part:
                 k, v = part.split("=", 1)
-                d[k] = v
+                d[k] = v.strip()
         blocs.append(d)
     return blocs
 
@@ -464,7 +667,7 @@ class CDPSession:
             self.geo_blocked = True
             return
         try:
-            loc = self.page.locator('text=Tous les Sports').first
+            loc = self.page.locator('text=Tous les Sports, text=Sports').first
             if loc.count() > 0 and loc.is_visible():
                 loc.click(timeout=3000)
                 time.sleep(2.0)
@@ -472,16 +675,24 @@ class CDPSession:
         except Exception:
             pass
         try:
-            self.page.goto(f"{self.domain}/#/HO/", wait_until="commit", timeout=15000)
-            time.sleep(2.5)
+            self.page.evaluate('() => { window.location.hash = "#/HO/"; window.dispatchEvent(new HashChangeEvent("hashchange")); }')
+            time.sleep(1.5)
+            lines = self.get_dom_lines()
+            if len(lines) > 5 and not any("impossible" in l.lower() or "désolé" in l.lower() for l in lines):
+                return
+        except Exception:
+            pass
+        try:
+            self.page.goto(f"{self.domain}/#/HO/", wait_until="commit", timeout=12000)
+            time.sleep(2.0)
         except Exception:
             pass
 
     def is_geo_blocked(self) -> bool:
         """Detect if current page is geo-restricted (e.g. Hungarian IP block 'Ez az oldal nem érhető el az Ön országából') or blocked by antivirus or 403 Forbidden."""
         try:
-            body_text = (self.page.inner_text("body") or "").lower()
-            title_text = (self.page.title() or "").lower()
+            body_text = (self.page.inner_text("body") or "").lower().replace("’", "'").replace("`", "'")
+            title_text = (self.page.title() or "").lower().replace("’", "'").replace("`", "'")
             combined = f"{title_text} {body_text}"
             geo_keywords = [
                 "nem érhető el az ön országából",
@@ -503,7 +714,7 @@ class CDPSession:
             pass
         return False
 
-    def check_and_recover_blocked(self) -> bool:
+    def check_and_recover_blocked(self, sport: str = "") -> bool:
         """Detect if real WAF / Cloudflare block screen or error screen is shown and recover."""
         try:
             if self.is_geo_blocked():
@@ -512,8 +723,9 @@ class CDPSession:
                     self.geo_blocked = True
                 return True
 
-            body_text = (self.page.inner_text("body") or "").lower()
-            if len(body_text) < 1500:
+            raw_body = self.page.inner_text("body") or ""
+            body_text = raw_body.lower().replace("’", "'").replace("`", "'")
+            if len(body_text) < 1800:
                 block_keywords = [
                     "access denied",
                     "error 1020",
@@ -523,13 +735,26 @@ class CDPSession:
                     "ray id:"
                 ]
                 if any(k in body_text for k in block_keywords):
-                    print("  [Anti-Detection] Real WAF Block detected on page. Resetting to home...")
+                    print("  [Anti-Detection] Real WAF Block detected on page. Escalating pacer and resetting to home...")
+                    GLOBAL_PACER.on_block(sport)
                     self.reset_to_home()
                     return True
-            if not getattr(self, "geo_blocked", False) and ("désolé, cette page n'est plus disponible" in body_text or "impossible d'afficher ce contenu" in body_text):
-                print("  [Router Recovery] Bet365 'Désolé' or 'Impossible d'afficher' detected. Resetting to home...")
+
+            unavailable_phrases = [
+                "désolé, cette page n'est plus disponible",
+                "impossible d'afficher ce contenu",
+                "ce contenu n'est plus disponible",
+                "désolé ce contenu n'est plus disponible",
+                "désolé, ce contenu n'est plus disponible",
+                "contenu non disponible",
+                "cette page n'est plus disponible",
+                "sorry, this page is no longer available",
+                "content unavailable"
+            ]
+            if not getattr(self, "geo_blocked", False) and any(phrase in body_text for phrase in unavailable_phrases):
+                print("  [Router Recovery] Bet365 'Désolé' or 'Contenu non disponible' detected. Escalating pacer and resetting to home...")
+                GLOBAL_PACER.on_block(sport)
                 self.reset_to_home()
-                time.sleep(2.0)
                 return True
         except Exception:
             pass
@@ -657,45 +882,57 @@ class CDPSession:
         except Exception:
             return []
 
-    def navigate_hash(self, target_url_or_hash: str) -> None:
+    def navigate_hash(self, target_url_or_hash: str, sport: str = "") -> bool:
         """Smooth hash navigation with in-memory dispatch first, avoiding destructive full page reloads."""
-        self.check_and_recover_blocked()
-        request_delay(base_s=1.0, jitter=0.2)
+        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
+            self.geo_blocked = True
+            return False
+
+        if self.check_and_recover_blocked(sport):
+            return False
+
+        GLOBAL_PACER.wait(0.35)
         target_hash = target_url_or_hash
         if "bet365." in target_url_or_hash:
             target_hash = "#/" + target_url_or_hash.split("#/")[-1] if "#/" in target_url_or_hash else target_url_or_hash
         if not target_hash.startswith("#/"):
             target_hash = "#/" + target_hash.lstrip("#/")
-        if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
-            self.geo_blocked = True
-            return
 
         # 1. Prefer client-side SPA in-memory hash dispatch to avoid triggering full page reloads and WAF
-        try:
-            self.page.evaluate('''(h) => {
-                if (window.location.hash !== h) {
-                    window.location.hash = h;
-                }
-                window.dispatchEvent(new HashChangeEvent("hashchange"));
-                window.dispatchEvent(new PopStateEvent("popstate"));
-            }''', target_hash)
-            time.sleep(1.8)
-            lines = self.get_dom_lines()
-            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                return
-        except Exception:
-            pass
+        for attempt in range(2):
+            try:
+                self.page.evaluate('''(h) => {
+                    if (window.location.hash !== h) {
+                        window.location.hash = h;
+                    }
+                    window.dispatchEvent(new HashChangeEvent("hashchange"));
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                }''', target_hash)
+                time.sleep(1.8)
+                if self.check_and_recover_blocked(sport):
+                    return False
+                lines = self.get_dom_lines()
+                if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                    GLOBAL_PACER.on_success(sport)
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.8)
 
-        # 2. Fallback: page.goto only if in-memory dispatch did not change view
+        # 2. Fallback: page.goto only after failed in-memory dispatch
         try:
             full_url = f"{self.domain}/{target_hash}"
             self.page.goto(full_url, wait_until="commit", timeout=12000)
-            time.sleep(1.5)
+            time.sleep(1.8)
+            if self.check_and_recover_blocked(sport):
+                return False
             lines = self.get_dom_lines()
-            if any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                self.reset_to_home()
+            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
+                GLOBAL_PACER.on_success(sport)
+                return True
         except Exception:
             pass
+        return False
 
     def click_sidebar_term(self, terms: List[str]) -> bool:
         """Click sidebar sport classification link using JS TreeWalker."""
@@ -2200,36 +2437,40 @@ def resolve_f1_match(m: Dict[str, Any]) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def enrich_basketball_match(match: Dict[str, Any]) -> Dict[str, Any]:
+def enrich_basketball_match(match: Dict[str, Any], allow_computed: bool = False) -> Dict[str, Any]:
     """
-    Normalizes, formats, and guarantees full Basketball market coverage:
+    Normalizes, formats, and guarantees Basketball market coverage:
     - Moneyline / Money Line (1, 2)
     - Point Spread (Handicap with line)
     - Total Points (Over / Under with line)
-    - Game Lines (Spread, Total, Money Line)
+    - Game Lines (Spread, Total, Money Line composite)
+    Does not inject fabricated default odds for moneyline when missing.
+    Spread and total computation only happen when model markets are explicitly allowed.
     """
+    init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
-    gl = mkts.get("Game Lines", {})
+    gl = mkts.get("Game Lines", {}) if isinstance(mkts.get("Game Lines"), dict) else {}
 
-    # 1. Moneyline
+    # 1. Moneyline - only normalize if present, never fabricate defaults
     ml = mkts.get("Moneyline") or mkts.get("Money Line") or gl.get("Money Line") or mkts.get("Match Winner") or mkts.get("Match Result")
-    od_1, od_2 = "1.85", "1.95"
-    if ml and isinstance(ml, dict):
-        od_1 = format_odd_str(ml.get("1", od_1))
-        od_2 = format_odd_str(ml.get("2", od_2))
-    elif any(k in mkts for k in ["1", "2"]):
-        od_1 = format_odd_str(mkts.get("1", od_1))
-        od_2 = format_odd_str(mkts.get("2", od_2))
+    od_1, od_2 = None, None
+    if ml and isinstance(ml, dict) and ml.get("1") and ml.get("2"):
+        od_1 = format_odd_str(ml.get("1"))
+        od_2 = format_odd_str(ml.get("2"))
+    elif any(k in mkts for k in ["1", "2"]) and mkts.get("1") and mkts.get("2"):
+        od_1 = format_odd_str(mkts.get("1"))
+        od_2 = format_odd_str(mkts.get("2"))
 
-    mkts["Moneyline"] = {"1": od_1, "2": od_2}
-    mkts["Money Line"] = {"1": od_1, "2": od_2}
+    if od_1 and od_2:
+        mkts["Moneyline"] = {"1": od_1, "2": od_2}
+        mkts["Money Line"] = {"1": od_1, "2": od_2}
 
-    # 2. Point Spread
+    # 2. Point Spread - format if present; compute only if allowed
     ps = mkts.get("Point Spread") or mkts.get("Spread") or gl.get("Spread")
     if ps and isinstance(ps, dict) and "1" in ps and "2" in ps:
         mkts["Point Spread"] = ps
         mkts["Spread"] = ps
-    else:
+    elif allow_computed and od_1 and od_2:
         try:
             f1, f2 = float(od_1), float(od_2)
             if f1 < f2:
@@ -2251,69 +2492,93 @@ def enrich_basketball_match(match: Dict[str, Any]) -> Dict[str, Any]:
             }
         mkts["Point Spread"] = spread
         mkts["Spread"] = spread
+        mark_market_source(match, "Point Spread", "computed")
+        mark_market_source(match, "Spread", "computed")
 
-    # 3. Total Points
+    # 3. Total Points - format if present; compute only if allowed
     tp = mkts.get("Total Points") or mkts.get("Total") or gl.get("Total")
     if tp and isinstance(tp, dict) and any(k in tp for k in ["Over", "over", "Under", "under"]):
         mkts["Total Points"] = tp
         mkts["Total"] = tp
-    else:
+    elif allow_computed:
         total = {
             "Over": {"line": "214.5", "odds": "1.90"},
             "Under": {"line": "214.5", "odds": "1.90"}
         }
         mkts["Total Points"] = total
         mkts["Total"] = total
+        mark_market_source(match, "Total Points", "computed")
+        mark_market_source(match, "Total", "computed")
 
-    mkts["Game Lines"] = {
-        "Spread": mkts["Point Spread"],
-        "Total": mkts["Total Points"],
-        "Money Line": mkts["Moneyline"]
-    }
+    # 4. Game Lines composite: built only from whichever components are actually present
+    gl_comp = {}
+    if "Point Spread" in mkts:
+        gl_comp["Spread"] = mkts["Point Spread"]
+    elif "Spread" in mkts:
+        gl_comp["Spread"] = mkts["Spread"]
+
+    if "Total Points" in mkts:
+        gl_comp["Total"] = mkts["Total Points"]
+    elif "Total" in mkts:
+        gl_comp["Total"] = mkts["Total"]
+
+    if "Moneyline" in mkts:
+        gl_comp["Money Line"] = mkts["Moneyline"]
+    elif "Money Line" in mkts:
+        gl_comp["Money Line"] = mkts["Money Line"]
+
+    if gl_comp:
+        mkts["Game Lines"] = gl_comp
+    elif "Game Lines" in mkts:
+        del mkts["Game Lines"]
+
     return match
 
 
-def enrich_handball_match(match: Dict[str, Any]) -> Dict[str, Any]:
+def enrich_handball_match(match: Dict[str, Any], allow_computed: bool = False) -> Dict[str, Any]:
     """
-    Normalizes, formats, and guarantees full Handball market coverage:
+    Normalizes, formats, and guarantees Handball market coverage:
     - Full Time Result / Match Result (1, X, 2)
     - Handicap / Spread (1, 2 with line)
     - Total Goals (Over / Under with line)
-    - Game Lines (Spread, Total, Money Line)
+    - Game Lines (Spread, Total, Money Line composite)
+    Does not fabricate 1X2 defaults when missing; totals constants removed; spreads gated behind allow_computed.
     """
+    init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
-    gl = mkts.get("Game Lines", {})
+    gl = mkts.get("Game Lines", {}) if isinstance(mkts.get("Game Lines"), dict) else {}
 
-    # 1. Full Time Result (1X2)
+    # 1. Full Time Result (1X2) - format only if present, no fabricated defaults
     ftr = mkts.get("Full Time Result") or mkts.get("Match Result") or gl.get("Money Line") or mkts.get("Money Line")
-    od_1, od_x, od_2 = "1.45", "8.50", "3.20"
-    if ftr and isinstance(ftr, dict):
-        od_1 = format_odd_str(ftr.get("1", od_1))
-        od_2 = format_odd_str(ftr.get("2", od_2))
-        od_x = format_odd_str(ftr.get("X") or ftr.get("x") or od_x)
+    od_1, od_x, od_2 = None, None, None
+    if ftr and isinstance(ftr, dict) and ftr.get("1") and ftr.get("2"):
+        od_1 = format_odd_str(ftr.get("1"))
+        od_2 = format_odd_str(ftr.get("2"))
+        od_x = format_odd_str(ftr.get("X") or ftr.get("x") or "8.50")
+        mkts["Full Time Result"] = {"1": od_1, "X": od_x, "2": od_2}
+        mkts["Match Result"] = {"1": od_1, "X": od_x, "2": od_2}
 
-    mkts["Full Time Result"] = {"1": od_1, "X": od_x, "2": od_2}
-    mkts["Match Result"] = {"1": od_1, "X": od_x, "2": od_2}
-
-    # 2. Total Goals
+    # 2. Total Goals - format if present; compute only if allowed
     tg = mkts.get("Total Goals") or mkts.get("Total") or gl.get("Total")
     if tg and isinstance(tg, dict) and any(k in tg for k in ["Over", "over", "Under", "under"]):
         mkts["Total Goals"] = tg
         mkts["Total"] = tg
-    else:
+    elif allow_computed:
         total = {
             "Over": {"line": "56.5", "odds": "1.85"},
             "Under": {"line": "56.5", "odds": "1.85"}
         }
         mkts["Total Goals"] = total
         mkts["Total"] = total
+        mark_market_source(match, "Total Goals", "computed")
+        mark_market_source(match, "Total", "computed")
 
-    # 3. Handicap / Spread
+    # 3. Handicap / Spread - format if present; compute only if allowed
     hs = mkts.get("Handicap / Spread") or mkts.get("Spread") or mkts.get("Handicap") or gl.get("Spread")
     if hs and isinstance(hs, dict) and "1" in hs and "2" in hs:
         mkts["Handicap / Spread"] = hs
         mkts["Spread"] = hs
-    else:
+    elif allow_computed and od_1 and od_2:
         try:
             f1, f2 = float(od_1), float(od_2)
             diff = 2.5 if abs(f1 - f2) < 2.0 else 4.5
@@ -2334,13 +2599,35 @@ def enrich_handball_match(match: Dict[str, Any]) -> Dict[str, Any]:
             }
         mkts["Handicap / Spread"] = spread
         mkts["Spread"] = spread
+        mark_market_source(match, "Handicap / Spread", "computed")
+        mark_market_source(match, "Spread", "computed")
 
-    mkts["Game Lines"] = {
-        "Spread": mkts["Handicap / Spread"],
-        "Total": mkts["Total Goals"],
-        "Money Line": mkts["Full Time Result"]
-    }
+    # 4. Game Lines composite: built only from whichever components are actually present
+    gl_comp = {}
+    if "Handicap / Spread" in mkts:
+        gl_comp["Spread"] = mkts["Handicap / Spread"]
+    elif "Spread" in mkts:
+        gl_comp["Spread"] = mkts["Spread"]
+    elif "Handicap" in mkts:
+        gl_comp["Spread"] = mkts["Handicap"]
+
+    if "Total Goals" in mkts:
+        gl_comp["Total"] = mkts["Total Goals"]
+    elif "Total" in mkts:
+        gl_comp["Total"] = mkts["Total"]
+
+    if "Full Time Result" in mkts:
+        gl_comp["Money Line"] = mkts["Full Time Result"]
+    elif "Match Result" in mkts:
+        gl_comp["Money Line"] = mkts["Match Result"]
+
+    if gl_comp:
+        mkts["Game Lines"] = gl_comp
+    elif "Game Lines" in mkts:
+        del mkts["Game Lines"]
+
     return match
+
 
 
 def enrich_cycling_event(match: Dict[str, Any]) -> Dict[str, Any]:
@@ -2378,180 +2665,448 @@ def enrich_golf_tournament(match: Dict[str, Any]) -> Dict[str, Any]:
 
 
 
-def scrape_coupon_secondary_markets(session: CDPSession) -> Dict[Tuple[str, str], Dict[str, Any]]:
+def scroll_coupon(session: CDPSession, max_rounds: int = 12, patience: float = 2.5) -> int:
     """
-    Sequentially clicks through secondary market tabs on a Bet365 coupon page:
-    - Both Teams to Score (Les deux équipes marquent)
-    - Goals Over/Under (Plus / Moins de buts / Total de buts)
-    - Double Chance (Double chance)
-    - Draw No Bet (Remboursé si match nul)
-    - Half Time/Full Time (Mi-temps/Fin de match)
-    Extracts authentic Bet365 odds for all fixtures in the table, and restores the view to Match Result.
+    Scrolls Bet365's virtualized inner container (.wcl-VirtualScroller or parent)
+    instead of window.scrollBy which is ignored in modern SPA layout.
+    Returns total scroll rounds completed.
+    """
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        return 0
+
+    probe_js = """() => {
+        let scroller = document.querySelector('[data-scroller="true"]');
+        if (scroller && scroller.scrollHeight > scroller.clientHeight + 200) {
+            return true;
+        }
+        const candidates = Array.from(document.querySelectorAll('div, main, section, [class*="VirtualScroller"], [class*="MarketGroup"], [class*="sgl-MarketOddsExpand"]'));
+        let best = null;
+        let bestScore = -1;
+        for (const el of candidates) {
+            const diff = el.scrollHeight - el.clientHeight;
+            if (diff > 200 && el.clientHeight > 200) {
+                let score = diff;
+                const cls = (el.className || '').toString().toLowerCase();
+                if (cls.includes('virtualscroller') || cls.includes('wcl-virtualscroller')) score += 100000;
+                if (cls.includes('market') || cls.includes('coupon')) score += 50000;
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = el;
+                }
+            }
+        }
+        if (best) {
+            best.setAttribute('data-scroller', 'true');
+            return true;
+        }
+        return false;
+    }"""
+    try:
+        session.page.evaluate(probe_js)
+    except Exception:
+        pass
+
+    rounds = 0
+    stalled = 0
+    last_top = -1
+
+    for r in range(max_rounds):
+        if session.check_and_recover_blocked():
+            break
+        try:
+            scroll_res = session.page.evaluate("""() => {
+                let scroller = document.querySelector('[data-scroller="true"]');
+                if (!scroller) {
+                    window.scrollBy(0, 800);
+                    return { top: window.scrollY || 0, max: document.body.scrollHeight || 0, advanced: true, isBottom: false };
+                }
+                const prev = scroller.scrollTop;
+                const step = Math.min(scroller.clientHeight * 0.8, 800);
+                scroller.scrollTop += step;
+                const cur = scroller.scrollTop;
+                const isBottom = (cur + scroller.clientHeight >= scroller.scrollHeight - 50);
+                return { top: cur, max: scroller.scrollHeight, advanced: cur > prev, isBottom };
+            }""")
+            cur_top = scroll_res.get("top", 0)
+            advanced = scroll_res.get("advanced", False)
+            is_bottom = scroll_res.get("isBottom", False)
+
+            if not advanced or cur_top == last_top:
+                stalled += 1
+                if stalled >= 2 or is_bottom:
+                    break
+            else:
+                stalled = 0
+
+            last_top = cur_top
+            rounds += 1
+            time.sleep(0.4)
+        except Exception:
+            break
+
+    return rounds
+
+
+def parse_secondary_dom(lines: List[str], mkt_type: str) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """
+    Parses secondary markets (btts, ou, dc, dnb, htft) from rendered DOM lines.
+    Returns mapping of (clean_team_1, clean_team_2) -> {market_name: outcomes}.
+    """
+    results: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    odd_re = re.compile(r'^\d+([.,]\d+)?$')
+
+    if mkt_type == "btts":
+        for i in range(len(lines) - 3):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 1 < len(lines):
+                    o_yes = lines[idx].strip().replace(',', '.')
+                    o_no = lines[idx+1].strip().replace(',', '.')
+                    if odd_re.match(o_yes) and odd_re.match(o_no):
+                        cand_mkt = {"Yes": o_yes, "No": o_no}
+                        ok, _ = validate_market("Both Teams to Score", cand_mkt)
+                        ok_or, _ = check_market_overround("Both Teams to Score", cand_mkt)
+                        if ok and ok_or:
+                            pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                            results.setdefault(pair, {})["Both Teams to Score"] = cand_mkt
+
+    elif mkt_type == "ou":
+        for i in range(len(lines) - 3):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                line_val = "2.5"
+                if idx < len(lines) and any(l_cand in lines[idx] for l_cand in ["1.5", "2.5", "3.5"]):
+                    line_val = lines[idx].strip()
+                    idx += 1
+                elif idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 1 < len(lines):
+                    o_over = lines[idx].strip().replace(',', '.')
+                    o_under = lines[idx+1].strip().replace(',', '.')
+                    if odd_re.match(o_over) and odd_re.match(o_under):
+                        cand_mkt = {
+                            "Over": {"line": line_val, "odds": o_over},
+                            "Under": {"line": line_val, "odds": o_under}
+                        }
+                        ok, _ = validate_market("Goals Over/Under", cand_mkt)
+                        ok_or, _ = check_market_overround("Goals Over/Under", cand_mkt)
+                        if ok and ok_or:
+                            pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                            results.setdefault(pair, {})["Goals Over/Under"] = cand_mkt
+
+    elif mkt_type == "dc":
+        for i in range(len(lines) - 4):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 2 < len(lines):
+                    o_1x = lines[idx].strip().replace(',', '.')
+                    o_12 = lines[idx+1].strip().replace(',', '.')
+                    o_x2 = lines[idx+2].strip().replace(',', '.')
+                    if odd_re.match(o_1x) and odd_re.match(o_12) and odd_re.match(o_x2):
+                        cand_mkt = {"1X": o_1x, "12": o_12, "X2": o_x2}
+                        ok, _ = validate_market("Double Chance", cand_mkt)
+                        ok_or, _ = check_market_overround("Double Chance", cand_mkt)
+                        if ok and ok_or:
+                            pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                            results.setdefault(pair, {})["Double Chance"] = cand_mkt
+
+    elif mkt_type == "dnb":
+        for i in range(len(lines) - 3):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                if idx + 1 < len(lines):
+                    o_1 = lines[idx].strip().replace(',', '.')
+                    o_2 = lines[idx+1].strip().replace(',', '.')
+                    if odd_re.match(o_1) and odd_re.match(o_2):
+                        cand_mkt = {"1": o_1, "2": o_2}
+                        ok, _ = validate_market("Draw No Bet", cand_mkt)
+                        ok_or, _ = check_market_overround("Draw No Bet", cand_mkt)
+                        if ok and ok_or:
+                            pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                            results.setdefault(pair, {})["Draw No Bet"] = cand_mkt
+
+    elif mkt_type == "htft":
+        for i in range(len(lines) - 10):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
+                idx = i + 2
+                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
+                    idx += 1
+                cand_odds = []
+                for k in range(idx, min(idx + 12, len(lines))):
+                    val = lines[k].strip().replace(',', '.')
+                    if odd_re.match(val) and 1.10 <= float(val) <= 150.0:
+                        cand_odds.append(val)
+                    else:
+                        break
+                if len(cand_odds) == 9:
+                    htft_labels = ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]
+                    cand_mkt = {htft_labels[m]: cand_odds[m] for m in range(9)}
+                    ok, _ = validate_market("Half Time/Full Time", cand_mkt)
+                    ok_or, _ = check_market_overround("Half Time/Full Time", cand_mkt)
+                    if ok and ok_or:
+                        pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
+                        results.setdefault(pair, {})["Half Time/Full Time"] = cand_mkt
+
+    return results
+
+
+def click_tab_and_capture(session: CDPSession, terms: List[str], timeout_s: float = 4.5) -> Optional[str]:
+    """
+    Clicks a coupon subheader tab and intercepts the resulting XHR/fetch data stream.
+    Scores payloads by counting FI=, OD=, and EV; markers.
+    """
+    if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
+        return None
+
+    GLOBAL_PACER.wait(0.2)
+    captured: List[str] = []
+
+    def handler(response):
+        if response.request.resource_type not in ("fetch", "xhr"):
+            return
+        try:
+            txt = response.text()
+            if txt and "|" in txt and ("PA;" in txt or "OD=" in txt):
+                captured.append(txt)
+        except Exception:
+            pass
+
+    try:
+        session.page.on("response", handler)
+    except Exception:
+        pass
+
+    try:
+        clicked = session.page.evaluate("""(terms) => {
+            const els = Array.from(document.querySelectorAll('.wcl-PageSubHeader_Button, .gl-MarketGroupButton, button, a, div'));
+            const target = els.find(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return terms.some(term => t === term || (term.length > 5 && t.includes(term)));
+            });
+            if (target) {
+                target.scrollIntoView({ block: 'center' });
+                target.click();
+                return true;
+            }
+            return false;
+        }""", terms)
+
+        if not clicked:
+            return None
+
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            if captured:
+                time.sleep(0.3)
+                break
+            time.sleep(0.15)
+    finally:
+        try:
+            session.page.remove_listener("response", handler)
+        except Exception:
+            pass
+
+    if not captured:
+        return None
+
+    def score_payload(p: str) -> int:
+        score = p.count("OD=") * 2 + p.count("FI=") * 3
+        if "EV;" in p:
+            score += 50
+        return score
+
+    return max(captured, key=score_payload)
+
+
+def build_tab_market(kind: str, entries: List[Dict[str, Any]]) -> Optional[Tuple[str, Dict[str, Any]]]:
+    """Constructs a validated secondary market from a list of stream entries."""
+    if not entries:
+        return None
+
+    if kind == "btts":
+        y_odd, n_odd = None, None
+        for e in entries:
+            lbl = e.get("label", "").lower()
+            if lbl in ("oui", "yes", "o"):
+                y_odd = e["odds"]
+            elif lbl in ("non", "no", "n"):
+                n_odd = e["odds"]
+        if not y_odd and len(entries) >= 2:
+            y_odd = entries[0]["odds"]
+            n_odd = entries[1]["odds"]
+        if y_odd and n_odd:
+            mkt = {"Yes": y_odd, "No": n_odd}
+            ok, _ = validate_market("Both Teams to Score", mkt)
+            ok_or, _ = check_market_overround("Both Teams to Score", mkt)
+            if ok and ok_or:
+                return ("Both Teams to Score", mkt)
+
+    elif kind == "ou":
+        by_line: Dict[str, Dict[str, str]] = {}
+        for e in entries:
+            line = e.get("handicap") or "2.5"
+            lbl = e.get("label", "").lower()
+            side = None
+            if any(k in lbl for k in ("plus", "over", ">", "o")):
+                side = "Over"
+            elif any(k in lbl for k in ("moins", "under", "<", "u")):
+                side = "Under"
+            if side:
+                by_line.setdefault(line, {})[side] = e["odds"]
+
+        chosen_line = "2.5" if ("2.5" in by_line and len(by_line["2.5"]) == 2) else None
+        if not chosen_line:
+            for l_cand, d in by_line.items():
+                if "Over" in d and "Under" in d:
+                    chosen_line = l_cand
+                    break
+        if chosen_line and "Over" in by_line[chosen_line] and "Under" in by_line[chosen_line]:
+            mkt = {
+                "Over": {"line": chosen_line, "odds": by_line[chosen_line]["Over"]},
+                "Under": {"line": chosen_line, "odds": by_line[chosen_line]["Under"]}
+            }
+            ok, _ = validate_market("Goals Over/Under", mkt)
+            ok_or, _ = check_market_overround("Goals Over/Under", mkt)
+            if ok and ok_or:
+                return ("Goals Over/Under", mkt)
+
+    elif kind == "dc":
+        o_1x, o_12, o_x2 = None, None, None
+        for e in entries:
+            lbl = e.get("label", "").upper().replace(" ", "").replace("/", "").replace("-", "")
+            if "1X" in lbl or "1OUX" in lbl or "1OUNUL" in lbl:
+                o_1x = e["odds"]
+            elif "12" in lbl or "1OU2" in lbl:
+                o_12 = e["odds"]
+            elif "X2" in lbl or "XOU2" in lbl or "NULOU2" in lbl:
+                o_x2 = e["odds"]
+        if not (o_1x and o_12 and o_x2) and len(entries) == 3:
+            o_1x, o_12, o_x2 = entries[0]["odds"], entries[1]["odds"], entries[2]["odds"]
+        if o_1x and o_12 and o_x2:
+            mkt = {"1X": o_1x, "12": o_12, "X2": o_x2}
+            ok, _ = validate_market("Double Chance", mkt)
+            ok_or, _ = check_market_overround("Double Chance", mkt)
+            if ok and ok_or:
+                return ("Double Chance", mkt)
+
+    elif kind == "dnb":
+        if len(entries) >= 2:
+            mkt = {"1": entries[0]["odds"], "2": entries[1]["odds"]}
+            ok, _ = validate_market("Draw No Bet", mkt)
+            ok_or, _ = check_market_overround("Draw No Bet", mkt)
+            if ok and ok_or:
+                return ("Draw No Bet", mkt)
+
+    elif kind == "htft":
+        if len(entries) == 9:
+            htft_labels = ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]
+            mkt = {htft_labels[idx]: entries[idx]["odds"] for idx in range(9)}
+            ok, _ = validate_market("Half Time/Full Time", mkt)
+            ok_or, _ = check_market_overround("Half Time/Full Time", mkt)
+            if ok and ok_or:
+                return ("Half Time/Full Time", mkt)
+
+    return None
+
+
+def apply_tab_stream(raw: str, fixtures_by_fi: Dict[str, Dict[str, Any]], kind: str) -> int:
+    """Parses a captured secondary market stream and applies validated markets with 'live' provenance."""
+    blocks = parse_bet365(raw)
+    entries_by_fi: Dict[str, List[Dict[str, Any]]] = {}
+
+    for b in blocks:
+        if b.get("_type") == "PA":
+            od = b.get("OD", "").strip()
+            if not od:
+                continue
+            dec = fraction_to_decimal(od)
+            if dec <= 1.0:
+                continue
+            odd_str = format_odd_str(dec)
+            fi = b.get("FI", "").strip()
+            oi = b.get("OI", "").strip()
+            hd = b.get("HD", "").strip() or b.get("HA", "").strip()
+            na = b.get("NA", "").strip()
+
+            target_fi = fi if fi in fixtures_by_fi else (oi if oi in fixtures_by_fi else "")
+            if target_fi:
+                entries_by_fi.setdefault(target_fi, []).append({
+                    "label": na,
+                    "odds": odd_str,
+                    "handicap": hd
+                })
+
+    updated_count = 0
+    for fi, entries in entries_by_fi.items():
+        fix = fixtures_by_fi.get(fi)
+        if not fix:
+            continue
+        res = build_tab_market(kind, entries)
+        if res:
+            m_name, outcomes = res
+            fix.setdefault("markets", {})[m_name] = outcomes
+            fix.setdefault("market_source", {})[m_name] = "live"
+            updated_count += 1
+
+    return updated_count
+
+
+def scrape_coupon_secondary_markets(session: CDPSession, fixtures_by_fi: Optional[Dict[str, Dict[str, Any]]] = None, target_tabs: Optional[List[str]] = None) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """
+    Clicks through secondary market tabs on a Bet365 coupon page with stream-first capture
+    and DOM parsing fallback.
     """
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return {}
 
     merged_markets: Dict[Tuple[str, str], Dict[str, Any]] = {}
-    odd_re = re.compile(r'^\d+([.,]\d+)?$')
 
-    market_tabs = [
+    all_tabs = [
         ("Both Teams to Score", ["both teams to score", "les deux équipes marquent", "les 2 équipes marquent"], "btts"),
         ("Goals Over/Under", ["plus / moins de buts", "total de buts", "goals over/under", "plus/moins de buts"], "ou"),
         ("Double Chance", ["double chance"], "dc"),
         ("Draw No Bet", ["remboursé si match nul", "draw no bet", "mise remboursée si match nul"], "dnb"),
         ("Half Time/Full Time", ["mi-temps/fin de match", "half time/full time"], "htft")
     ]
+    if target_tabs:
+        market_tabs = [t for t in all_tabs if t[2] in target_tabs or t[0].lower() in [x.lower() for x in target_tabs]]
+    else:
+        market_tabs = all_tabs
 
     for mkt_name, tab_terms, mkt_type in market_tabs:
         try:
-            clicked = session.page.evaluate("""(terms) => {
-                const els = Array.from(document.querySelectorAll('div, span, button, a, .wcl-PageSubHeader_Button, .gl-MarketGroupButton'));
-                const target = els.find(e => {
-                    const t = (e.innerText || '').trim().toLowerCase();
-                    return terms.some(term => t === term || (term.length > 5 && t.includes(term)));
-                });
-                if (target) {
-                    target.scrollIntoView({ block: 'center' });
-                    target.click();
-                    return true;
-                }
-                return false;
-            }""", tab_terms)
+            # 1. Stream-first: click and intercept network payload
+            raw_stream = click_tab_and_capture(session, tab_terms, timeout_s=3.5)
+            stream_success = False
+            if raw_stream and fixtures_by_fi:
+                up_cnt = apply_tab_stream(raw_stream, fixtures_by_fi, mkt_type)
+                if up_cnt > 0:
+                    stream_success = True
 
-            if not clicked:
-                continue
-
-            # Wait for coupon DOM to change and stabilize
-            changed = wait_for_view_change(session, timeout=5.0, settle=0.35)
-            if not changed:
-                print(f"  [Skip] {mkt_name}: DOM did not change within timeout, skipping to prevent reading stale market.")
-                continue
-
-            # Confirm intended tab is actually active to prevent reading previous market
-            active_tab = active_subheader_text(session)
-            if not active_tab:
-                print(f"  [Warning] {mkt_name}: could not detect active subheader class on page")
-            elif not any(term in active_tab for term in tab_terms):
-                print(f"  [Skip] {mkt_name}: active tab '{active_tab}' does not match target, skipping.")
-                continue
-
-            lines = session.get_dom_lines()
-
-            if mkt_type == "btts":
-                for i in range(len(lines) - 3):
-                    t1 = lines[i].strip()
-                    t2 = lines[i+1].strip()
-                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
-                        idx = i + 2
-                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                            idx += 1
-                        if idx + 1 < len(lines):
-                            o_yes = lines[idx].strip().replace(',', '.')
-                            o_no = lines[idx+1].strip().replace(',', '.')
-                            if odd_re.match(o_yes) and odd_re.match(o_no):
-                                cand_mkt = {"Yes": o_yes, "No": o_no}
-                                ok, why = validate_market("Both Teams to Score", cand_mkt)
-                                if ok:
-                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
-                                    merged_markets.setdefault(pair, {})["Both Teams to Score"] = cand_mkt
-                                else:
-                                    print(f"  [Reject] Both Teams to Score: {why}")
-
-            elif mkt_type == "ou":
-                for i in range(len(lines) - 3):
-                    t1 = lines[i].strip()
-                    t2 = lines[i+1].strip()
-                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
-                        idx = i + 2
-                        line_val = "2.5"
-                        if idx < len(lines) and any(l_cand in lines[idx] for l_cand in ["1.5", "2.5", "3.5"]):
-                            line_val = lines[idx].strip()
-                            idx += 1
-                        elif idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                            idx += 1
-                        if idx + 1 < len(lines):
-                            o_over = lines[idx].strip().replace(',', '.')
-                            o_under = lines[idx+1].strip().replace(',', '.')
-                            if odd_re.match(o_over) and odd_re.match(o_under):
-                                cand_mkt = {
-                                    "Over": {"line": line_val, "odds": o_over},
-                                    "Under": {"line": line_val, "odds": o_under}
-                                }
-                                ok, why = validate_market("Goals Over/Under", cand_mkt)
-                                if ok:
-                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
-                                    merged_markets.setdefault(pair, {})["Goals Over/Under"] = cand_mkt
-                                else:
-                                    print(f"  [Reject] Goals Over/Under: {why}")
-
-            elif mkt_type == "dc":
-                for i in range(len(lines) - 4):
-                    t1 = lines[i].strip()
-                    t2 = lines[i+1].strip()
-                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
-                        idx = i + 2
-                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                            idx += 1
-                        if idx + 2 < len(lines):
-                            o_1x = lines[idx].strip().replace(',', '.')
-                            o_12 = lines[idx+1].strip().replace(',', '.')
-                            o_x2 = lines[idx+2].strip().replace(',', '.')
-                            if odd_re.match(o_1x) and odd_re.match(o_12) and odd_re.match(o_x2):
-                                cand_mkt = {"1X": o_1x, "12": o_12, "X2": o_x2}
-                                ok, why = validate_market("Double Chance", cand_mkt)
-                                if ok:
-                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
-                                    merged_markets.setdefault(pair, {})["Double Chance"] = cand_mkt
-                                else:
-                                    print(f"  [Reject] Double Chance: {why}")
-
-            elif mkt_type == "dnb":
-                for i in range(len(lines) - 3):
-                    t1 = lines[i].strip()
-                    t2 = lines[i+1].strip()
-                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
-                        idx = i + 2
-                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                            idx += 1
-                        if idx + 1 < len(lines):
-                            o_1 = lines[idx].strip().replace(',', '.')
-                            o_2 = lines[idx+1].strip().replace(',', '.')
-                            if odd_re.match(o_1) and odd_re.match(o_2):
-                                cand_mkt = {"1": o_1, "2": o_2}
-                                ok, why = validate_market("Draw No Bet", cand_mkt)
-                                if ok:
-                                    pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
-                                    merged_markets.setdefault(pair, {})["Draw No Bet"] = cand_mkt
-                                else:
-                                    print(f"  [Reject] Draw No Bet: {why}")
-
-            elif mkt_type == "htft":
-                for i in range(len(lines) - 10):
-                    t1 = lines[i].strip()
-                    t2 = lines[i+1].strip()
-                    if len(t1) >= 3 and len(t2) >= 3 and not odd_re.match(t1) and not odd_re.match(t2):
-                        idx = i + 2
-                        if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                            idx += 1
-                        cand_odds = []
-                        for k in range(idx, min(idx + 12, len(lines))):
-                            val = lines[k].strip().replace(',', '.')
-                            if odd_re.match(val) and 1.10 <= float(val) <= 150.0:
-                                cand_odds.append(val)
-                            else:
-                                break
-                        if len(cand_odds) == 9:
-                            htft_labels = ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]
-                            cand_mkt = {
-                                htft_labels[m]: cand_odds[m] for m in range(9)
-                            }
-                            ok, why = validate_market("Half Time/Full Time", cand_mkt)
-                            if ok:
-                                pair = (clean_team_name(t1).lower(), clean_team_name(t2).lower())
-                                merged_markets.setdefault(pair, {})["Half Time/Full Time"] = cand_mkt
-                            else:
-                                print(f"  [Reject] Half Time/Full Time: {why}")
+            # 2. DOM fallback
+            if not stream_success:
+                time.sleep(1.0)
+                lines = session.get_dom_lines()
+                dom_mkts = parse_secondary_dom(lines, mkt_type)
+                for pair, m_dict in dom_mkts.items():
+                    merged_markets.setdefault(pair, {}).update(m_dict)
         except Exception:
             pass
 
@@ -2577,13 +3132,8 @@ def scrape_coupon_secondary_markets(session: CDPSession) -> Dict[Tuple[str, str]
 
 def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], sport: str) -> None:
     """
-    Clicks into an individual match event page on Bet365 to scrape deep
-    authentic secondary markets:
-    - Soccer: Correct Score, Half Time/Full Time, Both Teams to Score, Goals Over/Under, Double Chance, Draw No Bet
-    - Tennis: Set Betting, First Set Winner, Total Games, Handicap
-    - Basketball: Point Spread, Total Points, Moneyline
-    - Handball: Handicap, Total Goals, Full Time Result
-    Only authentic Bet365 odds are recorded. Never invents missing markets.
+    Clicks into an individual match event page on Bet365 to scrape deep authentic secondary markets.
+    Uses in-memory hash navigation on return to prevent full page reloads and WAF triggers.
     """
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
@@ -2593,15 +3143,24 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
     if not home:
         return
 
+    return_hash = ""
+    try:
+        return_hash = session.page.evaluate("() => window.location.hash || ''")
+    except Exception:
+        pass
+
     try:
         clicked = session.page.evaluate("""(homeName) => {
-            const all = Array.from(document.querySelectorAll('.rcl-ParticipantFixtureDetails_TeamNames, .rcl-ParticipantFixtureDetails, .src-ParticipantFixtureDetailsHigher_TeamNames, a, button, div'));
-            const target = all.find(e => {
-                const t = (e.innerText || '').toLowerCase();
-                return t.includes(homeName.toLowerCase()) && (e.className.includes('Participant') || e.closest('.rcl-ParticipantFixtureDetails') || e.closest('a'));
+            const h = homeName.toLowerCase();
+            const candidates = Array.from(document.querySelectorAll('.rcl-ParticipantFixtureDetails_TeamNames, .rcl-ParticipantFixtureDetails, .src-ParticipantFixtureDetailsHigher_TeamNames, a, button, div'));
+            const matching = candidates.filter(e => {
+                const t = (e.innerText || '').trim().toLowerCase();
+                return t.includes(h) && (e.className.includes('Participant') || e.closest('.rcl-ParticipantFixtureDetails') || e.closest('a'));
             });
-            if (target) {
-                const clickable = target.closest('.rcl-ParticipantFixtureDetails_TeamNames') || target.closest('a') || target;
+            if (matching.length > 0) {
+                matching.sort((a, b) => (a.innerText || '').length - (b.innerText || '').length);
+                const best = matching[0];
+                const clickable = best.closest('.rcl-ParticipantFixtureDetails_TeamNames') || best.closest('a') || best;
                 clickable.scrollIntoView({ block: 'center' });
                 clickable.click();
                 return true;
@@ -2613,9 +3172,12 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
             return
 
         time.sleep(1.8)
+        if session.check_and_recover_blocked(sport):
+            return
+
         lines = session.get_dom_lines()
         odd_re = re.compile(r'^\d+([.,]\d+)?$')
-        mkts = match.setdefault("markets", {})
+        parsed_detail: Dict[str, Any] = {}
 
         if sport == "Soccer":
             # Correct Score (Score exact)
@@ -2629,7 +3191,7 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
                         cs_key = f"{m_cs.group(1)}-{m_cs.group(2)}"
                         cs_data[cs_key] = nxt
             if cs_data:
-                mkts["Correct Score"] = cs_data
+                parsed_detail["Correct Score"] = cs_data
 
             # Half Time/Full Time
             htft_data = {}
@@ -2641,42 +3203,42 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
                     if odd_re.match(nxt) and 1.10 <= float(nxt) <= 250.0:
                         htft_data[l_cur] = nxt
             if len(htft_data) >= 7:
-                mkts["Half Time/Full Time"] = htft_data
+                parsed_detail["Half Time/Full Time"] = htft_data
 
-            if "Both Teams to Score" not in mkts:
-                for i in range(len(lines) - 3):
-                    l_cur = lines[i].strip().lower()
-                    if l_cur in ["les deux équipes marquent", "both teams to score"]:
-                        o_y, o_n = None, None
-                        for y_idx in range(i + 1, min(i + 8, len(lines) - 1)):
-                            if lines[y_idx].strip().lower() in ["oui", "yes"]:
-                                o_y = lines[y_idx+1].strip().replace(',', '.')
-                                break
-                        for n_idx in range(i + 1, min(i + 8, len(lines) - 1)):
-                            if lines[n_idx].strip().lower() in ["non", "no"]:
-                                o_n = lines[n_idx+1].strip().replace(',', '.')
-                                break
-                        if o_y and o_n and odd_re.match(o_y) and odd_re.match(o_n):
-                            mkts["Both Teams to Score"] = {"Yes": o_y, "No": o_n}
+            # Both Teams to Score
+            for i in range(len(lines) - 3):
+                l_cur = lines[i].strip().lower()
+                if l_cur in ["les deux équipes marquent", "both teams to score"]:
+                    o_y, o_n = None, None
+                    for y_idx in range(i + 1, min(i + 8, len(lines) - 1)):
+                        if lines[y_idx].strip().lower() in ["oui", "yes"]:
+                            o_y = lines[y_idx+1].strip().replace(',', '.')
+                            break
+                    for n_idx in range(i + 1, min(i + 8, len(lines) - 1)):
+                        if lines[n_idx].strip().lower() in ["non", "no"]:
+                            o_n = lines[n_idx+1].strip().replace(',', '.')
+                            break
+                    if o_y and o_n and odd_re.match(o_y) and odd_re.match(o_n):
+                        parsed_detail["Both Teams to Score"] = {"Yes": o_y, "No": o_n}
 
-            if "Goals Over/Under" not in mkts:
-                for i in range(len(lines) - 4):
-                    l_cur = lines[i].strip().lower()
-                    if any(term in l_cur for term in ["total de buts", "plus / moins de buts", "goals over/under"]):
-                        for j in range(i + 1, min(i + 15, len(lines) - 2)):
-                            line_cand = lines[j].strip()
-                            if "2.5" in line_cand or line_cand in ["Plus de 2.5", "Over 2.5"]:
-                                nxt = lines[j+1].strip().replace(',', '.')
-                                if odd_re.match(nxt):
-                                    for k in range(j + 1, min(j + 10, len(lines) - 1)):
-                                        if "Moins de 2.5" in lines[k] or "Under 2.5" in lines[k] or lines[k].strip() == "2.5":
-                                            u_odd = lines[k+1].strip().replace(',', '.')
-                                            if odd_re.match(u_odd):
-                                                mkts["Goals Over/Under"] = {
-                                                    "Over": {"line": "2.5", "odds": nxt},
-                                                    "Under": {"line": "2.5", "odds": u_odd}
-                                                }
-                                                break
+            # Goals Over/Under
+            for i in range(len(lines) - 4):
+                l_cur = lines[i].strip().lower()
+                if any(term in l_cur for term in ["total de buts", "plus / moins de buts", "goals over/under"]):
+                    for j in range(i + 1, min(i + 15, len(lines) - 2)):
+                        line_cand = lines[j].strip()
+                        if "2.5" in line_cand or line_cand in ["Plus de 2.5", "Over 2.5"]:
+                            nxt = lines[j+1].strip().replace(',', '.')
+                            if odd_re.match(nxt):
+                                for k in range(j + 1, min(j + 10, len(lines) - 1)):
+                                    if "Moins de 2.5" in lines[k] or "Under 2.5" in lines[k] or lines[k].strip() == "2.5":
+                                        u_odd = lines[k+1].strip().replace(',', '.')
+                                        if odd_re.match(u_odd):
+                                            parsed_detail["Goals Over/Under"] = {
+                                                "Over": {"line": "2.5", "odds": nxt},
+                                                "Under": {"line": "2.5", "odds": u_odd}
+                                            }
+                                            break
 
         elif sport == "Tennis":
             sb_data = {}
@@ -2687,56 +3249,70 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
                     if odd_re.match(nxt) and 1.05 <= float(nxt) <= 50.0:
                         sb_data[l_cur] = nxt
             if sb_data:
-                mkts["Set Betting"] = sb_data
+                parsed_detail["Set Betting"] = sb_data
 
-            if "First Set Winner" not in mkts:
-                for i in range(len(lines) - 4):
-                    l_cur = lines[i].strip().lower()
-                    if any(k in l_cur for k in ["vainqueur du 1er set", "first set winner", "1er set"]):
-                        cand_odds = []
-                        for j in range(i + 1, min(i + 10, len(lines))):
-                            val = lines[j].strip().replace(',', '.')
-                            if odd_re.match(val) and 1.05 <= float(val) <= 25.0:
-                                cand_odds.append(val)
-                        if len(cand_odds) >= 2:
-                            mkts["First Set Winner"] = {"1": cand_odds[0], "2": cand_odds[1]}
-                            break
+            for i in range(len(lines) - 4):
+                l_cur = lines[i].strip().lower()
+                if any(k in l_cur for k in ["vainqueur du 1er set", "first set winner", "1er set"]):
+                    cand_odds = []
+                    for j in range(i + 1, min(i + 10, len(lines))):
+                        val = lines[j].strip().replace(',', '.')
+                        if odd_re.match(val) and 1.05 <= float(val) <= 25.0:
+                            cand_odds.append(val)
+                    if len(cand_odds) >= 2:
+                        parsed_detail["First Set Winner"] = {"1": cand_odds[0], "2": cand_odds[1]}
+                        break
 
-            if "Total Games" not in mkts:
-                for i in range(len(lines) - 4):
-                    l_cur = lines[i].strip().lower()
-                    if any(k in l_cur for k in ["total des jeux", "total games"]):
-                        for j in range(i + 1, min(i + 12, len(lines) - 2)):
-                            tok = lines[j].strip()
-                            if re.match(r'^\d+\.5$', tok):
-                                o_odd = lines[j+1].strip().replace(',', '.') if j + 1 < len(lines) else ""
-                                u_odd = lines[j+2].strip().replace(',', '.') if j + 2 < len(lines) else ""
-                                if odd_re.match(o_odd) and odd_re.match(u_odd):
-                                    mkts["Total Games"] = {
-                                        "Over": {"line": tok, "odds": o_odd},
-                                        "Under": {"line": tok, "odds": u_odd}
-                                    }
-                                    break
+            for i in range(len(lines) - 4):
+                l_cur = lines[i].strip().lower()
+                if any(k in l_cur for k in ["total des jeux", "total games"]):
+                    for j in range(i + 1, min(i + 12, len(lines) - 2)):
+                        tok = lines[j].strip()
+                        if re.match(r'^\d+\.5$', tok):
+                            o_odd = lines[j+1].strip().replace(',', '.') if j + 1 < len(lines) else ""
+                            u_odd = lines[j+2].strip().replace(',', '.') if j + 2 < len(lines) else ""
+                            if odd_re.match(o_odd) and odd_re.match(u_odd):
+                                parsed_detail["Total Games"] = {
+                                    "Over": {"line": tok, "odds": o_odd},
+                                    "Under": {"line": tok, "odds": u_odd}
+                                }
+                                break
 
         elif sport == "Basketball":
             for i in range(len(lines) - 4):
                 l_cur = lines[i].strip().lower()
-                if l_cur in ["handicap", "spread"] and "Point Spread" not in mkts:
+                if l_cur in ["handicap", "spread"]:
                     for j in range(i + 1, min(i + 10, len(lines) - 3)):
                         l1 = lines[j].strip()
                         o1 = lines[j+1].strip().replace(',', '.')
                         l2 = lines[j+2].strip()
                         o2 = lines[j+3].strip().replace(',', '.')
                         if (l1.startswith('+') or l1.startswith('-')) and odd_re.match(o1) and odd_re.match(o2):
-                            mkts["Point Spread"] = {"1": {"line": l1, "odds": o1}, "2": {"line": l2, "odds": o2}}
-                            mkts["Spread"] = mkts["Point Spread"]
+                            parsed_detail["Point Spread"] = {"1": {"line": l1, "odds": o1}, "2": {"line": l2, "odds": o2}}
+                            parsed_detail["Spread"] = parsed_detail["Point Spread"]
                             break
 
-        session.page.go_back(wait_until="commit", timeout=8000)
-        time.sleep(1.2)
+        # Validate and apply with 'live' provenance
+        mkts = match.setdefault("markets", {})
+        src_map = match.setdefault("market_source", {})
+        for m_name, outcomes in parsed_detail.items():
+            ok, _ = validate_market(m_name, outcomes)
+            ok_or, _ = check_market_overround(m_name, outcomes)
+            if ok and ok_or:
+                mkts[m_name] = outcomes
+                src_map[m_name] = "live"
+
+        if return_hash:
+            session.navigate_hash(return_hash, sport=sport)
+        else:
+            session.page.go_back(wait_until="commit", timeout=8000)
+        time.sleep(1.0)
     except Exception:
         try:
-            session.page.go_back(wait_until="commit", timeout=5000)
+            if return_hash:
+                session.navigate_hash(return_hash, sport=sport)
+            else:
+                session.page.go_back(wait_until="commit", timeout=5000)
             time.sleep(1.0)
         except Exception:
             pass
@@ -2980,6 +3556,7 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
     Authentic scraped odds take precedence. Missing secondary markets are mathematically
     calibrated using the quantitative Dixon-Coles bivariate Poisson model.
     """
+    init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
     mr = mkts.get("Match Result") or mkts.get("Full Time Result")
     if mr and isinstance(mr, dict):
@@ -3048,6 +3625,7 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
         for req_m in missing:
             if req_m in detailed:
                 mkts[req_m] = detailed[req_m]
+                mark_market_source(match, req_m, "computed")
 
     return match
 
@@ -3179,7 +3757,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                             seen.add(pair_key)
                             kickoff_val = f"{curr_date} {time_val}:00"
                             matches.append({
-                                "id": stable_id(t1, t2, time_val),
+                                "id": stable_id("Soccer", clean_team_name(t1), clean_team_name(t2), curr_date),
                                 "date": curr_date,
                                 "kickoff": kickoff_val,
                                 "competition": curr_comp,
@@ -3205,7 +3783,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                                 seen.add(pair_key)
                                 kickoff_val = f"{curr_date} {curr_time}:00"
                                 matches.append({
-                                    "id": stable_id(t1, t2, curr_time),
+                                    "id": stable_id("Soccer", clean_team_name(t1), clean_team_name(t2), curr_date),
                                     "date": curr_date,
                                     "kickoff": kickoff_val,
                                     "competition": curr_comp,
@@ -3415,6 +3993,7 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
     - First Set Winner (1, 2)
     - Total Games (Over / Under with line)
     """
+    init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
     mw = mkts.get("To Win Match") or mkts.get("Match Winner") or mkts.get("Money Line") or mkts.get("Match Result")
 
@@ -3427,8 +4006,8 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             pass
 
-    mkts["To Win Match"] = {"1": f"{od_1:.2f}", "2": f"{od_2:.2f}"}
-    mkts["Match Winner"] = {"1": f"{od_1:.2f}", "2": f"{od_2:.2f}"}
+    mkts["To Win Match"] = {"1": format_odd_str(od_1), "2": format_odd_str(od_2)}
+    mkts["Match Winner"] = {"1": format_odd_str(od_1), "2": format_odd_str(od_2)}
 
     # Format or compute Set Betting
     sb = mkts.get("Set Betting")
@@ -3448,6 +4027,7 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
             "0-2": f"{max(1.30, min(25.0, round(margin / max(0.02, p2 * 0.63), 2))):.2f}",
             "1-2": f"{max(1.60, min(30.0, round(margin / max(0.02, p2 * 0.37), 2))):.2f}",
         }
+        mark_market_source(match, "Set Betting", "computed")
 
     # Format or compute First Set Winner
     fsw = mkts.get("First Set Winner")
@@ -3468,6 +4048,7 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
             "1": f"{max(1.10, min(15.0, round(margin / (pow_p1 / fs_s), 2))):.2f}",
             "2": f"{max(1.10, min(15.0, round(margin / (pow_p2 / fs_s), 2))):.2f}",
         }
+        mark_market_source(match, "First Set Winner", "computed")
 
     # Format or compute Total Games
     tg = mkts.get("Total Games") or mkts.get("Total")
@@ -3480,6 +4061,7 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
             "Over": {"line": "21.5", "odds": "1.83"},
             "Under": {"line": "21.5", "odds": "1.95"}
         }
+        mark_market_source(match, "Total Games", "computed")
 
     # Format Handicap if scraped
     hc = mkts.get("Handicap")
@@ -3504,7 +4086,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
     odd_regex = re.compile(r'^\d+[.,]\d+$')
 
     curr_comp = default_comp
-    curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    curr_date = get_now_paris().strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
@@ -3542,7 +4124,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                     pair_key = f"{p1.lower()}_{p2.lower()}"
                     if pair_key not in seen:
                         seen.add(pair_key)
-                        match_id = stable_id(p1, p2, cand_time)
+                        match_id = stable_id("Tennis", clean_team_name(p1), clean_team_name(p2), curr_date)
                         matches.append({
                             "id": match_id,
                             "date": curr_date,
@@ -3578,7 +4160,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                 pair_key = f"{p1.lower()}_{p2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    match_id = stable_id(p1, p2, time_val)
+                    match_id = stable_id("Tennis", clean_team_name(p1), clean_team_name(p2), curr_date)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3594,6 +4176,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
 
         i += 1
     return matches
+
 
 
 def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
@@ -3706,7 +4289,7 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
     odd_regex = re.compile(r'^\d+([.,]\d+)?$')
 
     curr_comp = default_comp
-    curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    curr_date = get_now_paris().strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
@@ -3779,7 +4362,7 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
                         mkts["Total Points"] = {"Over": tot_o, "Under": tot_u}
                         mkts["Total"] = {"Over": tot_o, "Under": tot_u}
 
-                    match_id = stable_id(cand_t1, cand_t2, time_val)
+                    match_id = stable_id("Basketball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3833,7 +4416,7 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
                 pair_key = f"{t1.lower()}_{t2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    match_id = stable_id(t1, t2, time_val)
+                    match_id = stable_id("Basketball", clean_team_name(t1), clean_team_name(t2), curr_date)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -3957,7 +4540,7 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
     )
 
     curr_comp = default_comp
-    curr_date = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    curr_date = get_now_paris().strftime("%d/%m/%Y")
 
     i = 0
     while i < len(lines):
@@ -4038,7 +4621,7 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                     if tot_o and tot_u:
                         mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
 
-                    match_id = stable_id(cand_t1, cand_t2, time_val)
+                    match_id = stable_id("Handball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
                     matches.append({
                         "id": match_id,
                         "date": curr_date,
@@ -4100,7 +4683,7 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                                 tot_o = f"{l1} ({o1})"
                                 tot_u = f"{l2} ({o2})"
 
-                    match_id = stable_id(t1, t2, time_val)
+                    match_id = stable_id("Handball", clean_team_name(t1), clean_team_name(t2), curr_date)
                     mkts = {}
                     if od1 and od2:
                         res = {"1": od1, "2": od2}
@@ -4770,8 +5353,20 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
             print("  [Geo-Block Notice] Please connect through a working VPN or set a valid residential proxy in config.json.\n")
             return []
 
+        state = load_scraper_state()
+        state["runs"] = state.get("runs", 0) + 1
+        save_scraper_state(state)
+
         for sport_name, handler in ALL_SPORT_HANDLERS:
             if not want(sport_name):
+                continue
+
+            if GLOBAL_PACER.is_global_circuit_open:
+                print(f"\n  [Circuit Breaker] Global circuit open ({len(GLOBAL_PACER.tripped_sports)} sports tripped). Aborting remaining pipeline.")
+                break
+
+            if GLOBAL_PACER.is_sport_circuit_open(sport_name):
+                print(f"\n  [Circuit Breaker] Skipping {sport_name} because its circuit is open.")
                 continue
 
             print("\n" + "-" * 54)

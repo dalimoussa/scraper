@@ -38,6 +38,8 @@ try:
         CDP_PORT,
         DEFAULT_DELAY,
         DEFAULT_DOMAIN,
+        PARIS_TZ,
+        get_now_paris,
         ensure_chrome_cdp,
         is_upcoming_pre_match,
         scrape_cdp_pipeline,
@@ -59,6 +61,39 @@ try:
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_internal: {exc}")
     sys.exit(1)
+
+
+def parse_iso_ts(ts_str: Any) -> Optional[datetime]:
+    """Safely parses ISO timestamp into a timezone-aware datetime."""
+    if not ts_str or not isinstance(ts_str, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=PARIS_TZ)
+        return dt
+    except Exception:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
+            try:
+                dt = datetime.strptime(ts_str, fmt)
+                return dt.replace(tzinfo=PARIS_TZ)
+            except Exception:
+                pass
+    return None
+
+
+def is_fresh_match(m: Dict[str, Any], max_age_hours: float = 48.0, now_dt: Optional[datetime] = None) -> bool:
+    """Compares how old the last live update is against a max age threshold using Paris time."""
+    if now_dt is None:
+        now_dt = get_now_paris()
+    ts_val = m.get("last_update") or m.get("timestamp") or m.get("extraction")
+    if not ts_val:
+        return True
+    dt = parse_iso_ts(ts_val)
+    if not dt:
+        return True
+    age_seconds = (now_dt - dt).total_seconds()
+    return age_seconds <= (max_age_hours * 3600.0)
 
 
 def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any]]:
@@ -105,6 +140,14 @@ def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any
         return None
 
     m_copy["markets"] = valid_markets
+
+    # Prune market_source to keep only valid markets and ensure consistency
+    if "market_source" in m_copy and isinstance(m_copy["market_source"], dict):
+        m_copy["market_source"] = {k: v for k, v in m_copy["market_source"].items() if k in valid_markets}
+        for k in valid_markets:
+            if k not in m_copy["market_source"]:
+                m_copy["market_source"][k] = "live"
+
     return m_copy
 
 
@@ -157,6 +200,7 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
     Safely merges live scraped sports data with seed_matches.json and the existing output file.
     Ensures that verified fixtures across all 7 sports are preserved even if live scraping returns a partial set,
     while live matches always take precedence for fresh odds.
+    Never lets a model-computed market overwrite a fresh live market.
     """
     existing_by_sport: Dict[str, List[Dict[str, Any]]] = {}
 
@@ -194,6 +238,18 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
         merged_results = []
         canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
 
+        # Check config flag keep_unverified
+        keep_unverified = True
+        try:
+            if os.path.exists("config.json"):
+                with open("config.json", encoding="utf-8") as _f:
+                    _cfg = json.load(_f)
+                    keep_unverified = bool(_cfg.get("keep_unverified_matches", True))
+        except Exception:
+            pass
+
+        now_paris = get_now_paris()
+
         import re
         from datetime import timedelta
 
@@ -211,12 +267,31 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                         matched_om = om
                         break
 
-                if matched_om:
-                    # Inherit existing secondary markets so live scrape never downgrades to 1X2 only
-                    base_mkts = dict(matched_om.get("markets", {}))
-                    base_mkts.update(lm.get("markets", {}))
-                    lm["markets"] = base_mkts
-                    if not lm.get("kickoff") or lm.get("kickoff") == "20:00:00":
+                if matched_om and is_fresh_match(matched_om, now_dt=now_paris):
+                    # Inherit secondary markets and protect live provenance
+                    lm_mkts = dict(lm.get("markets", {}))
+                    om_mkts = dict(matched_om.get("markets", {}))
+                    lm_src = dict(lm.get("market_source", {}))
+                    om_src = dict(matched_om.get("market_source", {}))
+
+                    merged_mkts = dict(lm_mkts)
+                    merged_src = dict(lm_src)
+
+                    for m_name, m_val in om_mkts.items():
+                        if m_name not in merged_mkts:
+                            merged_mkts[m_name] = m_val
+                            merged_src[m_name] = om_src.get(m_name, "live")
+                        else:
+                            # Never let a computed market overwrite a fresh live one
+                            if merged_src.get(m_name) == "computed" and om_src.get(m_name, "live") == "live":
+                                merged_mkts[m_name] = m_val
+                                merged_src[m_name] = "live"
+
+                    lm["markets"] = merged_mkts
+                    lm["market_source"] = merged_src
+
+                    # Carry over kickoff time corrections
+                    if not lm.get("kickoff") or lm.get("kickoff") == "20:00:00" or lm.get("kickoff").endswith("20:00:00"):
                         lm["kickoff"] = matched_om.get("kickoff", lm.get("kickoff"))
                     if not lm.get("date"):
                         lm["date"] = matched_om.get("date", lm.get("date"))
@@ -244,19 +319,19 @@ def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.
                         break
 
                 if not updated_live:
+                    is_up = is_upcoming_pre_match(om.get("date"), om.get("kickoff"), sp)
+                    is_fr = is_fresh_match(om, now_dt=now_paris)
+                    if not keep_unverified and not (is_up and is_fr):
+                        continue
+
                     _tpart = (om.get("kickoff") or "20:00:00").split()[-1]
                     if not re.match(r"^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$", _tpart):
                         _tpart = "20:00:00"
                     elif len(_tpart.split(":")) == 2:
                         _tpart = f"{_tpart}:00"
 
-                    if not is_upcoming_pre_match(om.get("date"), om.get("kickoff"), sp):
-                        _tom = datetime.now() + timedelta(days=1)
-                        om["date"] = _tom.strftime("%d/%m/%Y")
-                        om["kickoff"] = f"{om['date']} {_tpart}"
-                    else:
-                        om_date = om.get("date") or datetime.now().strftime("%d/%m/%Y")
-                        om["kickoff"] = f"{om_date} {_tpart}"
+                    om_date = om.get("date") or now_paris.strftime("%d/%m/%Y")
+                    om["kickoff"] = f"{om_date} {_tpart}"
 
                     proc = process_sport_match(om, sp)
                     if proc:
@@ -308,7 +383,7 @@ def main():
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 
     if total_m == 0 and os.path.exists(args.out):
-        print(f"\n[Warning] No matches collected. Preserving existing {args.out} to prevent blank overwrite.")
+        print(f"\n[Warning] No matches collected. Preserving existing {args.out} to prevent blank overwrite (may be stale).")
         return
 
     # Write output atomically to avoid corruption
@@ -322,3 +397,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
