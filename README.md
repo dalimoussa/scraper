@@ -54,11 +54,12 @@ To keep data continuously updated at a specified interval (e.g. every 60 seconds
 python auto_refresh.py --interval 60 --out all_matches.json
 ```
 
-### 5. Verify Scraped Data
-Inspect match counts, pre-match validity, and analytical market coverage:
+### 5. Inspect Scraped Data
+Inspect the generated JSON output:
 ```bash
-python verify.py
+# Output is saved to all_matches.json
 ```
+
 
 ---
 
