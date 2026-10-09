@@ -1,12 +1,12 @@
 """
-test_sports_complet_final.py
+bet365_parser.py
 ======================================
-Script de test unifié gérant les 4 architectures réseau de Bet365.
+Module de parsing unifie gérant les 4 architectures réseau de Bet365.
 Super Parseur mis à jour : Structure nette des marchés, des sélections, 
 des lignes (Over/Under, Handicaps) et des vainqueurs de match.
 
 Usage :
-    python test_sports_complet_final.py
+    python bet365_parser.py
 """
 
 import json
@@ -999,7 +999,7 @@ def scraper_match_unique(context, url, tous_resultats):
 def main():
     url_unique = sys.argv[1] if len(sys.argv) > 1 else None
     if not url_unique:
-        print("Usage: python test_sports_complet_final.py <URL>")
+        print("Usage: python bet365_parser.py <URL>")
         return
 
     sys.path.append(os.path.abspath("../bet365"))
