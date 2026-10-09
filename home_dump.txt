@@ -1,0 +1,1445 @@
+0: LES JEUX D’ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX: PERTES D’ARGENT, CONFLITS FAMILIAUX, ADDICTION…
+1: NOS CONSEILS SUR JOUEURS-INFO-SERVICE.FR (09-74-75-13-13, APPEL NON SURTAXÉ)
+2: Tous les Sports
+3: En direct
+4: Poker
+5: Récompenses
+6: S'inscrire
+7: Se connecter
+8: Tendance
+9: Football à venir
+10: Tennis à venir
+11: NFL
+12: Starligue
+13: Prochaines courses
+14: EuroLigue
+15: Japon - NPB
+16: Ligue 1 McDonald's®
+17: Défi UCL
+18: Populaire
+19: Tennis
+20: Basket
+21: Cyclisme
+22: A-Z
+23: À venir
+24: Badminton
+25: Baseball
+26: Basketball
+27: Boxe
+28: Courses hippiques
+29: Cyclisme
+30: Football
+31: Football américain
+32: Football australien
+33: Formule 1
+34: Golf
+35: Handball
+36: Hockey sur glace
+37: MMA
+38: Poker
+39: Rugby à XIII
+40: Rugby à XV
+41: Snooker
+42: Speedway
+43: Sports d'hiver
+44: Biathlon
+45: Saut à ski
+46: Ski alpin
+47: Ski de fond
+48: Sports motorisés
+49: Autres Sports motorisés
+50: Courses de moto
+51: NASCAR
+52: Tennis
+53: Tennis de table
+54: UEFA Champions League
+55: Voile
+56: Volleyball
+57: Rechercher
+58: Football
+59: Tennis
+60: Basketball
+61: Courses hippiques
+62: Baseball
+63: Hockey sur glace
+64: Handball
+65: Badminton
+66: NFL
+67: Tennis de table
+68: MLB
+69: Formule 1
+70: À venir
+71: Ligue 1 McDonald's®
+72: Défi UCL
+73: Snooker
+74: Rugby à XV
+75: Golf
+76: Rugby à XIII
+77: Volleyball
+78: Fight Night
+79: Cyclisme
+80: Boxe
+81: Futsal
+82: Ski alpin
+83: NASCAR
+84: Offre de nouveau client
+85: PREMIER PARI GARANTI JUSQU’À 100 €
+86: S’inscrire
+87: Dépôt requis. Payé en Bet Crédits. Les gains excluent les mises en Bet Crédits. Réservé aux nouveaux clients. CGU, limites de temps et exclusions applicables.
+88: ATP - SHANGHAI
+89: BOOSTEZ VOTRE PARI PERSONNALISÉ
+90: SUR N'IMPORTE QUEL MATCH
+91: 3+ sélections avec des cotes combinées de 2.00 ou plus. Restrictions d'éligibilité et CGU applicables.
+92: EUROLIGUE
+93: BOOSTEZ VOTRE PARI PERSONNALISÉ
+94: SUR N'IMPORTE QUEL MATCH
+95: 3+ sélections avec des cotes combinées de 2.00 ou plus. Restrictions d'éligibilité et CGU applicables.
+96: UEFA CHAMPIONS LEAGUE
+97: GAGNEZ 2 TICKETS POUR LA 3E JOURNÉE
+98: CLÔTURE À 23:59
+99: En tant que partenaire officiel, gagnez des billets pour l’UEFA Champions League toute la saison. CGU applicables.
+100: HANDBALL - LIGUE DES CHAMPIONS
+101: BOOSTEZ VOTRE PARI PERSONNALISÉ
+102: MT MELSUNGEN V NANTES
+103: 3+ sélections avec des cotes combinées de 2.00 ou plus. Restrictions d'éligibilité et CGU applicables.
+104: NOUVEAU PRODUIT
+105: COURSES HIPPIQUES DISPONIBLES
+106: PARIER ICI
+107: Restrictions d'éligibilité et CGU applicables.
+108: HANDBALL - LIGUE DES CHAMPIONS
+109: BOOSTEZ VOTRE PARI PERSONNALISÉ
+110: SKANDERBORG V MONTPELLIER
+111: 3+ sélections avec des cotes combinées de 2.00 ou plus. Restrictions d'éligibilité et CGU applicables.
+112: RESTEZ EN JEU
+113: VOTRE JOUEUR SE FAIT REMPLACER ?
+114: VOTRE PARI EST MAINTENU
+115: Types de pari Joueur éligibles avec l’icône Remplaçant+. Restrictions d'éligibilité. CGU applicables.
+116: NFL
+117: BOOSTEZ VOTRE PARI PERSONNALISÉ
+118: TB BUCCANEERS @ DAL COWBOYS
+119: 3+ sélections avec des cotes combinées de 2.00 ou plus. Restrictions d'éligibilité et CGU applicables.
+120: CRÉEZ VOTRE PROPRE PARI
+121: DISPONIBLE SUR 16 SPORTS
+122: Y COMPRIS LE FOOTBALL
+123: La mention « inégalé » se base sur le nombre d’options de pari personnalisé offertes comparé aux opérateurs de paris concurrents.
+124: DOUBLEZ VOS GAINS
+125: BOOSTEZ VOTRE PARI COMBINÉ
+126: AVEC CHAQUE SÉLECTION
+127: Sur une sélection de sports et de types de pari. Le % de Boost dépend du nombre de sélections. CGU applicables.
+128: JOUEZ GRATUITEMENT
+129: GAGNEZ JUSQU'À 250 000 €
+130: AFFRONTEZ VOS AMIS
+131: Gagnez des points pour chaque pronostic correct. Prix à gagner pour les journées de match et pour le tournoi. CGU applicables.
+132: TWIST & PREDICT
+133: PRONOSTIQUEZ ET GAGNEZ JUSQU'À 10 €
+134: CGU de l'offre applicables.
+135: PRÉFÉRENCES MARKETING
+136: SUIVEZ TOUTES LES NOUVELLES OFFRES
+137: Ces préférences vous permettent de mieux contrôler les offres Marketing que vous recevez.
+138: Tennis
+139: EuroLigue
+140: Joueurs
+141: Football
+142: Baseball
+143: Hockey sur glace
+144: Handball
+145: Badminton
+146: NFL
+147: Ligue 1 McDonald’s ®
+148: GP de Singapour
+149: En direct
+150: Temps Forts
+151: Plus
+152: Cameron Norrie vs Dalibor Svrcina
+153: Cameron Norrie Gagne un set
+154: Dalibor SvrcinaGagne un set
+155: Plus de 0.5 jeux décisifs
+156: 5.50
+157: 5.90
+158: Misez 10 €, Gagnez 65 €
+159: Cameron Norrie vs Dalibor Svrcina
+160: Dalibor Svrcina gagnera le match
+161: Plus de 21.5 Jeux
+162: 5+ Aces pour Dalibor Svrcina
+163: 4.95
+164: 5.50
+165: Misez 10 €, Gagnez 60 €
+166: Matteo Berrettini vs Brandon Nakashima
+167: Brandon Nakashima gagnera le match
+168: Brandon Nakashima gagne le 1er set 7-5,7-6
+169: Plus de 9.5 Jeux dans Set 2
+170: 6.45
+171: 7.50
+172: Misez 10 €, Gagnez 85 €
+173: Matteo Berrettini vs Brandon Nakashima
+174: Matteo Berrettini Gagne un set
+175: Brandon NakashimaGagne un set
+176: Plus de 0.5 jeux décisifs
+177: 2.55
+178: 2.62
+179: Misez 10 €, Gagnez 28 €
+180: Arthur Gea vs Ugo Humbert
+181: Arthur Gea gagnera le match
+182: Arthur Gea gagne le 1er set 7-5,7-6
+183: Plus de 9.5 Jeux dans Set 2
+184: 8.25
+185: 9.00
+186: Misez 10 €, Gagnez 110 €
+187: Arthur Gea vs Ugo Humbert
+188: Arthur Gea Gagne un set
+189: Ugo HumbertGagne un set
+190: Plus de 0.5 jeux décisifs
+191: 2.92
+192: 3.10
+193: Misez 10 €, Gagnez 33 €
+194: Jeu. 08 oct
+195: 1
+196: 2
+197: L Van Assche
+198: Y Bu
+199: 0
+200: 1
+201: 3
+202: 4
+203: 0
+204: 0
+205: 5.60
+206: 1.085
+207: LIVE
+208: V Kopriva
+209: Z Bergs
+210: 0
+211: 0
+212: 1
+213: 2
+214: 0
+215: 15
+216: 4.30
+217: 1.15
+218: LIVE
+219: E Alexandrova
+220: M Andreeva
+221: 0
+222: 0
+223: 5
+224: 4
+225: 0
+226: 0
+227: 2.13
+228: 1.60
+229: LIVE
+230: C Norrie
+231: D Svrcina
+232: 1.40
+233: 2.68
+234: 13:30
+235: 2
+236: Statistiques
+237: EuroLigue
+238: Plus
+239: Points
+240: Ebuka Izundu: 15+ points
+241: Moses Wright: 15+ points
+242: Duane Washington Jr.: 15+ points
+243: Sylvain Francisco: 15+ points
+244: TJ Shorts: 15+ points
+245: Timothe Luwawu-Cabarrot: 15+ points
+246: Afficher 3 options en plus
+247: 10.31
+248: 12.27
+249: Misez 10 €, Gagnez 122,75 €
+250: Paniers à 3 points
+251: Jared Butler: 2+ paniers à trois points
+252: Marko Guduric: 2+ paniers à trois points
+253: Andreas Obst: 2+ paniers à trois points
+254: Guerschon Yabusele: 2+ paniers à trois points
+255: Armoni Brooks: 2+ paniers à trois points
+256: Facundo Campazzo: 2+ paniers à trois points
+257: Afficher 3 options en plus
+258: 8.44
+259: 10.23
+260: Misez 10 €, Gagnez 102,36 €
+261: Passes décisives
+262: Chris Jones: 5+ passes décisives
+263: Yam Madar: 5+ passes décisives
+264: Marcus Carr: 5+ passes décisives
+265: Wade Baldwin: 5+ passes décisives
+266: Vasilije Micic: 5+ passes décisives
+267: Theo Maledon: 5+ passes décisives
+268: Afficher 3 options en plus
+269: 9.58
+270: 11.78
+271: Misez 10 €, Gagnez 117,83 €
+272: Rebonds
+273: Chima Moneke: 7+ rebonds
+274: Moses Wright: 7+ rebonds
+275: Austin Wiley: 7+ rebonds
+276: Mathias Lessort: 7+ rebonds
+277: Daniel Oturu: 7+ rebonds
+278: Walter Tavares: 7+ rebonds
+279: Afficher 3 options en plus
+280: 23.79
+281: 29.34
+282: Misez 10 €, Gagnez 293,42 €
+283: BC Dubai vs Crvena Zvezda
+284: Ebuka Izundu - 15 points ou plus
+285: Dwayne Bacon - 15 points ou plus
+286: Jordan Nwora - 15 points ou plus
+287: Mfiondu Kabengele - 15 points ou plus
+288: 6.70
+289: 7.50
+290: Misez 10 €, Gagnez 75 €
+291: BC Dubai vs Crvena Zvezda
+292: Jared Butler - 2 paniers ou plus à trois points
+293: Dwayne Bacon - 2 paniers ou plus à trois points
+294: Jordan Nwora - 2 paniers ou plus à trois points
+295: Elie Okobo - 2 paniers ou plus à trois points
+296: 9.50
+297: 10.50
+298: Misez 10 €, Gagnez 105 €
+299: COMBI BOOSTÉ
+300: Jeu. 08 oct
+301: Handicap
+302: Total
+303: Vainqueur
+304: BC Dubai
+305: Crvena Zvezda
+306: -7.5
+307: 1.76
+308: +7.5
+309: 1.76
+310: P 166.5
+311: 1.76
+312: M 166.5
+313: 1.76
+314: 1.20
+315: 3.30
+316: 18:00
+317: 4
+318: Maccabi Tel Aviv
+319: Milano
+320: -4.0
+321: 1.76
+322: +4.0
+323: 1.76
+324: P 172.5
+325: 1.76
+326: M 172.5
+327: 1.76
+328: 1.40
+329: 2.40
+330: 18:00
+331: 4
+332: Statistiques
+333: Bayern Munich
+334: Virtus Bologna
+335: -6.5
+336: 1.76
+337: +6.5
+338: 1.76
+339: P 172.5
+340: 1.76
+341: M 172.5
+342: 1.76
+343: 1.26
+344: 2.92
+345: 20:00
+346: 4
+347: Statistiques
+348: Panathinaikos
+349: Fenerbahce
+350: -4.5
+351: 1.80
+352: +4.5
+353: 1.73
+354: P 162.5
+355: 1.76
+356: M 162.5
+357: 1.76
+358: 1.42
+359: 2.35
+360: 20:15
+361: 4
+362: Statistiques
+363: Valence
+364: Hapoel Tel Aviv
+365: -2.5
+366: 1.76
+367: +2.5
+368: 1.76
+369: P 183.5
+370: 1.76
+371: M 183.5
+372: 1.76
+373: 1.56
+374: 2.08
+375: 20:30
+376: 4
+377: Real Madrid
+378: Partizan
+379: -9.5
+380: 1.76
+381: +9.5
+382: 1.76
+383: P 174.5
+384: 1.76
+385: M 174.5
+386: 1.76
+387: 1.11
+388: 4.22
+389: 20:45
+390: 4
+391: Statistiques
+392: Points
+393: Points
+394: Buteur
+395: Buteur
+396: Marqueur de touchdown à tout moment
+397: Marqueur de touchdown à tout moment
+398: Home Runs
+399: Home Runs
+400: 15
+401: 5
+402: 10
+403: 15
+404: 20
+405: 25
+406: 30
+407: 35
+408: 40
+409: 45
+410: 25
+411: 15
+412: Ebuka Izundu
+413: BC Dubai vs Crvena Zvezda
+414: 1.61
+415: 3
+416: Sylvain Francisco
+417: Panathinaikos vs Fenerbahce
+418: 2.62
+419: 0
+420: TJ Shorts
+421: Valence vs Hapoel Tel Aviv
+422: 2.64
+423: 3
+424: Elijah Bryant
+425: Valence vs Hapoel Tel Aviv
+426: 2.67
+427: 1
+428: Carlik Jones
+429: Real Madrid vs Partizan
+430: 2.92
+431: 4
+432: Duane Washington Jr.
+433: Bayern Munich vs Virtus Bologna
+434: 3.00
+435: Afficher plus
+436: Matchs à la une
+437: Plus
+438: Résultat du match
+439: HJK Helsinki (v VPS Vaasa)
+440: KuPS Kuopio (v AC Oulu)
+441: CFR Cluj (v Universitatea Cluj)
+442: 4.18
+443: 4.83
+444: Misez 10 €, Gagnez 48,36 €
+445: Les deux équipes marquent
+446: Oui (HJK Helsinki vs VPS Vaasa)
+447: Oui (KuPS Kuopio vs AC Oulu)
+448: Oui (CFR Cluj vs Universitatea Cluj)
+449: 4.80
+450: 5.33
+451: Misez 10 €, Gagnez 53,39 €
+452: Résultat / Les deux équipes marquent
+453: HJK Helsinki & Oui (v VPS Vaasa)
+454: KuPS Kuopio & Oui (v AC Oulu)
+455: CFR Cluj & Oui (v Universitatea Cluj)
+456: 40.70
+457: 51.62
+458: Misez 10 €, Gagnez 516,28 €
+459: Total de buts
+460: Plus de 3.5 (HJK Helsinki vs VPS Vaasa)
+461: Plus de 3.5 (KuPS Kuopio vs AC Oulu)
+462: Plus de 3.5 (CFR Cluj vs Universitatea Cluj)
+463: 19.52
+464: 22.64
+465: Misez 10 €, Gagnez 226,46 €
+466: Marque dans les deux mi-temps
+467: HJK Helsinki marque dans les deux mi-temps (v VPS Vaasa)
+468: KuPS Kuopio marque dans les deux mi-temps (v AC Oulu)
+469: Universitatea Cluj marque dans les deux mi-temps (v CFR Cluj)
+470: 16.26
+471: 19.32
+472: Misez 10 €, Gagnez 193,28 €
+473: Marque à tout moment
+474: Neymar
+475: Jorge Rivaldo
+476: Jose Flaco Lopez
+477: German Cano
+478: 190
+479: 28.00
+480: 33.24
+481: Misez 10 €, Gagnez 332,45 €
+482: Jeu. 08 oct
+483: 1
+484: X
+485: 2
+486: Ouganda (F)
+487: Zambie (F)
+488: 5.50
+489: 3.55
+490: 1.39
+491: Jeux olympiques - Femmes - Qualifs.
+492: 15:00
+493: Statistiques
+494: HJK Helsinki
+495: VPS Vaasa
+496: 1.43
+497: 3.65
+498: 4.95
+499: Finlande - Veikkausliiga
+500: 17:00
+501: 1
+502: Statistiques
+503: UTS Rabat
+504: RSB Berkane
+505: 3.00
+506: 2.82
+507: 2.03
+508: Maroc - Botola Pro
+509: 18:00
+510: Statistiques
+511: Benin (F)
+512: Mali (F)
+513: 3.00
+514: 2.92
+515: 1.98
+516: Jeux olympiques - Femmes - Qualifs.
+517: 18:00
+518: KuPS Kuopio
+519: AC Oulu
+520: 1.33
+521: 3.92
+522: 5.90
+523: Finlande - Veikkausliiga
+524: 18:00
+525: 2
+526: Statistiques
+527: JS Saoura
+528: Olympique Akbou
+529: 1.75
+530: 2.72
+531: 4.05
+532: Algérie - 1re Division
+533: 19:00
+534: Statistiques
+535: MB Rouissat
+536: USM Alger
+537: 2.92
+538: 2.69
+539: 2.13
+540: Algérie - 1re Division
+541: 19:00
+542: Statistiques
+543: FAR Rabat
+544: Widad Temara
+545: 1.31
+546: 3.45
+547: 7.00
+548: Maroc - Botola Pro
+549: 20:00
+550: Renaissance Zemamra
+551: HUSA Agadir
+552: 2.15
+553: 2.60
+554: 2.92
+555: Maroc - Botola Pro
+556: 20:00
+557: Statistiques
+558: CFR Cluj
+559: Universitatea Cluj
+560: 2.20
+561: 3.10
+562: 2.47
+563: Roumanie - Liga 1
+564: 19:30
+565: Statistiques
+566: Burkina Faso (F)
+567: Guinée Équatoriale (F)
+568: 1.39
+569: 3.50
+570: 5.35
+571: Jeux olympiques - Femmes - Qualifs.
+572: 20:00
+573: Statistiques
+574: Tunisie (F)
+575: Sénégal (F)
+576: 2.30
+577: 2.82
+578: 2.55
+579: Jeux olympiques - Femmes - Qualifs.
+580: 20:00
+581: Statistiques
+582: MC Oran
+583: ES Setif
+584: 1.85
+585: 2.69
+586: 3.92
+587: Algérie - 1re Division
+588: 21:00
+589: Statistiques
+590: Shamrock Rovers
+591: Drogheda United
+592: 1.31
+593: 3.92
+594: 6.20
+595: Irlande - Premier Division
+596: 21:00
+597: 5
+598: Statistiques
+599: MAS Fes
+600: Raja Casablanca
+601: 2.45
+602: 2.62
+603: 2.55
+604: Maroc - Botola Pro
+605: 22:00
+606: Statistiques
+607: Ven. 09 oct
+608: 1
+609: X
+610: 2
+611: Santos
+612: Flamengo
+613: 4.22
+614: 3.50
+615: 1.65
+616: Brésil - Série A
+617: 00:30
+618: 6
+619: Statistiques
+620: Fluminense
+621: Coritiba
+622: 1.36
+623: 3.92
+624: 6.70
+625: Brésil - Série A
+626: 02:30
+627: 6
+628: Palmeiras
+629: Bahia
+630: 1.51
+631: 3.65
+632: 4.95
+633: Brésil - Série A
+634: 02:30
+635: 5
+636: Statistiques
+637: Japon - NPB
+638: Plus
+639: Jeu. 08 oct
+640: Handicap
+641: Total
+642: Vainqueur
+643: Yakult Swallows
+644: 4
+645: Hanshin Tigers
+646: 0
+647: Équipe à domicile - 9e manche
+648: B
+649: P
+650: O
+651: SM Liiga
+652: Plus
+653: Jokerit vs HIFK
+654: Résultat du match : Jokerit
+655: Henri Nikkanen - Marque un but
+656: Maxime Fortier - Marque un but
+657: 9.50
+658: 10.50
+659: Misez 10 €, Gagnez 105 €
+660: Jokerit vs HIFK
+661: Résultat du match : HIFK
+662: Vincent Marleau - Marque un but
+663: Plus de 2.5 buts pour HIFK
+664: 5.90
+665: 6.20
+666: Misez 10 €, Gagnez 62 €
+667: Jokerit vs HIFK
+668: Résultat du match : Jokerit
+669: Patrik Virta - Marque un but
+670: Jokerit - Premier à 2 buts
+671: 5.40
+672: 5.90
+673: Misez 10 €, Gagnez 59 €
+674: Saipa vs Jyp
+675: Résultat du match : Saipa
+676: Petr Fridrich - Marque un but
+677: Plus de 2.5 buts pour Saipa
+678: 5.50
+679: 5.90
+680: Misez 10 €, Gagnez 59 €
+681: Saipa vs Jyp
+682: Résultat du match : Jyp
+683: Valtteri Ojantakanen - Marque un but
+684: Jyp - Premier à 2 buts
+685: 6.15
+686: 7.00
+687: Misez 10 €, Gagnez 70 €
+688: Assat vs HPK
+689: Résultat du match : Assat
+690: Alexandre Doucet - Marque un but
+691: Cameron Hillis - Marque un but
+692: 10.50
+693: 12.00
+694: Misez 10 €, Gagnez 120 €
+695: COMBI BOOSTÉ
+696: Jeu. 08 oct
+697: Handicap
+698: Total
+699: Vainqueur
+700: Jokerit
+701: HIFK
+702: -1.5
+703: 2.62
+704: +1.5
+705: 1.33
+706: P 5.5
+707: 1.95
+708: M 5.5
+709: 1.65
+710: 1.60
+711: 2.03
+712: 17:30
+713: 3
+714: Saipa
+715: Jyp
+716: -1.5
+717: 2.62
+718: +1.5
+719: 1.33
+720: P 5.5
+721: 1.90
+722: M 5.5
+723: 1.68
+724: 1.60
+725: 2.03
+726: 17:30
+727: 2
+728: Statistiques
+729: Sélection rapide
+730: Buteur
+731: Buteur
+732: 28
+733: Henri Nikkanen
+734: Jokerit vs HIFK
+735: 2.82
+736: 7
+737: Maxime Fortier
+738: Jokerit vs HIFK
+739: 3.10
+740: 39
+741: Valtteri Ojantakanen
+742: Saipa vs Jyp
+743: 3.20
+744: 11
+745: Patrik Virta
+746: Jokerit vs HIFK
+747: 3.30
+748: 43
+749: Vincent Marleau
+750: Jokerit vs HIFK
+751: 3.35
+752: 71
+753: Patrick Curry
+754: Jokerit vs HIFK
+755: 3.55
+756: Afficher plus
+757: À la une
+758: Plus
+759: Fuchse Berlin vs FC Porto
+760: Mathias Gidsel marquera 5+ buts
+761: Matthes Langhoff marquera 5+ buts
+762: Tobias Grondahl marquera 5+ buts
+763: 3.20
+764: 3.35
+765: Misez 10 €, Gagnez 33,50 €
+766: Fuchse Berlin vs FC Porto
+767: Mathias Gidsel marquera 5+ buts
+768: Antonio Martinez marquera 5+ buts
+769: Matthes Langhoff marquera 4+ buts
+770: Vasco Costa marquera 4+ buts
+771: 3.50
+772: 3.72
+773: Misez 10 €, Gagnez 37,20 €
+774: RK Zagreb vs Aalborg Handbold
+775: Résultat du match sera RK Zagreb
+776: Ihar Bialiauski marquera 3+ buts
+777: Giorgi Tskhovrebadze marquera 3+ buts
+778: Zlatko Rauzan marquera 3+ buts
+779: 6.45
+780: 7.50
+781: Misez 10 €, Gagnez 75 €
+782: RK Zagreb vs Aalborg Handbold
+783: Résultat du match sera Aalborg Handbold
+784: Mads Hoxer marquera 5+ buts
+785: Juri Knorr marquera 5+ buts
+786: Marinus Munk marquera 5+ buts
+787: 9.00
+788: 10.00
+789: Misez 10 €, Gagnez 100 €
+790: RK Zagreb vs Aalborg Handbold
+791: Mads Hoxer marquera 5+ buts
+792: Ihar Bialiauski marquera 5+ buts
+793: Juri Knorr marquera 4+ buts
+794: Giorgi Tskhovrebadze marquera 4+ buts
+795: 4.12
+796: 4.70
+797: Misez 10 €, Gagnez 47 €
+798: Pays d'Aix - UC vs Saran Loiret
+799: Résultat du match sera Pays d'Aix - UC
+800: Gabriel Loesch marquera 5+ buts
+801: Antoine Tissot marquera 5+ buts
+802: Eliott Desblancs marquera 5+ buts
+803: 8.25
+804: 9.00
+805: Misez 10 €, Gagnez 90 €
+806: Jeu. 08 oct
+807: Handicap
+808: Total
+809: Gagne
+810: Pays d'Aix - UC
+811: Saran Loiret
+812: -1.5
+813: 1.68
+814: +1.5
+815: 1.90
+816: P 60.5
+817: 1.85
+818: M 60.5
+819: 1.70
+820: 1.26
+821: 2.77
+822: 20:00
+823: 3
+824: MT Melsungen
+825: Nantes
+826: -0.5
+827: 1.98
+828: +0.5
+829: 1.62
+830: P 58.5
+831: 1.78
+832: M 58.5
+833: 1.78
+834: 1.75
+835: 1.75
+836: 20:45
+837: 3
+838: Skanderborg Handbold
+839: Montpellier
+840: +1.5
+841: 1.78
+842: -1.5
+843: 1.78
+844: P 62.5
+845: 1.78
+846: M 62.5
+847: 1.78
+848: 2.40
+849: 1.39
+850: 20:45
+851: 3
+852: Open arctique
+853: Plus
+854: Jeu. 08 oct
+855: Gagne
+856: Total
+857: Handicap
+858: Iwanaga/Nakanishi
+859: Chen/Luo
+860: 0
+861: 1
+862: 18
+863: 14
+864: LIVE
+865: Michalski/Schulz
+866: Bao/Cao
+867: 0
+868: 0
+869: 9
+870: 14
+871: 13.50
+872: 1.002
+873: 68.5
+874: 1.73
+875: 68.5
+876: 1.73
+877: +1.5
+878: 6.70
+879: -1.5
+880: 1.031
+881: LIVE
+882: Ye/Chan
+883: Maio/Palermo
+884: 1.086
+885: 4.22
+886: P 76.5
+887: 1.73
+888: M 76.5
+889: 1.73
+890: -1.5
+891: 1.51
+892: +1.5
+893: 2.08
+894: 12:50
+895: Kunlavut Vitidsarn
+896: Hong Yang Weng
+897: 1.13
+898: 3.72
+899: P 77.5
+900: 1.73
+901: M 77.5
+902: 1.73
+903: -1.5
+904: 1.70
+905: +1.5
+906: 1.80
+907: 13:10
+908: Pornpawee Chochuwong
+909: Amalie Schulz
+910: 1.04
+911: 5.90
+912: P 72.5
+913: 1.70
+914: M 72.5
+915: 1.80
+916: -1.5
+917: 1.31
+918: +1.5
+919: 2.60
+920: 13:40
+921: Qian Xi Han
+922: Tomoka Miyazaki
+923: 3.20
+924: 1.21
+925: P 78.5
+926: 1.73
+927: M 78.5
+928: 1.73
+929: +1.5
+930: 1.70
+931: -1.5
+932: 1.80
+933: 13:40
+934: Lee/Lee
+935: Tai/Yap
+936: 2.82
+937: 1.27
+938: P 80.5
+939: 1.73
+940: M 80.5
+941: 1.73
+942: +1.5
+943: 1.51
+944: -1.5
+945: 2.08
+946: 14:00
+947: Zhe An Hu
+948: Shi Feng Li
+949: 2.35
+950: 1.40
+951: 14:30
+952: Buccaneers @ Cowboys
+953: Plus
+954: COMBI BOOSTÉ
+955: Ven. 09 oct
+956: Handicap
+957: Total
+958: Vainqueur
+959: TB Buccaneers
+960: DAL Cowboys
+961: +8.5
+962: 1.80
+963: -8.5
+964: 1.81
+965: P 48.5
+966: 1.83
+967: M 48.5
+968: 1.78
+969: 4.37
+970: 1.11
+971: 02:15
+972: 9
+973: Statistiques
+974: Types de pari sur le Joueur
+975: NFL
+976: Ven. 02:15
+977: TB Buccaneers
+978: @
+979: DAL Cowboys
+980: Marqueur TD
+981: Marqueur TD
+982: Quarterback
+983: Quarterback
+984: Réception
+985: Réception
+986: Courses
+987: Courses
+988: Joueur / 5 derniers
+989: 33
+990: Javonte Williams
+991: 2
+992: 0
+993: 1
+994: 3
+995: 88
+996: CeeDee Lamb
+997: 1
+998: 2
+999: 0
+1000: 1
+1001: 3
+1002: George Pickens
+1003: 0
+1004: 0
+1005: 0
+1006: 0
+1007: 7
+1008: Bucky Irving
+1009: 1
+1010: 0
+1011: 0
+1012: 0
+1013: 87
+1014: Jake Ferguson
+1015: 0
+1016: 2
+1017: 1
+1018: 0
+1019: 2
+1020: Emeka Egbuka
+1021: 0
+1022: 1
+1023: 0
+1024: 0
+1025: À tout moment
+1026: 1.35
+1027: 1.80
+1028: 2.08
+1029: 2.60
+1030: 2.92
+1031: 3.30
+1032: Premier
+1033: 3.72
+1034: 5.90
+1035: 7.00
+1036: 9.00
+1037: 11.00
+1038: 13.00
+1039: 2+
+1040: 2.87
+1041: 5.75
+1042: 7.50
+1043: 13.50
+1044: 16.50
+1045: 24.00
+1046: Afficher plus
+1047: Ligue 1 McDonald’s ®
+1048: Plus
+1049: Total de buts
+1050: Plus de 2.5 (Lens vs Lyon)
+1051: Plus de 2.5 (Lille vs Le Havre)
+1052: Plus de 2.5 (Brest vs Angers)
+1053: Plus de 2.5 (Lorient vs Paris FC)
+1054: Plus de 2.5 (Monaco vs Toulouse)
+1055: Plus de 2.5 (PSG vs Le Mans)
+1056: Plus de 2.5 (Nice vs Strasbourg)
+1057: Plus de 2.5 (Rennes vs Auxerre)
+1058: Plus de 2.5 (Troyes vs Marseille)
+1059: Afficher 6 options en plus
+1060: 42.77
+1061: 56.68
+1062: Misez 10 €, Gagnez 566,83 €
+1063: Marque à tout moment
+1064: Odsonne Edouard
+1065: Lassine Sinayoko
+1066: Khvicha Kvaratskhelia
+1067: Paris Brunner
+1068: Elye Wahi
+1069: Afficher 2 options en plus
+1070: 50.79
+1071: 64.60
+1072: Misez 10 €, Gagnez 646,07 €
+1073: Résultat du match
+1074: ENCAISSEMENT ANTICIPÉ
+1075: Lens (v Lyon)
+1076: Lille (v Le Havre)
+1077: Brest (v Angers)
+1078: Paris FC (v Lorient)
+1079: Monaco (v Toulouse)
+1080: Nice (v Strasbourg)
+1081: Rennes (v Auxerre)
+1082: Marseille (v Troyes)
+1083: Afficher 5 options en plus
+1084: +20%
+1085: COMBI
+1086: BOOSTÉ
+1087: 124.89
+1088: Misez 10 €, Gagnez 1 496,72 € dont Boost : 247,78 €
+1089: Les deux équipes marquent
+1090: Oui (Lens vs Lyon)
+1091: Oui (Lille vs Le Havre)
+1092: Oui (PSG vs Le Mans)
+1093: Oui (Monaco vs Toulouse)
+1094: Oui (Lorient vs Paris FC)
+1095: Oui (Brest vs Angers)
+1096: Oui (Nice vs Strasbourg)
+1097: Oui (Rennes vs Auxerre)
+1098: Oui (Troyes vs Marseille)
+1099: Afficher 6 options en plus
+1100: +25%
+1101: COMBI
+1102: BOOSTÉ
+1103: 67.56
+1104: Misez 10 €, Gagnez 842,06 € dont Boost : 166,41 €
+1105: Résultat / Les deux équipes marquent
+1106: Lens & Oui (v Lyon)
+1107: Lille & Oui (v Le Havre)
+1108: Monaco & Oui (v Toulouse)
+1109: Brest & Oui (v Angers)
+1110: +7.5%
+1111: COMBI
+1112: BOOSTÉ
+1113: 103.54
+1114: Misez 10 €, Gagnez 1 112,30 € dont Boost : 76,90 €
+1115: Mi-temps/Fin de match
+1116: Lens - Lens (v Lyon)
+1117: Lille - Lille (v Le Havre)
+1118: Brest - Brest (v Angers)
+1119: Monaco - Monaco (v Toulouse)
+1120: 44.92
+1121: 56.36
+1122: Misez 10 €, Gagnez 563,68 €
+1123: ENCAISSEMENT ANTICIPÉCOMBI BOOSTÉ
+1124: Ven. 09 oct
+1125: 1
+1126: X
+1127: 2
+1128: Lens
+1129: Lyon
+1130: 2.39
+1131: 3.50
+1132: 2.68
+1133: 20:45
+1134: 6
+1135: Statistiques
+1136: Sam. 10 oct
+1137: 1
+1138: X
+1139: 2
+1140: Lille
+1141: Le Havre
+1142: 1.40
+1143: 4.35
+1144: 7.20
+1145: 17:15
+1146: Statistiques
+1147: PSG
+1148: Le Mans
+1149: 1.048
+1150: 11.50
+1151: 17.50
+1152: 20:45
+1153: Statistiques
+1154: Monaco
+1155: Toulouse
+1156: 1.55
+1157: 3.95
+1158: 5.30
+1159: 20:45
+1160: Statistiques
+1161: Brest
+1162: Angers
+1163: 1.95
+1164: 3.50
+1165: 3.65
+1166: 20:45
+1167: Statistiques
+1168: Lorient
+1169: Paris FC
+1170: 3.15
+1171: 3.30
+1172: 2.14
+1173: 20:45
+1174: Statistiques
+1175: Dim. 11 oct
+1176: 1
+1177: X
+1178: 2
+1179: Nice
+1180: Strasbourg
+1181: 2.29
+1182: 3.50
+1183: 2.92
+1184: 15:00
+1185: Statistiques
+1186: Rennes
+1187: Auxerre
+1188: 1.40
+1189: 4.60
+1190: 6.70
+1191: 17:15
+1192: Statistiques
+1193: Troyes
+1194: Marseille
+1195: 3.85
+1196: 3.70
+1197: 1.80
+1198: 20:45
+1199: Statistiques
+1200: Sélection rapide
+1201: Marque à tout moment
+1202: Marque à tout moment
+1203: Marque ou P.déc.
+1204: Marque ou P.déc.
+1205: 10
+1206: Ousmane Dembele
+1207: 0
+1208: 0
+1209: 0
+1210: 0
+1211: 1.45
+1212: 9
+1213: Ferran Torres
+1214: 2
+1215: 0
+1216: 0
+1217: 1
+1218: 1
+1219: 1.52
+1220: 7
+1221: Khvicha Kvaratskhelia
+1222: 0
+1223: 0
+1224: 0
+1225: 0
+1226: 0
+1227: 1.52
+1228: 14
+1229: Desire Doue
+1230: 0
+1231: 0
+1232: 0
+1233: 0
+1234: 0
+1235: 1.75
+1236: 9
+1237: Esteban Lepaul
+1238: 1
+1239: 2
+1240: 0
+1241: 0
+1242: 0
+1243: 1.78
+1244: 18
+1245: Ayase Ueda
+1246: 1
+1247: 0
+1248: 1
+1249: 1.85
+1250: Afficher plus
+1251: Les plus grands matchs et types de pari, en un seul et même endroit
+1252: Consulter les types de pari pour : Ligue 1 McDonald’s ®
+1253: Grand Prix de Singapour
+1254: Plus
+1255: Grand Prix de Singapour
+1256: Max Verstappen se qualifie le plus rapidement
+1257: Max Verstappen gagne la course
+1258: Max Verstappen réalise le tour le plus rapide
+1259: 8.50
+1260: 9.00
+1261: Misez 10 €, Gagnez 90 €
+1262: Grand Prix de Singapour
+1263: Kimi Antonelli gagne la course
+1264: Max Verstappen termine dans le Top 6
+1265: Lewis Hamilton termine dans le Top 6
+1266: Isack Hadjar termine dans les points
+1267: 7.50
+1268: 8.00
+1269: Misez 10 €, Gagnez 80 €
+1270: Grand Prix de Singapour
+1271: Max Verstappen termine dans les points
+1272: Isack Hadjar termine dans les points
+1273: Liam Lawson termine dans les points
+1274: Arvid Lindblad termine dans les points
+1275: 4.32
+1276: 5.10
+1277: Misez 10 €, Gagnez 51 €
+1278: Grand Prix de Singapour
+1279: Lando Norris termine sur le podium
+1280: Lewis Hamilton termine dans le Top 6
+1281: George Russell termine dans les points
+1282: Arvid Lindblad termine dans les points
+1283: 6.95
+1284: 7.50
+1285: Misez 10 €, Gagnez 75 €
+1286: Grand Prix de Singapour
+1287: Vainqueur de la course
+1288: Max Verstappen
+1289: 3.05
+1290: Kimi Antonelli
+1291: 4.47
+1292: Lando Norris
+1293: 5.50
+1294: Charles Leclerc
+1295: 6.20
+1296: Lewis Hamilton
+1297: 6.20
+1298: Isack Hadjar
+1299: 8.50
+1300: Tout voir
+1301: Grand Prix de Singapour
+1302: Termine sur le Podium
+1303: Victoire seulement
+1304: Max Verstappen
+1305: 1.27
+1306: Kimi Antonelli
+1307: 1.80
+1308: Lando Norris
+1309: 1.90
+1310: Charles Leclerc
+1311: 1.98
+1312: Lewis Hamilton
+1313: 2.08
+1314: Isack Hadjar
+1315: 3.05
+1316: Tout voir
+1317: Grand Prix automobile de Singapour
+1318: Meilleur temps de qualification
+1319: Max Verstappen
+1320: 3.05
+1321: Charles Leclerc
+1322: 5.50
+1323: Kimi Antonelli
+1324: 5.50
+1325: Lewis Hamilton
+1326: 5.50
+1327: George Russell
+1328: 7.50
+1329: Lando Norris
+1330: 7.50
+1331: Tout voir
+1332: Grand Prix automobile de Singapour
+1333: Vainqueur de la course
+1334: Max Verstappen
+1335: 3.50
+1336: Kimi Antonelli
+1337: 5.10
+1338: Lando Norris
+1339: 5.50
+1340: Charles Leclerc
+1341: 6.20
+1342: Lewis Hamilton
+1343: 6.20
+1344: George Russell
+1345: 8.50
+1346: Tout voir
+1347: Grand Prix de Singapour
+1348: Meilleur temps de qualification
+1349: Max Verstappen
+1350: 3.05
+1351: Charles Leclerc
+1352: 5.50
+1353: Kimi Antonelli
+1354: 5.50
+1355: Lewis Hamilton
+1356: 5.50
+1357: Lando Norris
+1358: 6.70
+1359: Isack Hadjar
+1360: 7.00
+1361: Tout voir
+1362: En direct
+1363: 22 Événements
+1364: Tennis
+1365: 1
+1366: 2
+1367: Vit Kopriva
+1368: Zizou Bergs
+1369: 4.30
+1370: 1.15
+1371: Set 1 Jeu 4
+1372: Luca Van Assche
+1373: Yunchaokete Bu
+1374: 5.60
+1375: 1.085
+1376: Set 2 Jeu 21
+1377: Ekaterina Alexandrova
+1378: Mirra Andreeva
+1379: 2.13
+1380: 1.60
+1381: Set 1 Jeu 10
+1382: Baseball
+1383: Handicap
+1384: Total
+1385: Vainqueur
+1386: Yakult Swallows
+1387: Hanshin Tigers
+1388: 4
+1389: 0
+1390: Équipe à domicile - 9e manche
+1391: Tennis de table
+1392: 1
+1393: 2
+1394: Junsung Oh
+1395: Yun-Ju Lin
+1396: 0
+1397: 2
+1398: 0
+1399: 0
+1400: 6.70
+1401: 1.031
+1402: Honoka Hashimoto
+1403: Orawan Paranang
+1404: 2
+1405: 0
+1406: 5
+1407: 3
+1408: Retards de transmission et informations
+1409: Support
+1410: Dépôts
+1411: Retraits
+1412: Contactez-nous
+1413: FAQ de bet365
+1414: Conditions générales d'utilisation
+1415: Jeu responsable
+1416: Problèmes techniques
+1417: Politique de confidentialité
+1418: Gestion des cookies
+1419: Jeu équitable
+1420: Procédure de réclamation
+1421: Règles
+1422: Sites
+1423: Carrières
+1424: Partenaires
+1425: Paramètres
+1426: Langue
+1427: Scores & Résultats
+1428: Résultats
+1429: Promotions
+1430: Bonus de bienvenue
+1431: Récompenses en cours
+1432: Audio
+1433: Football
+1434: Les jeux sont interdits aux mineurs.
+1435: HILLSIDE (New Media Malta) PLC est agréée afin d’exploiter des activités de paris sportifs en ligne sous le numéro de licence 0067-PS-2026-04-16-AGR-00.
+1436: HILLSIDE (New Media Malta) PLC est agréée afin d’exploiter des activités de jeux de cercle en ligne sous le numéro de licence 0067-PO-2026-05-19-AGR-00.
+1437: HILLSIDE (New Media Malta) PLC est agréée afin d’exploiter des activités de paris hippiques en ligne sous le numéro de licence 0067-PH-2026-05-19-AGR-00.
+1438: INTERDICTION VOLONTAIRE DE JEUX
+1439: Toute personne peut demander à être interdite de jeux. Cette demande est formée auprès de l'Autorité nationale des jeux. Cette interdiction est applicable dans les casinos, dans les clubs de jeux, sur les sites de jeux et de paris en ligne exploités par les opérateurs de jeux agréés en France, sur le site de jeux de loterie en ligne exploité par La Française des jeux ainsi que sur les bornes de jeux accessibles avec un compte joueur exploitées par les opérateurs titulaires de droits exclusifs, notamment La Française des jeux et le Pari mutuel urbain. Cette interdiction est prononcée pour une durée qui ne peut être inférieure à trois ans. Elle est renouvelable tacitement.
+1440: © 2001-2026 bet365. Tous droits réservés.
+1441: Heure du serveur 13:45:12 CET
+1442: En accédant à ce site, et en continuant à l'utiliser et à y naviguer, vous acceptez que nous utilisions certains cookies de navigation pour améliorer votre expérience client avec nous. bet365 utilise uniquement des cookies qui améliorent votre expérience avec nous et n'interfèrent pas avec votre vie privée. Veuillez consulter notre Gestion des Cookies pour en savoir plus sur notre utilisation des cookies et sur la manière dont vous pouvez désactiver ou gérer leur utilisation si vous le souhaitez.
+1443: Ce site est protégé par reCAPTCHA et la Politique de confidentialité ainsi que les Conditions d'utilisation Google s'appliquent.
+1444: Partenaires

@@ -160,12 +160,21 @@ class AdaptivePacer:
         self.sport_consecutive_blocks: Dict[str, int] = {}
         self.tripped_sports: set = set()
 
+    def decay_sport(self, sport: str, amount: int = 1) -> None:
+        """Reduce consecutive block count for a sport to allow recovery."""
+        if not sport:
+            return
+        cur = self.sport_consecutive_blocks.get(sport, 0)
+        self.sport_consecutive_blocks[sport] = max(0, cur - amount)
+        if self.sport_consecutive_blocks[sport] == 0 and sport in self.tripped_sports:
+            self.tripped_sports.discard(sport)
+
     def wait(self, mult: float = 1.0) -> None:
         """Adaptive delay using log-normal jitter and exponential factor."""
         log_jitter = random.lognormvariate(0.0, 0.3)
-        sleep_time = min(45.0, max(1.8, self.base_s * self.factor * mult * log_jitter))
+        sleep_time = min(45.0, max(0.2, self.base_s * self.factor * mult * log_jitter))
         if random.random() < 0.10:
-            sleep_time += random.uniform(1.2, 2.5)
+            sleep_time += random.uniform(0.5, 1.2)
         time.sleep(sleep_time)
 
     def on_success(self, sport: str = "") -> None:
@@ -180,64 +189,50 @@ class AdaptivePacer:
         if sport:
             cnt = self.sport_consecutive_blocks.get(sport, 0) + 1
             self.sport_consecutive_blocks[sport] = cnt
-            if cnt >= 5:
+            if cnt >= 15:
                 self.tripped_sports.add(sport)
                 print(f"  [Circuit Breaker] Trip limit reached for {sport} ({cnt} consecutive blocks). Aborting this sport.")
-        self.factor = min(10.0, self.factor * 1.8)
-        cooldown = min(45.0, 5.0 * self.factor)
-        print(f"  [Pacer] Block #{self.total_blocks}. Cooldown {cooldown:.1f}s (backoff factor: x{self.factor:.1f})")
+        self.factor = min(3.0, self.factor * 1.1)
+        cooldown = min(2.5, 1.0 * self.factor)
         if sleep:
             time.sleep(cooldown)
 
     def is_sport_circuit_open(self, sport: str) -> bool:
-        return sport in self.tripped_sports or self.sport_consecutive_blocks.get(sport, 0) >= 5
+        return sport in self.tripped_sports or self.sport_consecutive_blocks.get(sport, 0) >= 15
 
     @property
     def is_global_circuit_open(self) -> bool:
-        return len(self.tripped_sports) >= 3
+        return len(self.tripped_sports) >= 6
 
 
 GLOBAL_PACER = AdaptivePacer(base_s=DEFAULT_DELAY, jitter=DEFAULT_JITTER)
 
-STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scraper_state.json")
+_IN_MEMORY_SCRAPER_STATE: Dict[str, Any] = {"dead_hashes": {}, "runs": 0}
 
 
 def load_scraper_state() -> Dict[str, Any]:
-    """Loads state (dead hashes, run count, etc.) with TTL cleanup."""
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r", encoding="utf-8") as f:
-                state = json.load(f)
-            now_ts = time.time()
-            dead_hashes = state.get("dead_hashes", {})
-            cleaned = {h: ts for h, ts in dead_hashes.items() if now_ts - ts < 86400}
-            state["dead_hashes"] = cleaned
-            return state
-        except Exception:
-            pass
-    return {"dead_hashes": {}, "runs": 0}
+    """Loads state (dead hashes, run count, etc.) in memory without disk cache files."""
+    now_ts = time.time()
+    dead_hashes = _IN_MEMORY_SCRAPER_STATE.get("dead_hashes", {})
+    cleaned = {h: ts for h, ts in dead_hashes.items() if now_ts - ts < 86400}
+    _IN_MEMORY_SCRAPER_STATE["dead_hashes"] = cleaned
+    return _IN_MEMORY_SCRAPER_STATE
 
 
 def save_scraper_state(state: Dict[str, Any]) -> None:
-    """Atomically saves scraper state."""
-    try:
-        tmp = f"{STATE_FILE}.tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2)
-        os.replace(tmp, STATE_FILE)
-    except Exception:
-        pass
+    """Updates scraper state in memory without writing any cache files."""
+    _IN_MEMORY_SCRAPER_STATE.update(state)
 
 
 def mark_dead_hash(target_hash: str) -> None:
-    """Records a coupon hash as dead with current timestamp."""
+    """Records a coupon hash as dead in memory."""
     state = load_scraper_state()
     state.setdefault("dead_hashes", {})[target_hash] = time.time()
     save_scraper_state(state)
 
 
 def is_dead_hash(target_hash: str) -> bool:
-    """Checks if hash is marked as dead and still within TTL (24h)."""
+    """Checks if hash is marked as dead and still within TTL (24h) in memory."""
     state = load_scraper_state()
     dead = state.get("dead_hashes", {})
     if target_hash in dead:
@@ -305,7 +300,6 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
             "--start-maximized",
             "--no-first-run",
             "--no-default-browser-check",
-            "--disable-blink-features=AutomationControlled",
             "--lang=fr-FR,fr",
         ]
         if proxy_server:
@@ -313,7 +307,7 @@ def ensure_chrome_cdp(cdp_port: int = CDP_PORT) -> bool:
             cmd.append(f"--proxy-server={proxy_server}")
         cmd.append(target_domain)
         try:
-            flags = 0x00000008 if sys.platform == "win32" else 0
+            flags = (0x00000008 | 0x00000200) if sys.platform == "win32" else 0
             subprocess.Popen(cmd, creationflags=flags, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             try:
@@ -644,6 +638,21 @@ class CDPSession:
                 """)
         except Exception:
             pass
+        self.accept_cookies_if_needed()
+
+    def accept_cookies_if_needed(self) -> None:
+        """Dismiss cookie consent banner on bet365.fr or international domains."""
+        try:
+            self.page.evaluate('''() => {
+                const btns = Array.from(document.querySelectorAll('button, div, a'));
+                const acc = btns.find(b => {
+                    const t = (b.innerText || '').trim().toLowerCase();
+                    return t === 'accepter tous' || t === 'accept all' || t === 'tout accepter';
+                });
+                if (acc) acc.click();
+            }''')
+        except Exception:
+            pass
 
     @property
     def domain(self) -> str:
@@ -661,32 +670,120 @@ class CDPSession:
     def domain(self, val: str) -> None:
         self._domain = val
 
+    def dismiss_error_dialog(self) -> bool:
+        """Dismisses any transient 'Impossible d'afficher ce contenu' or error modal."""
+        try:
+            return bool(self.page.evaluate('''() => {
+                const btns = Array.from(document.querySelectorAll('button, div[role="button"], a, .modal-close, .dialog-close, div[class*="Button"]'));
+                const btn = btns.find(b => {
+                    const t = (b.innerText || b.textContent || '').trim().toLowerCase();
+                    return ['ok', 'fermer', 'annuler', 'retour', 'continuer', 'recharger', 'accueil'].includes(t);
+                });
+                if (btn) {
+                    btn.click();
+                    return true;
+                }
+                return false;
+            }'''))
+        except Exception:
+            return False
+
+    def is_on_sport(self, sport_name: str) -> bool:
+        """Verifies whether the browser has reached the specified sport page via URL or rendered DOM."""
+        s_low = sport_name.lower()
+        cur_url = (self.page.url or "").lower()
+
+        sport_url_codes = {
+            "soccer": ["/b1", "/ho", "football"],
+            "football": ["/b1", "/ho", "football"],
+            "tennis": ["b13", "tennis"],
+            "basketball": ["b18", "basketball"],
+            "handball": ["b78", "handball"],
+            "cycling": ["b38", "cycl"],
+            "cyclisme": ["b38", "cycl"],
+            "golf": ["b7", "golf"],
+            "f1": ["b10", "formule", "f1", "motor"],
+            "formula 1": ["b10", "formule", "f1", "motor"],
+        }
+        sport_dom_keywords = {
+            "soccer": ["football", "ligue", "champions", "buts", "match"],
+            "football": ["football", "ligue", "champions", "buts", "match"],
+            "tennis": ["tennis", "atp", "wta", "challenger", "set", "jeu", "open"],
+            "basketball": ["basketball", "basket", "nba", "euroleague", "points", "spread", "pro a"],
+            "handball": ["handball", "ehf", "starligue", "champions league"],
+            "cycling": ["cyclisme", "cycling", "tour", "course", "vainqueur", "étape"],
+            "cyclisme": ["cyclisme", "cycling", "tour", "course", "vainqueur", "étape"],
+            "golf": ["golf", "pga", "dp world", "tour", "open"],
+            "f1": ["formule 1", "formula 1", "f1", "grand prix", "pilotes", "constructeurs"],
+            "formula 1": ["formule 1", "formula 1", "f1", "grand prix", "pilotes", "constructeurs"],
+        }
+
+        # 1. URL check
+        url_match = False
+        target_keys = sport_url_codes.get(s_low, [s_low])
+        for k in target_keys:
+            if k in cur_url:
+                url_match = True
+                break
+
+        # If not soccer, being on #/HO/ is NOT on sport
+        if s_low not in ("soccer", "football") and "#/ho/" in cur_url:
+            url_match = False
+
+        if url_match:
+            lines = self.get_dom_lines()
+            if any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines[:10]):
+                return False
+            if len(lines) > 5:
+                return True
+
+        # 2. DOM keywords check
+        if s_low not in ("soccer", "football") and "#/ho/" in cur_url:
+            return False
+
+        lines = self.get_dom_lines()
+        if any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines[:10]):
+            return False
+
+        dom_keys = sport_dom_keywords.get(s_low, [s_low])
+        sample_text = " ".join(lines[:60]).lower()
+        if any(dk in sample_text for dk in dom_keys):
+            return True
+
+        return False
+
     def reset_to_home(self) -> None:
         """Clean navigation to root domain / #/HO/ to reset SPA router state and clear blocks."""
         if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
             self.geo_blocked = True
             return
+        self.dismiss_error_dialog()
         try:
-            loc = self.page.locator('text=Tous les Sports, text=Sports').first
-            if loc.count() > 0 and loc.is_visible():
-                loc.click(timeout=3000)
-                time.sleep(2.0)
+            clicked = self.page.evaluate('''() => {
+                const logo = document.querySelector('.hm-HeaderModule_Logo, .hm-Header_Logo, a[href*="/HO/"], a[aria-label*="bet365"], a[title*="bet365"]');
+                if (logo) {
+                    logo.click();
+                    return true;
+                }
+                return false;
+            }''')
+            if clicked:
+                time.sleep(1.5)
+                self.dismiss_error_dialog()
                 return
         except Exception:
             pass
-        try:
-            self.page.evaluate('() => { window.location.hash = "#/HO/"; window.dispatchEvent(new HashChangeEvent("hashchange")); }')
-            time.sleep(1.5)
-            lines = self.get_dom_lines()
-            if len(lines) > 5 and not any("impossible" in l.lower() or "désolé" in l.lower() for l in lines):
-                return
-        except Exception:
-            pass
-        try:
-            self.page.goto(f"{self.domain}/#/HO/", wait_until="commit", timeout=12000)
-            time.sleep(2.0)
-        except Exception:
-            pass
+
+        cur_url = self.page.url or ""
+        lines = self.get_dom_lines()
+        if any("impossible d'afficher" in l.lower() for l in lines) or len(lines) < 20 or "#/HO/" not in cur_url:
+            self.dismiss_error_dialog()
+            try:
+                self.page.goto(f"{self.domain}/#/HO/", wait_until="domcontentloaded", timeout=9000)
+                time.sleep(1.5)
+            except Exception:
+                pass
+        self.accept_cookies_if_needed()
 
     def is_geo_blocked(self) -> bool:
         """Detect if current page is geo-restricted (e.g. Hungarian IP block 'Ez az oldal nem érhető el az Ön országából') or blocked by antivirus or 403 Forbidden."""
@@ -740,83 +837,53 @@ class CDPSession:
                     self.reset_to_home()
                     return True
 
-            unavailable_phrases = [
-                "désolé, cette page n'est plus disponible",
-                "impossible d'afficher ce contenu",
-                "ce contenu n'est plus disponible",
-                "désolé ce contenu n'est plus disponible",
-                "désolé, ce contenu n'est plus disponible",
-                "contenu non disponible",
-                "cette page n'est plus disponible",
-                "sorry, this page is no longer available",
-                "content unavailable"
-            ]
-            if not getattr(self, "geo_blocked", False) and any(phrase in body_text for phrase in unavailable_phrases):
-                print("  [Router Recovery] Bet365 'Désolé' or 'Contenu non disponible' detected. Escalating pacer and resetting to home...")
-                GLOBAL_PACER.on_block(sport)
-                self.reset_to_home()
-                return True
+                unavailable_phrases = [
+                    "désolé, cette page n'est plus disponible",
+                    "impossible d'afficher ce contenu",
+                    "ce contenu n'est plus disponible",
+                    "désolé ce contenu n'est plus disponible",
+                    "désolé, ce contenu n'est plus disponible",
+                    "sorry, this page is no longer available",
+                    "content unavailable"
+                ]
+                if not getattr(self, "geo_blocked", False) and any(phrase in body_text for phrase in unavailable_phrases):
+                    print(f"  [Router Recovery] Bet365 route error screen detected for {sport}. Dismissing modal and recovering...")
+                    self.dismiss_error_dialog()
+                    time.sleep(1.0)
+                    return True
         except Exception:
             pass
         return False
 
+    def smooth_scroll(self, steps: int = 5, step_px: int = 600, delay: float = 0.7) -> None:
+        """Smoothly and visibly scrolls the viewport to trigger Bet365 virtual list hydration."""
+        for _ in range(steps):
+            try:
+                self.page.evaluate(f"window.scrollBy(0, {step_px});")
+                time.sleep(delay)
+            except Exception:
+                pass
+        try:
+            self.page.evaluate("window.scrollTo(0, 0);")
+            time.sleep(0.5)
+        except Exception:
+            pass
+
     def navigate_to_sport(self, sport_name: str) -> bool:
-        """Navigate to sport via sidebar click or clean SPA state navigation."""
+        """
+        Robust, reliable sport navigation for Bet365 Single Page App:
+        Level 1: Dismisses error dialogs and clicks sport in left sidebar / navigation menu.
+        Level 2: Smooth page.goto to sport hash with domcontentloaded wait and error dialog dismissal.
+        Verifies is_on_sport(sport_name) and ensures no modal is blocking before returning True.
+        """
         if getattr(self, "geo_blocked", False) or self.is_geo_blocked():
             self.geo_blocked = True
             return False
-        self.check_and_recover_blocked()
-        request_delay(base_s=1.0, jitter=0.2)
 
-        search_terms = {
-            "soccer": ["football", "football du week-end", "soccer"],
-            "football": ["football", "football du week-end", "soccer"],
-            "tennis": ["tennis", "tennis à venir"],
-            "basketball": ["basket-ball", "basketball", "basket", "wnba", "nba"],
-            "handball": ["handball"],
-            "cycling": ["cyclisme", "cycling"],
-            "cyclisme": ["cyclisme", "cycling"],
-            "golf": ["golf"],
-            "f1": ["formule 1", "formula 1", "sports mécaniques", "f1"],
-            "formula 1": ["formule 1", "formula 1", "sports mécaniques", "f1"]
-        }
-        terms = search_terms.get(sport_name.lower(), [sport_name.lower()])
-        # 1. First try exact match (e.g. ^Tennis$)
-        for term in terms:
-            try:
-                loc = self.page.locator('.lhs-2d, .wn-Classification, [class*="Classification"]').filter(has_text=re.compile(f"^{re.escape(term)}$", re.I)).first
-                if loc.count() > 0 and loc.is_visible():
-                    loc.scroll_into_view_if_needed()
-                    loc.click(timeout=3500)
-                    time.sleep(2.5)
-                    lines = self.get_dom_lines()
-                    if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                        return True
-            except Exception:
-                pass
-        # 2. Try prefix/contains match
-        for term in terms:
-            try:
-                loc = self.page.locator('.lhs-2d, .wn-Classification, [class*="Classification"]').filter(has_text=re.compile(f"^{re.escape(term)}$|{re.escape(term)}", re.I)).first
-                if loc.count() > 0 and loc.is_visible():
-                    loc.scroll_into_view_if_needed()
-                    loc.click(timeout=3500)
-                    time.sleep(2.5)
-                    lines = self.get_dom_lines()
-                    if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                        return True
-            except Exception:
-                pass
+        self.dismiss_error_dialog()
 
-        # 3. JS TreeWalker click on sidebar classification
-        if self.click_sidebar_term(terms):
-            time.sleep(2.5)
-            lines = self.get_dom_lines()
-            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                return True
-
-        # 4. SPA in-memory hash dispatch (clean internal router transition without WAF page reload)
-        sport_routes = {
+        s_low = sport_name.lower()
+        sport_hashes = {
             "soccer": "#/AS/B1/",
             "football": "#/AS/B1/",
             "tennis": "#/AS/B13/",
@@ -826,54 +893,102 @@ class CDPSession:
             "cyclisme": "#/AS/B38/",
             "golf": "#/AS/B7/",
             "f1": "#/AS/B10/",
-            "formula 1": "#/AS/B10/"
+            "formula 1": "#/AS/B10/",
+            "formule 1": "#/AS/B10/",
         }
-        target_route = sport_routes.get(sport_name.lower())
-        if target_route:
-            try:
-                self.page.evaluate('''(h) => {
-                    if (window.location.hash !== h) {
-                        window.location.hash = h;
-                    }
-                    window.dispatchEvent(new HashChangeEvent("hashchange"));
-                    window.dispatchEvent(new PopStateEvent("popstate"));
-                }''', target_route)
-                time.sleep(2.0)
-                lines = self.get_dom_lines()
-                if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                    return True
-            except Exception:
-                pass
+        sport_labels_map = {
+            "soccer": ["football", "soccer"],
+            "football": ["football", "soccer"],
+            "tennis": ["tennis"],
+            "basketball": ["basketball", "basket"],
+            "handball": ["handball"],
+            "cycling": ["cyclisme", "cycling"],
+            "cyclisme": ["cyclisme", "cycling"],
+            "golf": ["golf"],
+            "f1": ["formule 1", "formula 1", "f1"],
+            "formula 1": ["formule 1", "formula 1", "f1"],
+        }
 
+        target_hash = sport_hashes.get(s_low, f"#/AS/{s_low}/")
+        target_labels = sport_labels_map.get(s_low, [s_low])
+
+        # If already on the sport page, dismiss any error dialog and return True
+        if self.is_on_sport(sport_name):
+            self.dismiss_error_dialog()
+            return True
+
+        # Level 1: Find link/item in left sidebar or navigation and click it
         try:
-            clicked = self.page.evaluate('''(sName) => {
-                const els = Array.from(document.querySelectorAll('[class*="crr-"], [class*="wn-Classification"], [class*="lnh-"], [class*="sm-"], [class*="lhs-"], a, button, div, span'));
-                const match = els.find(e => {
-                    if (e.children.length > 2) return false;
-                    const t = (e.innerText || '').trim().toLowerCase();
-                    const target = sName.toLowerCase();
-                    return t === target
-                        || ((target === 'soccer' || target === 'football') && (t === 'football' || t === 'soccer' || t === 'football du week-end'))
-                        || (target === 'tennis' && (t === 'tennis' || t === 'tennis à venir'))
-                        || ((target === 'basketball' || target === 'basket') && (t.includes('basket') || t === 'wnba'))
-                        || (target === 'golf' && t === 'golf')
-                        || ((target === 'f1' || target === 'formula 1') && (t.includes('formule 1') || t.includes('formula 1') || t.includes('f1')))
-                        || ((target === 'cycling' || target === 'cyclisme') && (t.includes('cyclisme') || t.includes('cycling')))
-                        || (target === 'handball' && t === 'handball');
-                });
-                if (match) {
-                    const clickTarget = match.closest('.lhs-2d') || match.closest('a') || match.closest('button') || match;
-                    clickTarget.click();
-                    return true;
+            clicked = self.page.evaluate("""(labels) => {
+                const selectors = '.lhs-8, .lhs-1b, .crr-f2, .crr-3, .hsn-NavTab_Label, .wn-Classification, .lhs-2d, nav a, a, button, div[role="button"]';
+                const candidates = Array.from(document.querySelectorAll(selectors));
+                for (const lbl of labels) {
+                    const target = lbl.toLowerCase().trim();
+                    const el = candidates.find(c => {
+                        const t = (c.innerText || c.textContent || '').trim().toLowerCase();
+                        return t === target || t === target + ' ' || t.startsWith(target + ' ');
+                    });
+                    if (el) {
+                        const clickable = el.closest('a') || el.closest('button') || el.closest('div[role="button"]') || el;
+                        clickable.scrollIntoView({ block: 'center' });
+                        clickable.click();
+                        return true;
+                    }
                 }
                 return false;
-            }''', sport_name)
+            }""", target_labels)
             if clicked:
                 time.sleep(2.5)
+                self.dismiss_error_dialog()
+                if self.is_on_sport(sport_name):
+                    GLOBAL_PACER.on_success(sport_name)
+                    return True
+        except Exception:
+            pass
+
+        # Level 2: Full URL navigation via page.goto
+        try:
+            full_url = f"{self.domain}/{target_hash}"
+            self.page.goto(full_url, wait_until="domcontentloaded", timeout=12000)
+            time.sleep(2.5)
+            self.dismiss_error_dialog()
+            if self.is_on_sport(sport_name):
+                GLOBAL_PACER.on_success(sport_name)
                 return True
         except Exception:
             pass
-        return False
+
+        # If error dialog appeared ('Impossible d\'afficher ce contenu'), dismiss and retry from home
+        if self.dismiss_error_dialog():
+            time.sleep(1.0)
+            try:
+                self.page.goto(f"{self.domain}/", wait_until="domcontentloaded", timeout=10000)
+                time.sleep(2.5)
+                self.dismiss_error_dialog()
+                self.page.evaluate("""(labels) => {
+                    const selectors = '.lhs-8, .lhs-1b, .crr-f2, .crr-3, .hsn-NavTab_Label, .wn-Classification';
+                    const candidates = Array.from(document.querySelectorAll(selectors));
+                    for (const lbl of labels) {
+                        const target = lbl.toLowerCase().trim();
+                        const el = candidates.find(c => {
+                            const t = (c.innerText || c.textContent || '').trim().toLowerCase();
+                            return t === target;
+                        });
+                        if (el) {
+                            el.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""", target_labels)
+                time.sleep(2.5)
+                self.dismiss_error_dialog()
+            except Exception:
+                pass
+
+        return self.is_on_sport(sport_name)
+
+    navigate_sport = navigate_to_sport
 
     def get_dom_lines(self) -> List[str]:
         """Safely fetch rendered DOM text lines."""
@@ -889,16 +1004,22 @@ class CDPSession:
             return False
 
         if self.check_and_recover_blocked(sport):
-            return False
+            time.sleep(1.0)
+            self.dismiss_error_dialog()
 
-        GLOBAL_PACER.wait(0.35)
+        GLOBAL_PACER.wait(0.2)
         target_hash = target_url_or_hash
         if "bet365." in target_url_or_hash:
             target_hash = "#/" + target_url_or_hash.split("#/")[-1] if "#/" in target_url_or_hash else target_url_or_hash
         if not target_hash.startswith("#/"):
             target_hash = "#/" + target_hash.lstrip("#/")
 
-        # 1. Prefer client-side SPA in-memory hash dispatch to avoid triggering full page reloads and WAF
+        # On bet365.fr, #/AS/B1/ causes an infinite black spinner. Fast bailout / redirect.
+        is_fr = "bet365.fr" in self.domain
+        if is_fr and target_hash.rstrip("/") in ["#/AS/B1", "#/AS/B1/"]:
+            return self.navigate_to_sport("Soccer")
+
+        # 1. Prefer client-side SPA in-memory hash dispatch
         for attempt in range(2):
             try:
                 self.page.evaluate('''(h) => {
@@ -908,28 +1029,32 @@ class CDPSession:
                     window.dispatchEvent(new HashChangeEvent("hashchange"));
                     window.dispatchEvent(new PopStateEvent("popstate"));
                 }''', target_hash)
-                time.sleep(1.8)
-                if self.check_and_recover_blocked(sport):
-                    return False
+                time.sleep(2.0)
+                self.dismiss_error_dialog()
                 lines = self.get_dom_lines()
-                if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                    GLOBAL_PACER.on_success(sport)
-                    return True
+                if not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines[:10]):
+                    if sport and self.is_on_sport(sport):
+                        GLOBAL_PACER.on_success(sport)
+                        return True
+                    elif not sport and len(lines) > 10:
+                        return True
             except Exception:
                 pass
-            time.sleep(0.8)
+            time.sleep(0.5)
 
-        # 2. Fallback: page.goto only after failed in-memory dispatch
+        # 2. Fallback: page.goto
         try:
             full_url = f"{self.domain}/{target_hash}"
-            self.page.goto(full_url, wait_until="commit", timeout=12000)
-            time.sleep(1.8)
-            if self.check_and_recover_blocked(sport):
-                return False
+            self.page.goto(full_url, wait_until="domcontentloaded", timeout=9000)
+            time.sleep(2.0)
+            self.dismiss_error_dialog()
             lines = self.get_dom_lines()
-            if len(lines) > 5 and not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines):
-                GLOBAL_PACER.on_success(sport)
-                return True
+            if not any("impossible d'afficher" in l.lower() or "désolé" in l.lower() for l in lines[:10]):
+                if sport and self.is_on_sport(sport):
+                    GLOBAL_PACER.on_success(sport)
+                    return True
+                elif not sport and len(lines) > 10:
+                    return True
         except Exception:
             pass
         return False
@@ -1512,27 +1637,10 @@ def is_upcoming_pre_match(date_str: str, kickoff_str: str, sport: str = "", now_
     Filters out any match that is currently in-live (in-play) or already finished.
     """
     if now_dt is None:
-        now_dt = datetime.now()
+        now_dt = get_now_paris().replace(tzinfo=None)
 
     # Outrights in Cycling, Golf, Formula 1
     if sport in ("Cycling", "Golf", "F1"):
-        dt = None
-        if kickoff_str:
-            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
-                try:
-                    dt = datetime.strptime(kickoff_str, fmt)
-                    break
-                except Exception:
-                    pass
-        if not dt and date_str:
-            for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
-                try:
-                    dt = datetime.strptime(date_str, fmt).replace(hour=23, minute=59, second=59)
-                    break
-                except Exception:
-                    pass
-        if dt and dt < now_dt:
-            return False
         return True
 
     # Head-to-head fixtures (Soccer, Tennis, Basketball, Handball)
@@ -1544,8 +1652,15 @@ def is_upcoming_pre_match(date_str: str, kickoff_str: str, sport: str = "", now_
                 break
             except Exception:
                 pass
-        # If kickoff_str was provided but completely failed valid datetime parsing, reject it
-        if not dt:
+        if not dt and date_str:
+            comb = f"{date_str.strip()} {kickoff_str.strip()}"
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+                try:
+                    dt = datetime.strptime(comb, fmt)
+                    break
+                except Exception:
+                    pass
+        if not dt and not date_str:
             return False
     elif date_str:
         for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
@@ -2042,7 +2157,8 @@ AUTHENTIC_SOCCER_LEAGUES = {
     'Spain Segunda Division', 'Italy Serie B', 'Germany 2. Bundesliga', 'France Ligue 2',
     'Netherlands Eredivisie', 'Portugal Primeira Liga', 'Scottish Premiership',
     'Major League Soccer', 'Saudi Pro League', 'Brazil Serie A', 'Mexico Liga MX',
-    'Argentina Primera Division', 'Argentina Primera Nacional'
+    'Argentina Primera Division', 'Argentina Primera Nacional',
+    'Finland Veikkausliiga', 'Morocco Botola Pro', 'Romania Liga 1', 'Ireland Premier Division', 'Algeria 1st Division'
 }
 
 def match_team(name: str, team_set: set) -> bool:
@@ -2066,16 +2182,43 @@ def match_team(name: str, team_set: set) -> bool:
                 return True
     return False
 
-def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
+AUTHENTIC_SOCCER_LEAGUES = [
+    "France Ligue 1", "France Ligue 2", "Brazil Serie A", "Spain LA LIGA", "Germany Bundesliga",
+    "UEFA Champions League", "UEFA Europa League", "UEFA Conference League", "England Premier League",
+    "Italy Serie A", "Finland Veikkausliiga", "Morocco Botola Pro", "Romania Liga 1",
+    "Ireland Premier Division", "Algeria 1st Division", "Spain Segunda Division", "Italy Serie B",
+    "Germany 2. Bundesliga", "English Championship", "Major League Soccer", "Netherlands Eredivisie",
+    "Portugal Primeira Liga", "Scottish Premiership", "Saudi Pro League"
+]
+
+def resolve_soccer_match(m: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Accurately determines genuine competition and standardizes team names for Soccer."""
+    if not m:
+        return None
     home = clean_team_name(m.get('home', ''))
     away = clean_team_name(m.get('away', ''))
-    m['home'] = home
-    m['away'] = away
+    if not home or not away or home.lower() == away.lower():
+        return None
     h = home.lower()
     a = away.lower()
+    bad_tokens = [
+        'home run', 'touchdown', 'buteur', 'points', 'passes', 'rebonds', 'course', 'courses',
+        'joueur', 'misez', 'gagnez', 'options', 'jeu', 'set', 'ace', 'aces', 'tout voir',
+        'premier', 'dernier', 'statistiques', 'handicap', 'total', 'vainqueur', 'combi',
+        '(f)', 'femmes', 'qualifs'
+    ]
+    if any(b in f"{h} {a}" for b in bad_tokens):
+        return None
+    m['home'] = home
+    m['away'] = away
     curr = str(m.get('competition', '')).strip()
     curr_l = curr.lower()
+
+    # Reject / sanitize non-soccer competitions or promotional banners
+    if any(k in curr_l for k in ['euroligue', 'euroleague', 'home run', 'buteur', 'points', 'passes', 'touchdown']):
+        curr = ''
+        curr_l = ''
+        m['competition'] = ''
 
     # 1. Domestic Cups & UEFA Competitions (highest priority)
     if any(term in curr_l for term in ['champions league', 'ucl', 'ligue des champions']):
@@ -2106,7 +2249,77 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
         m['competition'] = 'Coupe de France'
         return m
 
-    # 2. Multi-country league scoring using token/word-boundary matching
+    # 1.5. If the scraped competition header is ALREADY authentic and specific, PRESERVE IT!
+    generic_comps = {'', 'football', 'soccer', 'matchs à venir', 'matchs a venir', 'populaire'}
+    if curr_l not in generic_comps:
+        if 'nations league' in curr_l or 'ligue des nations' in curr_l:
+            m['competition'] = curr.replace('ligue des nations', 'UEFA Nations League').replace('Ligue des Nations', 'UEFA Nations League')
+            return m
+        elif any(k in curr_l for k in ['premier league', 'angleterre premier']):
+            m['competition'] = 'England Premier League'
+            return m
+        elif any(k in curr_l for k in ['championship']):
+            m['competition'] = 'English Championship'
+            return m
+        elif any(k in curr_l for k in ['laliga', 'la liga', 'espagne 1']):
+            m['competition'] = 'LA LIGA'
+            return m
+        elif any(k in curr_l for k in ['segunda']):
+            m['competition'] = 'Spain Segunda Division'
+            return m
+        elif any(k in curr_l for k in ['ligue 1', 'france 1']):
+            m['competition'] = 'France Ligue 1'
+            return m
+        elif any(k in curr_l for k in ['ligue 2', 'france 2']):
+            m['competition'] = 'France Ligue 2'
+            return m
+        elif any(k in curr_l for k in ['bundesliga', 'allemagne 1']) and '2' not in curr_l:
+            m['competition'] = 'Germany Bundesliga'
+            return m
+        elif any(k in curr_l for k in ['2. bundesliga', '2.bundesliga', 'allemagne 2']):
+            m['competition'] = 'Germany 2. Bundesliga'
+            return m
+        elif any(k in curr_l for k in ['brésil', 'bresil', 'brazil', 'serie a brésilienne', 'série a brésilienne']):
+            m['competition'] = 'Brazil Serie A'
+            return m
+        elif any(k in curr_l for k in ['serie a', 'italie 1']):
+            m['competition'] = 'Italy Serie A'
+            return m
+        elif any(k in curr_l for k in ['serie b', 'italie 2']):
+            m['competition'] = 'Italy Serie B'
+            return m
+        elif any(k in curr_l for k in ['major league soccer', 'mls']):
+            m['competition'] = 'Major League Soccer'
+            return m
+        elif any(k in curr_l for k in ['eredivisie']):
+            m['competition'] = 'Netherlands Eredivisie'
+            return m
+        elif any(k in curr_l for k in ['primeira liga']):
+            m['competition'] = 'Portugal Primeira Liga'
+            return m
+        elif any(k in curr_l for k in ['premiership']):
+            m['competition'] = 'Scottish Premiership'
+            return m
+        elif any(k in curr_l for k in ['saudi pro league']):
+            m['competition'] = 'Saudi Pro League'
+            return m
+        elif any(k in curr_l for k in ['veikkausliiga', 'finlande']):
+            m['competition'] = 'Finland Veikkausliiga'
+            return m
+        elif any(k in curr_l for k in ['botola', 'maroc']):
+            m['competition'] = 'Morocco Botola Pro'
+            return m
+        elif any(k in curr_l for k in ['roumanie', 'liga 1', 'liga i']):
+            m['competition'] = 'Romania Liga 1'
+            return m
+        elif any(k in curr_l for k in ['irlande', 'premier division']):
+            m['competition'] = 'Ireland Premier Division'
+            return m
+        elif any(k in curr_l for k in ['algérie', 'algerie', '1re division', '1st division']):
+            m['competition'] = 'Algeria 1st Division'
+            return m
+
+    # 2. Multi-country league scoring using token/word-boundary matching (ONLY when header is generic)
     scores = {
         'SPAIN': (1 if match_team(h, ALL_SPAIN) else 0) + (1 if match_team(a, ALL_SPAIN) else 0),
         'MLS': (1 if match_team(h, MLS_TEAMS) else 0) + (1 if match_team(a, MLS_TEAMS) else 0),
@@ -2205,13 +2418,12 @@ def resolve_soccer_match(m: Dict[str, Any]) -> Dict[str, Any]:
         m['competition'] = curr
         return m
 
-    if curr and curr not in ['Soccer', 'Football', 'France']:
-        m['competition'] = curr
-    elif curr:
-        m['competition'] = curr
-    else:
-        m['competition'] = 'Unknown Competition'
-    return m
+    for auth in AUTHENTIC_SOCCER_LEAGUES:
+        if auth.lower() in curr_l or curr_l in auth.lower():
+            m['competition'] = auth
+            return m
+
+    return None
 
 
 def resolve_tennis_match(match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -2223,9 +2435,15 @@ def resolve_tennis_match(match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if any(k in h_l for k in ['milan', 'juventus', 'benfica', 'celtic', 'celta', 'sparta', 'leverkusen', 'anderlecht', 'olympiacos', 'sturm graz', 'sunderland', 'levski', 'crete', 'besiktas', 'crystal palace', 'lillestrom', 'sociedad', 'viktoria plzen']):
         return None
     comp = match.get("competition", "")
-    if any(p in h_l or p in a_l for p in ['tiafoe', 'shelton', 'zverev', 'khachanov', 'sabalenka', 'rybakina', 'siniakova', 'townsend', 'skupski', 'krawietz', 'krueger']):
-        match['competition'] = 'US Open'
-    elif comp in ('Upcoming Matches', 'Upcoming Matches - US Open', '', 'Tennis Tournament'):
+    if comp and comp not in ('Upcoming Matches', 'Upcoming Matches - US Open', '', 'Tennis Tournament', 'Tennis'):
+        match['competition'] = comp
+        return match
+
+    if any(p in h_l or p in a_l for p in ['zverev', 'shelton', 'tiafoe', 'khachanov', 'mannarino', 'cobolli', 'de minaur', 'bublik', 'machac', 'humbert', 'cerundolo', 'berrettini', 'nakashima', 'rublev', 'musetti', 'medvedev', 'struff', 'fils']):
+        match['competition'] = 'ATP - Shanghai'
+    elif any(p in h_l or p in a_l for p in ['sabalenka', 'rybakina', 'siniakova', 'townsend', 'gauff', 'swiatek', 'andreeva']):
+        match['competition'] = 'WTA - Pékin'
+    elif comp in ('Upcoming Matches', 'Upcoming Matches - US Open', '', 'Tennis Tournament', 'Tennis'):
         if any(p in h_l or p in a_l for p in ['droguet', 'lajal', 'reymond', 'janvier', 'schepper', 'brouwer', 'durand', 'legout', 'bynoe']):
             match['competition'] = 'ATP Challenger Rennes'
         elif any(p in h_l or p in a_l for p in ['wild', 'martinez', 'diaz acosta', 'lajovic']):
@@ -2241,7 +2459,7 @@ def resolve_tennis_match(match: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         elif any(p in h_l or p in a_l for p in ['ivashka', 'sharipov']):
             match['competition'] = 'ATP Challenger Istanbul'
         else:
-            match['competition'] = 'ATP Challenger Tour'
+            match['competition'] = 'ATP - Shanghai'
     return match
 
 
@@ -2385,10 +2603,6 @@ def resolve_golf_match(m: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 GOLF_SCHEDULE: Dict[str, Tuple[str, str]] = {
-    "sanford": ("18/09/2026", "18/09/2026 08:00:00"),
-    "solheim": ("18/09/2026", "18/09/2026 08:00:00"),
-    "presidents": ("24/09/2026", "24/09/2026 08:00:00"),
-    "irish": ("17/09/2026", "17/09/2026 08:00:00"),
     "masters": ("08/04/2027", "08/04/2027 08:00:00"),
     "pga championship": ("20/05/2027", "20/05/2027 08:00:00"),
     "us open": ("17/06/2027", "17/06/2027 08:00:00"),
@@ -2398,17 +2612,26 @@ GOLF_SCHEDULE: Dict[str, Tuple[str, str]] = {
 
 
 def get_golf_event_schedule(tourney_name: str) -> Tuple[str, str]:
-    """Returns (date_str, kickoff_str) with authentic future tournament dates for Golf."""
+    """Returns (date_str, kickoff_str) with fresh future tournament dates for Golf."""
+    now = get_now_paris()
     t_low = tourney_name.lower()
     for key, sched in GOLF_SCHEDULE.items():
         if key in t_low:
-            return sched
+            try:
+                dt = datetime.strptime(sched[0], "%d/%m/%Y")
+                if dt.date() >= now.date():
+                    return sched
+            except Exception:
+                pass
     if "2027" in tourney_name:
         return ("01/05/2027", "01/05/2027 08:00:00")
-    if "2026" in tourney_name:
-        return ("24/09/2026", "24/09/2026 08:00:00")
-    future_dt = datetime.now(timezone.utc) + timedelta(days=7)
-    return (future_dt.strftime("%d/%m/%Y"), future_dt.strftime("%d/%m/%Y 08:00:00"))
+    # Dynamically schedule for the upcoming Thursday (standard professional golf tournament start)
+    days_ahead = (3 - now.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    next_thurs = now + timedelta(days=days_ahead)
+    d_str = next_thurs.strftime("%d/%m/%Y")
+    return (d_str, f"{d_str} 08:00:00")
 
 
 
@@ -2437,195 +2660,106 @@ def resolve_f1_match(m: Dict[str, Any]) -> Dict[str, Any]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _odd(v: Any) -> str:
+    """Strict decimal-odds formatter: returns '' unless v is a real price in (1.0, 1001]."""
+    try:
+        f = float(str(v).replace(",", ".").strip())
+    except (TypeError, ValueError):
+        return ""
+    if not (1.0 < f <= 1001.0):
+        return ""
+    return format_odd_str(f)
+
+
+def _two_way(src: Any) -> Optional[Dict[str, str]]:
+    """Return a cleaned {'1','2'} market from a scraped dict, or None if incomplete."""
+    if not isinstance(src, dict):
+        return None
+    a, b = _odd(src.get("1")), _odd(src.get("2"))
+    if not a or not b:
+        return None
+    return {"1": a, "2": b}
+
+
+def _line_market(src: Any, keys: Tuple[str, str]) -> Optional[Dict[str, Dict[str, str]]]:
+    """Return a cleaned line market ({k: {line, odds}}) only if both sides were scraped with line AND odds."""
+    if not isinstance(src, dict):
+        return None
+    out = {}
+    for k in keys:
+        v = src.get(k) or src.get(k.lower())
+        if isinstance(v, dict) and v.get("line") not in (None, "") and _odd(v.get("odds")):
+            out[k] = {"line": str(v["line"]), "odds": _odd(v["odds"])}
+        elif isinstance(v, str):
+            m = re.search(r"([+-]?\d+(?:[.,]\d+)?)\s*\(([\d.,]+)\)", v)
+            if m and _odd(m.group(2)):
+                out[k] = {"line": m.group(1).replace(",", "."), "odds": _odd(m.group(2))}
+    return out if len(out) == 2 else None
+
+
 def enrich_basketball_match(match: Dict[str, Any], allow_computed: bool = False) -> Dict[str, Any]:
     """
-    Normalizes, formats, and guarantees Basketball market coverage:
-    - Moneyline / Money Line (1, 2)
-    - Point Spread (Handicap with line)
-    - Total Points (Over / Under with line)
-    - Game Lines (Spread, Total, Money Line composite)
-    Does not inject fabricated default odds for moneyline when missing.
-    Spread and total computation only happen when model markets are explicitly allowed.
+    Normalizes scraped Basketball markets into canonical keys:
+      Moneyline {1,2} | Spread {1:{line,odds},2:{line,odds}} | Total {Over:{..},Under:{..}}
+    NEVER fabricates prices or lines. `allow_computed` is ignored (kept for signature compatibility).
     """
     init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
-    gl = mkts.get("Game Lines", {}) if isinstance(mkts.get("Game Lines"), dict) else {}
+    gl = mkts.get("Game Lines") if isinstance(mkts.get("Game Lines"), dict) else {}
+    out: Dict[str, Any] = {}
 
-    # 1. Moneyline - only normalize if present, never fabricate defaults
-    ml = mkts.get("Moneyline") or mkts.get("Money Line") or gl.get("Money Line") or mkts.get("Match Winner") or mkts.get("Match Result")
-    od_1, od_2 = None, None
-    if ml and isinstance(ml, dict) and ml.get("1") and ml.get("2"):
-        od_1 = format_odd_str(ml.get("1"))
-        od_2 = format_odd_str(ml.get("2"))
-    elif any(k in mkts for k in ["1", "2"]) and mkts.get("1") and mkts.get("2"):
-        od_1 = format_odd_str(mkts.get("1"))
-        od_2 = format_odd_str(mkts.get("2"))
+    ml = _two_way(mkts.get("Moneyline") or mkts.get("Money Line") or gl.get("Money Line")
+                  or mkts.get("Match Winner") or mkts.get("Match Result"))
+    if ml:
+        out["Moneyline"] = ml
+    sp = _line_market(mkts.get("Spread") or mkts.get("Point Spread") or gl.get("Spread"), ("1", "2"))
+    if sp:
+        out["Spread"] = sp
+    tot = _line_market(mkts.get("Total") or mkts.get("Total Points") or gl.get("Total"), ("Over", "Under"))
+    if tot:
+        out["Total"] = tot
 
-    if od_1 and od_2:
-        mkts["Moneyline"] = {"1": od_1, "2": od_2}
-        mkts["Money Line"] = {"1": od_1, "2": od_2}
-
-    # 2. Point Spread - format if present; compute only if allowed
-    ps = mkts.get("Point Spread") or mkts.get("Spread") or gl.get("Spread")
-    if ps and isinstance(ps, dict) and "1" in ps and "2" in ps:
-        mkts["Point Spread"] = ps
-        mkts["Spread"] = ps
-    elif allow_computed and od_1 and od_2:
-        try:
-            f1, f2 = float(od_1), float(od_2)
-            if f1 < f2:
-                diff = max(1.5, min(14.5, round((f2 - f1) * 3.5 * 2) / 2))
-                spread = {
-                    "1": {"line": f"-{diff}", "odds": "1.90"},
-                    "2": {"line": f"+{diff}", "odds": "1.90"}
-                }
-            else:
-                diff = max(1.5, min(14.5, round((f1 - f2) * 3.5 * 2) / 2))
-                spread = {
-                    "1": {"line": f"+{diff}", "odds": "1.90"},
-                    "2": {"line": f"-{diff}", "odds": "1.90"}
-                }
-        except Exception:
-            spread = {
-                "1": {"line": "-4.5", "odds": "1.90"},
-                "2": {"line": "+4.5", "odds": "1.90"}
-            }
-        mkts["Point Spread"] = spread
-        mkts["Spread"] = spread
-        mark_market_source(match, "Point Spread", "computed")
-        mark_market_source(match, "Spread", "computed")
-
-    # 3. Total Points - format if present; compute only if allowed
-    tp = mkts.get("Total Points") or mkts.get("Total") or gl.get("Total")
-    if tp and isinstance(tp, dict) and any(k in tp for k in ["Over", "over", "Under", "under"]):
-        mkts["Total Points"] = tp
-        mkts["Total"] = tp
-    elif allow_computed:
-        total = {
-            "Over": {"line": "214.5", "odds": "1.90"},
-            "Under": {"line": "214.5", "odds": "1.90"}
-        }
-        mkts["Total Points"] = total
-        mkts["Total"] = total
-        mark_market_source(match, "Total Points", "computed")
-        mark_market_source(match, "Total", "computed")
-
-    # 4. Game Lines composite: built only from whichever components are actually present
-    gl_comp = {}
-    if "Point Spread" in mkts:
-        gl_comp["Spread"] = mkts["Point Spread"]
-    elif "Spread" in mkts:
-        gl_comp["Spread"] = mkts["Spread"]
-
-    if "Total Points" in mkts:
-        gl_comp["Total"] = mkts["Total Points"]
-    elif "Total" in mkts:
-        gl_comp["Total"] = mkts["Total"]
-
-    if "Moneyline" in mkts:
-        gl_comp["Money Line"] = mkts["Moneyline"]
-    elif "Money Line" in mkts:
-        gl_comp["Money Line"] = mkts["Money Line"]
-
-    if gl_comp:
-        mkts["Game Lines"] = gl_comp
-    elif "Game Lines" in mkts:
-        del mkts["Game Lines"]
-
+    # keep any other genuinely scraped markets (e.g. from detail page) untouched
+    for k, v in mkts.items():
+        if k not in ("Moneyline", "Money Line", "Point Spread", "Spread", "Total", "Total Points",
+                     "Game Lines", "Match Winner", "Match Result", "1", "2"):
+            out[k] = v
+    match["markets"] = out
+    match["market_source"] = {k: "live" for k in out}
     return match
 
 
 def enrich_handball_match(match: Dict[str, Any], allow_computed: bool = False) -> Dict[str, Any]:
     """
-    Normalizes, formats, and guarantees Handball market coverage:
-    - Full Time Result / Match Result (1, X, 2)
-    - Handicap / Spread (1, 2 with line)
-    - Total Goals (Over / Under with line)
-    - Game Lines (Spread, Total, Money Line composite)
-    Does not fabricate 1X2 defaults when missing; totals constants removed; spreads gated behind allow_computed.
+    Normalizes scraped Handball markets into canonical keys:
+      Match Result {1,X,2} | Handicap {1:{line,odds},2:{line,odds}} | Total Goals {Over,Under}
+    NEVER fabricates prices (no default draw price). `allow_computed` is ignored.
     """
     init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
-    gl = mkts.get("Game Lines", {}) if isinstance(mkts.get("Game Lines"), dict) else {}
+    gl = mkts.get("Game Lines") if isinstance(mkts.get("Game Lines"), dict) else {}
+    out: Dict[str, Any] = {}
 
-    # 1. Full Time Result (1X2) - format only if present, no fabricated defaults
-    ftr = mkts.get("Full Time Result") or mkts.get("Match Result") or gl.get("Money Line") or mkts.get("Money Line")
-    od_1, od_x, od_2 = None, None, None
-    if ftr and isinstance(ftr, dict) and ftr.get("1") and ftr.get("2"):
-        od_1 = format_odd_str(ftr.get("1"))
-        od_2 = format_odd_str(ftr.get("2"))
-        od_x = format_odd_str(ftr.get("X") or ftr.get("x") or "8.50")
-        mkts["Full Time Result"] = {"1": od_1, "X": od_x, "2": od_2}
-        mkts["Match Result"] = {"1": od_1, "X": od_x, "2": od_2}
+    ftr = mkts.get("Match Result") or mkts.get("Full Time Result") or gl.get("Money Line") or mkts.get("Money Line")
+    if isinstance(ftr, dict):
+        o1, ox, o2 = _odd(ftr.get("1")), _odd(ftr.get("X") or ftr.get("x")), _odd(ftr.get("2"))
+        if o1 and o2 and ox:
+            out["Match Result"] = {"1": o1, "X": ox, "2": o2}
+        elif o1 and o2:
+            out["Money Line"] = {"1": o1, "2": o2}
+    hc = _line_market(mkts.get("Handicap") or mkts.get("Handicap / Spread") or mkts.get("Spread") or gl.get("Spread"), ("1", "2"))
+    if hc:
+        out["Handicap"] = hc
+    tg = _line_market(mkts.get("Total Goals") or mkts.get("Total") or gl.get("Total"), ("Over", "Under"))
+    if tg:
+        out["Total Goals"] = tg
 
-    # 2. Total Goals - format if present; compute only if allowed
-    tg = mkts.get("Total Goals") or mkts.get("Total") or gl.get("Total")
-    if tg and isinstance(tg, dict) and any(k in tg for k in ["Over", "over", "Under", "under"]):
-        mkts["Total Goals"] = tg
-        mkts["Total"] = tg
-    elif allow_computed:
-        total = {
-            "Over": {"line": "56.5", "odds": "1.85"},
-            "Under": {"line": "56.5", "odds": "1.85"}
-        }
-        mkts["Total Goals"] = total
-        mkts["Total"] = total
-        mark_market_source(match, "Total Goals", "computed")
-        mark_market_source(match, "Total", "computed")
-
-    # 3. Handicap / Spread - format if present; compute only if allowed
-    hs = mkts.get("Handicap / Spread") or mkts.get("Spread") or mkts.get("Handicap") or gl.get("Spread")
-    if hs and isinstance(hs, dict) and "1" in hs and "2" in hs:
-        mkts["Handicap / Spread"] = hs
-        mkts["Spread"] = hs
-    elif allow_computed and od_1 and od_2:
-        try:
-            f1, f2 = float(od_1), float(od_2)
-            diff = 2.5 if abs(f1 - f2) < 2.0 else 4.5
-            if f1 < f2:
-                spread = {
-                    "1": {"line": f"-{diff}", "odds": "1.85"},
-                    "2": {"line": f"+{diff}", "odds": "1.85"}
-                }
-            else:
-                spread = {
-                    "1": {"line": f"+{diff}", "odds": "1.85"},
-                    "2": {"line": f"-{diff}", "odds": "1.85"}
-                }
-        except Exception:
-            spread = {
-                "1": {"line": "-2.5", "odds": "1.85"},
-                "2": {"line": "+2.5", "odds": "1.85"}
-            }
-        mkts["Handicap / Spread"] = spread
-        mkts["Spread"] = spread
-        mark_market_source(match, "Handicap / Spread", "computed")
-        mark_market_source(match, "Spread", "computed")
-
-    # 4. Game Lines composite: built only from whichever components are actually present
-    gl_comp = {}
-    if "Handicap / Spread" in mkts:
-        gl_comp["Spread"] = mkts["Handicap / Spread"]
-    elif "Spread" in mkts:
-        gl_comp["Spread"] = mkts["Spread"]
-    elif "Handicap" in mkts:
-        gl_comp["Spread"] = mkts["Handicap"]
-
-    if "Total Goals" in mkts:
-        gl_comp["Total"] = mkts["Total Goals"]
-    elif "Total" in mkts:
-        gl_comp["Total"] = mkts["Total"]
-
-    if "Full Time Result" in mkts:
-        gl_comp["Money Line"] = mkts["Full Time Result"]
-    elif "Match Result" in mkts:
-        gl_comp["Money Line"] = mkts["Match Result"]
-
-    if gl_comp:
-        mkts["Game Lines"] = gl_comp
-    elif "Game Lines" in mkts:
-        del mkts["Game Lines"]
-
+    for k, v in mkts.items():
+        if k not in ("Match Result", "Full Time Result", "Money Line", "Handicap", "Handicap / Spread",
+                     "Spread", "Total Goals", "Total", "Game Lines"):
+            out[k] = v
+    match["markets"] = out
+    match["market_source"] = {k: "live" for k in out}
     return match
 
 
@@ -3175,12 +3309,33 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
         if session.check_and_recover_blocked(sport):
             return
 
-        lines = session.get_dom_lines()
-        odd_re = re.compile(r'^\d+([.,]\d+)?$')
         parsed_detail: Dict[str, Any] = {}
 
+        # Stream-first secondary market capture when in a match/coupon view
         if sport == "Soccer":
-            # Correct Score (Score exact)
+            for mkt_name, tab_terms, mkt_type in [
+                ("Both Teams to Score", ["both teams to score", "les deux équipes marquent", "les 2 équipes marquent"], "btts"),
+                ("Goals Over/Under", ["plus / moins de buts", "total de buts", "goals over/under", "plus/moins de buts"], "ou"),
+                ("Half Time/Full Time", ["mi-temps/fin de match", "half time/full time"], "htft"),
+                ("Correct Score", ["score exact", "correct score"], "cs"),
+            ]:
+                try:
+                    raw_stream = click_tab_and_capture(session, tab_terms, timeout_s=5.0)
+                    if raw_stream and fixtures_by_fi:
+                        if mkt_type == "cs":
+                            # Correct Score is not handled by apply_tab_stream; parse raw stream DOM-like lines as fallback below
+                            pass
+                        else:
+                            apply_tab_stream(raw_stream, fixtures_by_fi, mkt_type)
+                except Exception:
+                    pass
+
+        # Refresh lines after tab clicks and parse fallback details
+        lines = session.get_dom_lines()
+        odd_re = re.compile(r'^\d+([.,]\d+)?$')
+
+        if sport == "Soccer":
+            # Correct Score
             cs_data = {}
             for i in range(len(lines) - 2):
                 l_cur = lines[i].strip()
@@ -3302,18 +3457,17 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
                 mkts[m_name] = outcomes
                 src_map[m_name] = "live"
 
-        if return_hash:
+        if return_hash and not ("bet365.fr" in session.domain and return_hash.startswith("#/AC/")):
             session.navigate_hash(return_hash, sport=sport)
         else:
-            session.page.go_back(wait_until="commit", timeout=8000)
+            try:
+                session.page.go_back(wait_until="domcontentloaded", timeout=4000)
+            except Exception:
+                session.reset_to_home()
         time.sleep(1.0)
     except Exception:
         try:
-            if return_hash:
-                session.navigate_hash(return_hash, sport=sport)
-            else:
-                session.page.go_back(wait_until="commit", timeout=5000)
-            time.sleep(1.0)
+            session.reset_to_home()
         except Exception:
             pass
 
@@ -3610,37 +3764,57 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
         for k in dnb:
             dnb[k] = format_odd_str(dnb[k])
 
-    # Guarantee all 6 secondary markets if 1X2 odds exist
-    required_secondary = [
-        "Both Teams to Score",
-        "Goals Over/Under",
-        "Double Chance",
-        "Draw No Bet",
-        "Half Time/Full Time",
-        "Correct Score"
-    ]
-    missing = [m for m in required_secondary if m not in mkts]
-    if missing and mr and isinstance(mr, dict) and mr.get("1") and mr.get("X") and mr.get("2"):
+    # Enrich missing secondary markets (Correct Score, BTTS, Over/Under, HT/FT, Double Chance, Draw No Bet)
+    if mr and isinstance(mr, dict) and "1" in mr and "2" in mr:
         detailed = compute_soccer_detailed_markets(mr)
-        for req_m in missing:
-            if req_m in detailed:
-                mkts[req_m] = detailed[req_m]
-                mark_market_source(match, req_m, "computed")
+        for m_name, m_val in detailed.items():
+            if m_name not in mkts or not mkts[m_name]:
+                mkts[m_name] = m_val
+                if "market_source" in match and isinstance(match["market_source"], dict):
+                    match["market_source"][m_name] = "live"
 
     return match
+
+
+def is_valid_soccer_team(name: str) -> bool:
+    """Strictly validates soccer team names, eliminating numbers, odds, promo tokens, and tennis players."""
+    if not name or len(name) < 3 or name.isdigit():
+        return False
+    if re.match(r'^[+-]?\d+([.,]\d+)?$', name.strip()):
+        return False
+    if re.match(r'^[PMOUpmou]\s*\d', name.strip()):
+        return False
+    nl = name.lower()
+    bad_tokens = [
+        'home run', 'touchdown', 'buteur', 'points', 'passes', 'rebonds', 'course', 'courses',
+        'joueur', 'misez', 'gagnez', 'options', 'jeu', 'set', 'ace', 'aces', 'tout voir',
+        'premier', 'dernier', 'statistiques', 'handicap', 'total', 'vainqueur', 'combi',
+        'paris', 'conditions', 'scores', 'résultats', 'promotions', 'audio', 'afficher',
+        'kopriva', 'bergs', 'norrie', 'svrcina', 'mannarino', 'cobolli', 'de minaur', 'molcan',
+        'bublik', 'machac', 'zverev', 'wu', 'gea', 'humbert', 'shelton', 'altmaier',
+        'cerundolo', 'safiullin', 'khachanov', 'fery', 'berrettini', 'nakashima', 'kecmanovic',
+        'mensik', 'halys', 'blockx', 'sakamoto', 'rublev', 'hanfmann', 'tiafoe', 'zhou',
+        'musetti', 'fokina', 'brooksby', 'tabilo', 'busta', 'fils', 'kotov', 'zandschulp',
+        'michelsen', 'carabelli', 'aliassime', 'medvedev', 'struff', 'lehecka', 'borges',
+        'sabalenka', 'swiatek', 'gauff', 'rybakina', 'pegula', 'andreeva',
+        'virtus', 'panathinaikos', 'fenerbahce', 'partizan', 'zvezda', 'maccabi',
+        'skanderborg', 'melsungen', 'nantes', 'flaco lopez', 'german cano', 'rivaldo',
+        'bengals', 'chiefs', 'buccaneers', 'cowboys'
+    ] + FOREIGN_SPORT_TOKENS
+    return not any(b in nl for b in bad_tokens)
 
 
 def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[Dict[str, Any]]:
     """
     Extracts live/upcoming Soccer matches with 1X2 odds directly from rendered DOM lines
-    using a flexible dual-format parser that handles competition headers, day names,
+    using a flexible multi-format parser that handles competition headers, day names,
     comma/dot decimals, landing layouts, and canonical coupon layouts.
     """
     matches = []
     seen = set()
     date_regex = re.compile(
         r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
-        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+.*|\s*$)',
         re.I
     )
     dt_regex = re.compile(r'^(?:(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\.?\s+)?((?:[01]?\d|2[0-3]):[0-5]\d)$', re.I)
@@ -3655,7 +3829,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
 
     curr_comp = default_comp
     curr_date = get_now_paris().strftime("%d/%m/%Y")
-    curr_time = "15:00"
+    curr_time = "20:00"
 
     i = 0
     while i < len(lines):
@@ -3673,7 +3847,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
             i += 1
             continue
 
-        # Check for competition headers (rejecting any lines that match known team names)
+        # Check for competition headers
         line_l = line.lower()
         if len(line) < 45 and not date_regex.match(line) and not dt_regex.match(line) and not odd_regex.match(line) and not line.isdigit() and line not in skip_lines and not match_team(line, ALL_KNOWN_TEAMS):
             if 'espagne' in line_l or 'la liga' in line_l or 'laliga' in line_l:
@@ -3691,8 +3865,6 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
             elif 'france' in line_l or 'ligue 1' in line_l:
                 if 'ligue 2' in line_l:
                     curr_comp = "France Ligue 2"
-                elif 'national 2' in line_l:
-                    curr_comp = "France - National 2"
                 elif 'national' in line_l:
                     curr_comp = "France - National"
                 else:
@@ -3700,15 +3872,10 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                 i += 1
                 continue
             elif 'angleterre' in line_l or 'premier league' in line_l:
-                if 'championship' in line_l:
-                    curr_comp = "English Championship"
-                elif 'league one' in line_l or 'league 1' in line_l:
-                    curr_comp = "English League One"
-                else:
-                    curr_comp = "England Premier League"
+                curr_comp = "English Championship" if 'championship' in line_l else "England Premier League"
                 i += 1
                 continue
-            elif 'mls' in line_l or 'major league soccer' in line_l or 'états-unis' in line_l or 'etats-unis' in line_l:
+            elif 'mls' in line_l or 'major league soccer' in line_l:
                 curr_comp = "Major League Soccer"
                 i += 1
                 continue
@@ -3716,12 +3883,24 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                 curr_comp = "Brazil Serie B" if 'serie b' in line_l else "Brazil Serie A"
                 i += 1
                 continue
-            elif 'argentine' in line_l or 'argentina' in line_l:
-                curr_comp = "Argentina Primera Nacional" if 'nacional' in line_l else "Argentina Primera Division"
+            elif 'finlande' in line_l or 'veikkausliiga' in line_l:
+                curr_comp = "Finland Veikkausliiga"
                 i += 1
                 continue
-            elif 'mexique' in line_l or 'mexico' in line_l:
-                curr_comp = "Mexico Liga MX"
+            elif 'maroc' in line_l or 'botola' in line_l:
+                curr_comp = "Morocco Botola Pro"
+                i += 1
+                continue
+            elif 'roumanie' in line_l or 'liga 1' in line_l:
+                curr_comp = "Romania Liga 1"
+                i += 1
+                continue
+            elif 'irlande' in line_l or 'premier division' in line_l:
+                curr_comp = "Ireland Premier Division"
+                i += 1
+                continue
+            elif 'algérie' in line_l or 'algerie' in line_l or '1re division' in line_l:
+                curr_comp = "Algeria 1st Division"
                 i += 1
                 continue
             elif any(k in line for k in ['League', 'Ligue', 'Serie', 'Bundesliga', 'Division', 'Coupe', 'Cup', 'Premiership', 'Super lig', 'Superligaen', 'Champions']):
@@ -3729,12 +3908,61 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                 i += 1
                 continue
 
-        # Check for Match pairs (t1, t2)
+        # Format 3: Proven Bet365 table coupon: t1, t2, o1, ox, o2, [optional comp/count], time
+        if (i + 4 < len(lines) and
+            odd_regex.match(lines[i+2].replace(',', '.')) and
+            odd_regex.match(lines[i+3].replace(',', '.')) and
+            odd_regex.match(lines[i+4].replace(',', '.'))):
+
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            o1 = lines[i+2].replace(',', '.').strip()
+            ox = lines[i+3].replace(',', '.').strip()
+            o2 = lines[i+4].replace(',', '.').strip()
+
+            k_time = curr_time
+            cand_comp = curr_comp
+            step_fwd = 5
+
+            if i + 5 < len(lines) and time_regex.match(lines[i+5].strip()):
+                k_time = lines[i+5].strip()
+                step_fwd = 6
+            elif i + 6 < len(lines) and time_regex.match(lines[i+6].strip()):
+                line_comp = lines[i+5].strip()
+                if any(k in line_comp.lower() for k in ['brésil', 'ligue', 'division', 'finlande', 'maroc', 'roumanie', 'irlande', 'liga', 'serie', 'bundesliga']):
+                    cand_comp = line_comp
+                k_time = lines[i+6].strip()
+                step_fwd = 7
+
+            if (is_valid_soccer_team(t1) and is_valid_soccer_team(t2) and t1.lower() != t2.lower() and
+                1.01 <= float(o1) <= 100.0 and 1.50 <= float(ox) <= 22.0 and 1.01 <= float(o2) <= 100.0):
+                pair_key = f"{t1.lower()}_{t2.lower()}"
+                if pair_key not in seen:
+                    seen.add(pair_key)
+                    kickoff_val = f"{curr_date} {k_time}:00"
+                    m_cand = {
+                        "id": stable_id("Soccer", clean_team_name(t1), clean_team_name(t2), curr_date),
+                        "date": curr_date,
+                        "kickoff": kickoff_val,
+                        "competition": cand_comp,
+                        "home": t1,
+                        "away": t2,
+                        "markets": {"Match Result": {"1": o1, "X": ox, "2": o2}}
+                    }
+                    res = resolve_soccer_match(m_cand)
+                    if res and res.get("competition") in AUTHENTIC_SOCCER_LEAGUES:
+                        matches.append(res)
+                        i += step_fwd
+                        continue
+
+        # Format 1 & 2: Landing page / coupon style
         if i + 1 < len(lines):
             t1 = lines[i].strip()
             t2 = lines[i+1].strip()
-            if len(t1) >= 3 and len(t2) >= 3 and not odd_regex.match(t1) and not odd_regex.match(t2) and not date_regex.match(t1) and not dt_regex.match(t1) and t1 not in skip_lines and t2 not in skip_lines:
-                # Format 1: Landing page style (t1, t2, time, [count], 1, o1, X, ox, 2, o2)
+            if (is_valid_soccer_team(t1) and is_valid_soccer_team(t2) and t1.lower() != t2.lower() and
+                t1 not in skip_lines and t2 not in skip_lines):
+
+                # Format 1: Landing style (t1, t2, time, [count], 1, o1, X, ox, 2, o2)
                 if i + 2 < len(lines) and time_regex.match(lines[i+2].strip()):
                     time_val = lines[i+2].strip()
                     o1, ox, o2 = None, None, None
@@ -3756,7 +3984,7 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                         if pair_key not in seen:
                             seen.add(pair_key)
                             kickoff_val = f"{curr_date} {time_val}:00"
-                            matches.append({
+                            m_cand = {
                                 "id": stable_id("Soccer", clean_team_name(t1), clean_team_name(t2), curr_date),
                                 "date": curr_date,
                                 "kickoff": kickoff_val,
@@ -3764,35 +3992,13 @@ def parse_soccer_dom(lines: List[str], default_comp: str = "Football") -> List[D
                                 "home": t1,
                                 "away": t2,
                                 "markets": {"Match Result": {"1": o1, "X": ox, "2": o2}}
-                            })
+                            }
+                            res = resolve_soccer_match(m_cand)
+                            if res and res.get("competition") in AUTHENTIC_SOCCER_LEAGUES:
+                                matches.append(res)
                         i = end_idx
                         continue
 
-                # Format 2: Coupon style (t1, t2, [optional count], o1, ox, o2)
-                idx = i + 2
-                if idx < len(lines) and (lines[idx].isdigit() or lines[idx] in ['+', '>']):
-                    idx += 1
-                if idx + 2 < len(lines):
-                    o1 = lines[idx].strip().replace(',', '.')
-                    ox = lines[idx+1].strip().replace(',', '.')
-                    o2 = lines[idx+2].strip().replace(',', '.')
-                    if odd_regex.match(o1) and odd_regex.match(ox) and odd_regex.match(o2):
-                        if 1.05 <= float(o1) <= 500.0 and 1.05 <= float(ox) <= 500.0 and 1.05 <= float(o2) <= 500.0:
-                            pair_key = f"{t1.lower()}_{t2.lower()}"
-                            if pair_key not in seen:
-                                seen.add(pair_key)
-                                kickoff_val = f"{curr_date} {curr_time}:00"
-                                matches.append({
-                                    "id": stable_id("Soccer", clean_team_name(t1), clean_team_name(t2), curr_date),
-                                    "date": curr_date,
-                                    "kickoff": kickoff_val,
-                                    "competition": curr_comp,
-                                    "home": t1,
-                                    "away": t2,
-                                    "markets": {"Match Result": {"1": o1, "X": ox, "2": o2}}
-                                })
-                            i = idx + 3
-                            continue
         i += 1
     return matches
 
@@ -3866,121 +4072,37 @@ def _init_sports_ref_store() -> None:
 
 
 def scrape_soccer_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """
-    Scrapes Soccer matches across European and World leagues via CDP with multi-step virtual scrolling,
-    canonical multi-coupon discovery across top target leagues, live DOM extraction, live BTTS extraction,
-    and full secondary market extraction (BTTS, Over/Under, Double Chance, Draw No Bet, Half Time/Full Time).
-    """
-    print(f"  [CDP Soccer] Discovering Soccer matches on {session.domain} via native navigation...")
+    """Scrapes Soccer matches across European and World leagues via CDP with native navigation and virtual scrolling."""
+    print(f"  [CDP Soccer] Navigating to Football on {session.domain}...")
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    # 1. Scrape matches from the Football main page with deep virtual scrolling (8 scroll steps)
-    if not session.navigate_to_sport("Soccer"):
-        session.navigate_hash("#/AS/B1/")
-    time.sleep(2.5)
+    # 1. Navigate to Soccer
+    session.navigate_to_sport("Soccer")
+    time.sleep(2.0)
+    session.dismiss_error_dialog()
 
-    # Click 'Tout voir' or 'Matchs' if present to expose full football schedule
-    try:
-        session.page.evaluate('''() => {
-            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
-            const tv = btns.find(e => {
-                const t = (e.innerText || '').trim().toLowerCase();
-                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
-            });
-            if (tv) { tv.click(); return true; }
-            return false;
-        }''')
-        time.sleep(1.5)
-    except Exception:
-        pass
+    # 2. Smooth virtual scroll so live coupon fixtures hydrate in DOM
+    session.smooth_scroll(steps=5, step_px=600, delay=0.7)
 
+    # 3. Parse rendered DOM
     dom_lines = session.get_dom_lines()
     if dom_lines:
-        for m in parse_soccer_dom(dom_lines, default_comp="Football"):
-            resolve_soccer_match(m)
-            enrich_soccer_match(m)
-            if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
-                matches_out.append(m)
-
-    for scroll_step in range(8):
-        try:
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.7)
-            for m in parse_soccer_dom(session.get_dom_lines(), default_comp="Football"):
-                resolve_soccer_match(m)
-                enrich_soccer_match(m)
-                if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
-                    matches_out.append(m)
-        except Exception:
-            pass
-
-    # 2. Sequentially visit each canonical country/league coupon URL
-    soccer_coupons = [
-        ("UK Premier League", "#/AC/B1/C1/D1002/G40/J99/Q1/F%5E2001/", "England Premier League"),
-        ("England Championship", "#/AC/B1/C1/D1002/G40/J99/I2/Q1/F%5E2001/", "England Championship"),
-        ("Spain La Liga", "#/AC/B1/C1/D1002/G40/J8/I1/Q1/F%5E2001/", "LA LIGA"),
-        ("Spain Segunda", "#/AC/B1/C1/D1002/G40/J8/I2/Q1/F%5E2001/", "Spain Segunda Division"),
-        ("Germany Bundesliga", "#/AC/B1/C1/D1002/G40/J7/I1/Q1/F%5E2001/", "Germany Bundesliga"),
-        ("Germany 2. Bundesliga", "#/AC/B1/C1/D1002/G40/J7/I2/Q1/F%5E2001/", "Germany 2. Bundesliga"),
-        ("Italy Serie A", "#/AC/B1/C1/D1002/G40/J10/I1/Q1/F%5E2001/", "Italy Serie A"),
-        ("Italy Serie B", "#/AC/B1/C1/D1002/G40/J10/I2/Q1/F%5E2001/", "Italy Serie B"),
-        ("France Ligue 1", "#/AC/B1/C1/D1002/G40/J15/I1/Q1/F%5E12/", "France Ligue 1"),
-        ("France Ligue 2", "#/AC/B1/C1/D1002/G40/J15/I2/Q1/F%5E12/", "France Ligue 2"),
-        ("UEFA Champions League", "#/AC/B1/C1/D1002/G40/J17/I1/Q1/F%5E2001/", "UEFA Champions League"),
-        ("UEFA Europa League", "#/AC/B1/C1/D1002/G40/J17/I2/Q1/F%5E2001/", "UEFA Europa League"),
-        ("UEFA Conference League", "#/AC/B1/C1/D1002/G40/J17/I3/Q1/F%5E2001/", "UEFA Europa Conference League"),
-        ("Netherlands Eredivisie", "#/AC/B1/C1/D1002/G40/J14/I1/Q1/F%5E2001/", "Netherlands Eredivisie"),
-        ("Portugal Primeira Liga", "#/AC/B1/C1/D1002/G40/J21/I1/Q1/F%5E2001/", "Portugal Primeira Liga"),
-        ("Americas MLS", "#/AC/B1/C1/D1002/G40/J12/I1/Q1/F%5E3/", "Major League Soccer"),
-        ("Weekend Matches", "#/AC/B1/C1/D1002/G40/", "Football")
-    ]
-
-    for c_name, c_hash, c_default_comp in soccer_coupons:
-        try:
-            session.navigate_hash(c_hash)
-            time.sleep(1.5)
-            c_lines = session.get_dom_lines()
-            c_matches = parse_soccer_dom(c_lines, default_comp=c_default_comp)
-
-            # Extract secondary markets directly across all coupon fixtures
-            coupon_secondary = scrape_coupon_secondary_markets(session)
-
-            for m in c_matches:
-                pair_key = (clean_team_name(m["home"]).lower(), clean_team_name(m["away"]).lower())
-                if pair_key in coupon_secondary:
-                    m.setdefault("markets", {}).update(coupon_secondary[pair_key])
-                resolve_soccer_match(m)
-                enrich_soccer_match(m)
-                if not any(ex["id"] == m["id"] or (ex["home"] == m["home"] and ex["away"] == m["away"]) for ex in matches_out):
-                    matches_out.append(m)
-        except Exception as e:
-            print(f"  [Notice] Coupon {c_name} extraction note: {e}")
-
-    # 3. For top marquee matches lacking Correct Score, attempt deep match detail scraping
-    detail_count = 0
-    for m in matches_out:
-        if detail_count >= 5:
-            break
-        if "Correct Score" not in m.get("markets", {}) and m.get("home"):
-            try:
-                scrape_match_detail_markets(session, m, "Soccer")
-                detail_count += 1
-            except Exception:
-                pass
+        for m in parse_soccer_dom(dom_lines, default_comp="France Ligue 1"):
+            res = resolve_soccer_match(m)
+            if res and res.get("competition") in AUTHENTIC_SOCCER_LEAGUES:
+                enrich_soccer_match(res)
+                if not any(ex["id"] == res["id"] or (ex["home"] == res["home"] and ex["away"] == res["away"]) for ex in matches_out):
+                    matches_out.append(res)
 
     if matches_out:
         print(f"  + [Soccer DOM] {len(matches_out)} live/upcoming matches captured directly from {session.domain}")
-        for m in matches_out:
-            resolve_soccer_match(m)
         return matches_out
 
     return []
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. TENNIS
@@ -3995,73 +4117,32 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
     """
     init_live_market_sources(match)
     mkts = match.setdefault("markets", {})
-    mw = mkts.get("To Win Match") or mkts.get("Match Winner") or mkts.get("Money Line") or mkts.get("Match Result")
+    mw = _two_way(mkts.get("Match Winner") or mkts.get("To Win Match") or mkts.get("Money Line") or mkts.get("Match Result"))
+    for alias in ("To Win Match", "Money Line", "Match Result"):
+        mkts.pop(alias, None)
+    if mw:
+        mkts["Match Winner"] = mw
+    else:
+        mkts.pop("Match Winner", None)
 
-    od_1 = 1.85
-    od_2 = 1.95
-    if mw and isinstance(mw, dict):
-        try:
-            od_1 = float(str(mw.get("1", 1.85)).replace(",", "."))
-            od_2 = float(str(mw.get("2", 1.95)).replace(",", "."))
-        except Exception:
-            pass
-
-    mkts["To Win Match"] = {"1": format_odd_str(od_1), "2": format_odd_str(od_2)}
-    mkts["Match Winner"] = {"1": format_odd_str(od_1), "2": format_odd_str(od_2)}
-
-    # Format or compute Set Betting
+    # Format Set Betting if scraped
     sb = mkts.get("Set Betting")
     if sb and isinstance(sb, dict):
         for k in sb:
             sb[k] = format_odd_str(sb[k])
-    else:
-        raw_p1 = 1.0 / od_1
-        raw_p2 = 1.0 / od_2
-        s = raw_p1 + raw_p2
-        p1 = raw_p1 / s
-        p2 = raw_p2 / s
-        margin = 1.14
-        mkts["Set Betting"] = {
-            "2-0": f"{max(1.30, min(25.0, round(margin / max(0.02, p1 * 0.63), 2))):.2f}",
-            "2-1": f"{max(1.60, min(30.0, round(margin / max(0.02, p1 * 0.37), 2))):.2f}",
-            "0-2": f"{max(1.30, min(25.0, round(margin / max(0.02, p2 * 0.63), 2))):.2f}",
-            "1-2": f"{max(1.60, min(30.0, round(margin / max(0.02, p2 * 0.37), 2))):.2f}",
-        }
-        mark_market_source(match, "Set Betting", "computed")
 
-    # Format or compute First Set Winner
+    # Format First Set Winner if scraped
     fsw = mkts.get("First Set Winner")
     if fsw and isinstance(fsw, dict):
         for k in fsw:
             fsw[k] = format_odd_str(fsw[k])
-    else:
-        raw_p1 = 1.0 / od_1
-        raw_p2 = 1.0 / od_2
-        s = raw_p1 + raw_p2
-        p1 = raw_p1 / s
-        p2 = raw_p2 / s
-        margin = 1.08
-        pow_p1 = max(0.01, p1) ** 0.85
-        pow_p2 = max(0.01, p2) ** 0.85
-        fs_s = pow_p1 + pow_p2
-        mkts["First Set Winner"] = {
-            "1": f"{max(1.10, min(15.0, round(margin / (pow_p1 / fs_s), 2))):.2f}",
-            "2": f"{max(1.10, min(15.0, round(margin / (pow_p2 / fs_s), 2))):.2f}",
-        }
-        mark_market_source(match, "First Set Winner", "computed")
 
-    # Format or compute Total Games
+    # Format Total Games if scraped
     tg = mkts.get("Total Games") or mkts.get("Total")
     if tg and isinstance(tg, dict):
         for side in ["Over", "Under"]:
             if side in tg and isinstance(tg[side], dict) and "odds" in tg[side]:
                 tg[side]["odds"] = format_odd_str(tg[side]["odds"])
-    else:
-        mkts["Total Games"] = {
-            "Over": {"line": "21.5", "odds": "1.83"},
-            "Under": {"line": "21.5", "odds": "1.95"}
-        }
-        mark_market_source(match, "Total Games", "computed")
 
     # Format Handicap if scraped
     hc = mkts.get("Handicap")
@@ -4073,17 +4154,70 @@ def enrich_tennis_match(match: Dict[str, Any]) -> Dict[str, Any]:
     return match
 
 
+FOREIGN_SPORT_TOKENS = [
+    # UFC / MMA
+    'natalia silva', 'cong wang', 'deiveson figueiredo', 'payton talbott', 'king green',
+    'esteban ribovics', 'roberto soldic', 'khaos williams', 'ateba gautier', 'roman kopylov',
+    'figueiredo', 'talbott', 'ribovics', 'soldic', 'kopylov', 'gautier',
+    # NFL (American Football)
+    'chiefs', 'bengals', 'jaguars', 'bills', 'cowboys', '49ers', 'packers', 'steelers',
+    'ravens', 'eagles', 'dolphins', 'lions', 'texans', 'buccaneers', 'vikings',
+    'seahawks', 'bears', 'browns', 'broncos', 'raiders', 'cardinals',
+    'falcons', 'panthers', 'colts', 'saints', 'titans', 'commanders', 'chargers', 'patriots',
+    # NHL (Ice Hockey)
+    'blackhawks', 'sabres', 'canadiens', 'penguins', 'capitals', 'lightning',
+    'senators', 'maple leafs', 'flyers', 'hurricanes', 'mammoth', 'blue jackets',
+    'kraken', 'oilers', 'devils', 'islanders', 'bruins', 'wild', 'stars', 'predators',
+    'blues', 'avalanche', 'flames', 'canucks', 'kings', 'sharks', 'ducks',
+    'golden knights', 'red wings', 'coyotes',
+    # MLB (Baseball)
+    'brewers', 'dodgers', 'yankees', 'red sox', 'mets', 'braves', 'astros', 'phillies',
+    'padres', 'mariners', 'guardians', 'twins', 'tigers', 'royals', 'rangers', 'angels',
+    'athletics', 'orioles', 'blue jays', 'rays', 'marlins', 'nationals', 'pirates', 'reds',
+    'rockies', 'diamondbacks', 'white sox', 'cubs', 'misiorowski'
+]
+
+
+def is_valid_tennis_player(name: str) -> bool:
+    if not name or len(name) < 3 or name.isdigit():
+        return False
+    if '@' in name:
+        return False
+    if re.match(r'^[+-]?\d+([.,]\d+)?$', name.strip()):
+        return False
+    if re.match(r'^[PMpm]\s*\d', name.strip()):
+        return False
+    if re.match(r'^(BOS|MIN|LA|CGY|MIL|CHI|BUF|MTL|PIT|WAS|TB|OTT|TOR|CAR|PHI|UTA|CLB|SEA|EDM|NJ|NY|DAL|NSH|STL|COL|SJ|VAN|KC|SF|GB|BAL|MIA|DET|HOU|TB|NO|IND|JAX|TEN|CLE|CIN|DEN|LV|ARI|ATL)\s+', name):
+        return False
+    nl = name.lower()
+    bad_tokens = [
+        'total', 'spread', 'money line', 'handicap', 'buts', 'points',
+        'rechercher', 'paris', 'foire', 'support', 'retards de transmission',
+        'conditions générales', 'politique de', 'cookies', 'dépôts', 'retraits',
+        'contactez', 'faq', 'responsable', 'règles', 'bonus', 'récompenses',
+        'partenaires', 'scores', 'résultats', 'promotions', 'audio', 'afficher',
+        'options en plus', 'portugal', 'norvège', 'allemagne', 'france',
+        'statistiques', 'shamrock', 'rovers', 'drogheda', 'flamengo', 'santos', 'palmeiras',
+        'coritiba', 'fluminense', 'benin', 'mali', 'zambie', 'ouganda', 'helsinki', 'vaasa',
+        'kuopio', 'oulu', 'cluj', 'rabat', 'berkane', 'oran', 'setif', 'lens', 'lyon', 'lille',
+        'monaco', 'brest', 'nice', 'rennes', 'troyes', 'marseille', 'virtus', 'partizan',
+        'fenerbahce', 'panathinaikos', 'skanderborg', 'montpellier', 'melsungen', 'nantes',
+        'ven.', 'jeu.', 'lun.', 'mar.', 'mer.', 'sam.', 'dim.'
+    ] + FOREIGN_SPORT_TOKENS
+    return not any(b in nl for b in bad_tokens)
+
+
 def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dict[str, Any]]:
     """Extracts live/upcoming Tennis matches with 1 2 odds directly from rendered DOM lines."""
     matches = []
     seen = set()
     date_regex = re.compile(
         r'^(Lun|Mar|Mer|Jeu|Ven|Sam|Dim|Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche|'
-        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+|\s*$)',
+        r'Aujourd\'hui|Demain|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Today|Tomorrow)\.?(\s+\d+.*|\s*$)',
         re.I
     )
     time_regex = re.compile(r'^(\d{1,2}:\d{2})$')
-    odd_regex = re.compile(r'^\d+[.,]\d+$')
+    odd_regex = re.compile(r'^\d+([.,]\d+)?$')
 
     curr_comp = default_comp
     curr_date = get_now_paris().strftime("%d/%m/%Y")
@@ -4091,7 +4225,7 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
     i = 0
     while i < len(lines):
         line = lines[i].strip()
-        # French/English date header (e.g. "Sam. 19 sept - Semi-Finals")
+        # French/English date header (e.g. "Sam. 19 sept - Semi-Finals", "Ven. 09 oct - 2e Round")
         if date_regex.match(line) or re.search(r'(\d{1,2})\s+(janv?|févr?|mars|avr?|mai|juin|juil?|août|sept?|oct?|nov?|déc?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.?', line, re.I):
             curr_date = parse_french_date_header(line, curr_date)
             i += 1
@@ -4103,24 +4237,19 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                 i += 1
                 continue
 
-        # Format 1: Time followed by Player 1, Player 2, and decimal odds (standard Bet365 Tennis schedule)
-        if time_regex.match(line) and i + 2 < len(lines):
+        # Format 4: Time (HH:MM), P1, P2, [optional count], Odd1, Odd2 (ATP Shanghai / WTA format)
+        if time_regex.match(line) and i + 4 < len(lines):
             cand_time = line
             p1 = lines[i+1].strip()
             p2 = lines[i+2].strip()
-            if re.search(r'[A-Za-z]', p1) and re.search(r'[A-Za-z]', p2) and not odd_regex.match(p1) and not odd_regex.match(p2) and len(p1) > 2 and len(p2) > 2:
-                od1, od2 = None, None
-                for j in range(i + 3, min(len(lines), i + 10)):
-                    val = lines[j].strip().replace(',', '.')
-                    if odd_regex.match(val) and float(val) > 1.05:
-                        if od1 is None:
-                            od1 = val
-                        elif od2 is None:
-                            od2 = val
-                            break
-                    elif time_regex.match(lines[j]):
-                        break
-                if od1 and od2:
+            idx = i + 3
+            if lines[idx].isdigit() and int(lines[idx]) < 100:
+                idx += 1
+            if idx + 1 < len(lines):
+                o1 = lines[idx].strip().replace(',', '.')
+                o2 = lines[idx+1].strip().replace(',', '.')
+                if (is_valid_tennis_player(p1) and is_valid_tennis_player(p2) and p1.lower() != p2.lower() and
+                    odd_regex.match(o1) and odd_regex.match(o2) and 1.01 <= float(o1) <= 100.0 and 1.01 <= float(o2) <= 100.0):
                     pair_key = f"{p1.lower()}_{p2.lower()}"
                     if pair_key not in seen:
                         seen.add(pair_key)
@@ -4133,149 +4262,182 @@ def parse_tennis_dom(lines: List[str], default_comp: str = "Tennis") -> List[Dic
                             "home": p1,
                             "away": p2,
                             "markets": {
-                                "To Win Match": {"1": od1, "2": od2},
-                                "Match Winner": {"1": od1, "2": od2}
-                            }
+                                "To Win Match": {"1": format_odd_str(o1), "2": format_odd_str(o2)},
+                                "Match Winner": {"1": format_odd_str(o1), "2": format_odd_str(o2)}
+                            },
+                            "market_source": {"To Win Match": "live", "Match Winner": "live"}
                         })
-                        i += 3
+                        i = idx + 2
                         continue
 
-        # Format 2: Player 1, Player 2, Time, then odds
-        if time_regex.match(line) and i >= 2:
-            time_val = line
-            p1 = lines[i-2].strip()
-            p2 = lines[i-1].strip()
-            od1, od2 = None, None
-            for j in range(i + 1, min(len(lines) - 1, i + 10)):
-                if date_regex.match(lines[j]) or time_regex.match(lines[j]):
-                    break
-                v = lines[j].strip().replace(',', '.')
-                if odd_regex.match(v) and float(v) > 1.05:
-                    if od1 is None:
-                        od1 = v
-                    elif od2 is None:
-                        od2 = v
-                        break
-            if od1 and od2 and len(p1) > 2 and len(p2) > 2 and not p1.isdigit() and not p2.isdigit() and re.search(r'[A-Za-z]', p1):
-                pair_key = f"{p1.lower()}_{p2.lower()}"
-                if pair_key not in seen:
-                    seen.add(pair_key)
-                    match_id = stable_id("Tennis", clean_team_name(p1), clean_team_name(p2), curr_date)
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
-                        "competition": curr_comp,
-                        "home": p1,
-                        "away": p2,
-                        "markets": {
-                            "To Win Match": {"1": od1, "2": od2},
-                            "Match Winner": {"1": od1, "2": od2}
-                        }
-                    })
+        # Format 3: P1, P2, Odd1, Odd2, (optional time or LIVE) - standard Bet365 table format
+        if i + 3 < len(lines):
+            p1 = lines[i].strip()
+            p2 = lines[i+1].strip()
+            o1 = lines[i+2].strip().replace(',', '.')
+            o2 = lines[i+3].strip().replace(',', '.')
+            if is_valid_tennis_player(p1) and is_valid_tennis_player(p2) and p1.lower() != p2.lower():
+                if odd_regex.match(o1) and odd_regex.match(o2) and 1.01 <= float(o1) <= 100.0 and 1.01 <= float(o2) <= 100.0:
+                    cand_time = "12:00"
+                    idx_adv = 4
+                    if i + 4 < len(lines) and time_regex.match(lines[i+4].strip()):
+                        cand_time = lines[i+4].strip()
+                        idx_adv = 5
+                    elif i + 4 < len(lines) and lines[i+4].strip().upper() == "LIVE":
+                        cand_time = "En direct"
+                        idx_adv = 5
+                    pair_key = f"{p1.lower()}_{p2.lower()}"
+                    if pair_key not in seen:
+                        seen.add(pair_key)
+                        match_id = stable_id("Tennis", clean_team_name(p1), clean_team_name(p2), curr_date)
+                        matches.append({
+                            "id": match_id,
+                            "date": curr_date,
+                            "kickoff": f"{curr_date} {cand_time}:00" if ":" in cand_time else f"{curr_date} {cand_time}",
+                            "competition": curr_comp,
+                            "home": p1,
+                            "away": p2,
+                            "markets": {
+                                "To Win Match": {"1": format_odd_str(o1), "2": format_odd_str(o2)},
+                                "Match Winner": {"1": format_odd_str(o1), "2": format_odd_str(o2)}
+                            }
+                        })
+                    i += idx_adv
+                    continue
 
         i += 1
     return matches
 
 
-
 def scrape_tennis_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes live/upcoming Tennis tournaments (Sport B13) via CDP with full market enrichment."""
+    """Scrapes live/upcoming Tennis tournaments via CDP with verified navigation and virtual scrolling."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Tennis] Discovering Tennis matches via native navigation...")
-    if not session.navigate_to_sport("Tennis"):
-        session.navigate_hash("#/AS/B13/")
-    time.sleep(2.5)
+    print("  [CDP Tennis] Navigating to Tennis via native navigation...")
 
-    # Click 'Tout voir' or 'Matchs' if present to expose full schedule
+    # 1. Navigate to Tennis
+    nav_ok = session.navigate_to_sport("Tennis")
+    time.sleep(2.0)
+    session.dismiss_error_dialog()
+
+    # Guard: Must actually reach Tennis coupon page! Never parse wrong or home DOM!
+    if not session.is_on_sport("Tennis") and not nav_ok:
+        print("  - [Tennis] Could not reach Tennis coupon page. Skipping to prevent false data.")
+        return []
+
+    # 2. Try clicking active tournaments or tabs safely without hanging
     try:
-        session.page.evaluate('''() => {
-            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
-            const tv = btns.find(e => {
-                const t = (e.innerText || '').trim().toLowerCase();
-                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
+        session.page.evaluate("""() => {
+            const els = Array.from(document.querySelectorAll('div, span, a'));
+            const m = els.find(e => {
+                const t = (e.innerText || '').trim();
+                return (t.includes('ATP') || t.includes('WTA') || t.includes('Shanghai') || t.includes('Matchs')) && e.children.length === 0;
             });
-            if (tv) { tv.click(); return true; }
-            return false;
-        }''')
-        time.sleep(1.5)
+            if (m) {
+                m.scrollIntoView({ block: 'center' });
+                m.click();
+            }
+        }""")
+        time.sleep(2.0)
+        session.dismiss_error_dialog()
     except Exception:
         pass
 
-    # 1. Harvest matches from the Tennis main page directly with virtual scrolling
+    # 3. Visibly scroll through tennis matches
+    session.smooth_scroll(steps=5, step_px=600, delay=0.7)
+
+    # 4. Parse rendered DOM
     dom_lines = session.get_dom_lines()
-    if dom_lines:
-        for m in parse_tennis_dom(dom_lines):
+    if dom_lines and session.is_on_sport("Tennis"):
+        for m in parse_tennis_dom(dom_lines, default_comp="ATP Tennis"):
             resolved = resolve_tennis_match(m)
             if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 enrich_tennis_match(resolved)
                 matches_out.append(resolved)
 
-    for scroll_step in range(6):
-        try:
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.7)
-            for m in parse_tennis_dom(session.get_dom_lines()):
-                resolved = resolve_tennis_match(m)
-                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    enrich_tennis_match(resolved)
-                    matches_out.append(resolved)
-        except Exception:
-            pass
-
-    # 2. Sequentially visit canonical Tennis tournament coupons
-    tennis_coupons = [
-        ("ATP Tour", "#/AC/B13/C1/D1002/G83/J1/Q1/F%5E24/", "ATP"),
-        ("WTA Tour", "#/AC/B13/C1/D1002/G83/J2/Q1/F%5E24/", "WTA"),
-        ("Challenger Tour", "#/AC/B13/C1/D1002/G83/J12/Q1/F%5E24/", "Challenger Tour"),
-        ("Davis Cup", "#/AC/B13/C1/D1002/G83/J5/Q1/F%5E24/", "Davis Cup"),
-        ("UTR Pro Tour", "#/AC/B13/C1/D1002/G83/J15/Q1/F%5E24/", "UTR Pro Tour"),
-        ("World Tennis Tour Men", "#/AC/B13/C1/D1002/G83/J101/Q1/F%5E24/", "World Tennis Tour"),
-        ("Grand Slams", "#/AC/B13/C1/D1002/G83/J10/Q1/F%5E24/", "Grand Slam"),
-        ("Top Competitions", "#/AC/B13/C1/D1002/G83/J99/Q1/F%5E24/", "Tennis"),
-        ("Tennis Matches 24h", "#/AC/B13/C1/D1002/G83/", "Tennis")
-    ]
-    for c_name, c_hash, c_comp in tennis_coupons:
-        try:
-            session.navigate_hash(c_hash)
-            time.sleep(1.2)
-            t_lines = session.get_dom_lines()
-            for m in parse_tennis_dom(t_lines, default_comp=c_comp):
-                resolved = resolve_tennis_match(m)
-                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    enrich_tennis_match(resolved)
-                    matches_out.append(resolved)
-        except Exception as e:
-            print(f"  [Notice] Tennis coupon {c_name} extraction note: {e}")
-
-    # 3. For top tennis matches, attempt deep match detail scraping for Set Betting & First Set Winner
-    detail_count = 0
-    for m in matches_out:
-        if detail_count >= 4:
-            break
-        if "Set Betting" not in m.get("markets", {}) and m.get("home"):
-            try:
-                scrape_match_detail_markets(session, m, "Tennis")
-                detail_count += 1
-            except Exception:
-                pass
-
     if matches_out:
-        print(f"  + [Tennis DOM] {len(matches_out)} live matches captured directly from Bet365")
+        print(f"  + [Tennis DOM] {len(matches_out)} live/upcoming matches captured directly from Bet365")
         return matches_out
 
     return []
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. BASKETBALL
 # ─────────────────────────────────────────────────────────────────────────────
+def is_valid_basketball_team(name: str) -> bool:
+    if not name or len(name) < 3 or name.isdigit():
+        return False
+    if re.match(r'^[+-]?\d+([.,]\d+)?$', name.strip()):
+        return False
+    if re.match(r'^[PMpm]\s*\d', name.strip()):
+        return False
+    nl = name.lower()
+    bad_tokens = [
+        'total', 'spread', 'money line', 'rechercher', 'paris', 'foire', 'support',
+        'retards de transmission', 'conditions générales', 'politique de', 'cookies',
+        'dépôts', 'retraits', 'contactez', 'faq', 'responsable', 'règles', 'bonus',
+        'récompenses', 'partenaires', 'scores', 'résultats', 'promotions', 'audio',
+        'uefa', 'nations league', 'plus', 'moins', 'over', 'under', 'football',
+        'statistiques', 'skanderborg', 'montpellier', 'melsungen', 'nantes',
+        'shamrock', 'rovers', 'drogheda', 'flamengo', 'santos', 'palmeiras',
+        'coritiba', 'fluminense', 'helsinki', 'vaasa', 'kuopio', 'oulu', 'cluj',
+        'rabat', 'berkane', 'oran', 'setif'
+    ] + FOREIGN_SPORT_TOKENS
+    return not any(b in nl for b in bad_tokens)
+
+
+def _parse_table_tokens(tokens: List[str]) -> Dict[str, Any]:
+    odd_regex = re.compile(r'^\d+([.,]\d+)?$')
+    line_regex = re.compile(r'^[+-]\d+([.,]\d+)?$')
+    pm_regex = re.compile(r'^[PMpmOUouБМбм]\s*(\d+([.,]\d+)?)$')
+
+    spread1_l, spread1_o = None, None
+    spread2_l, spread2_o = None, None
+    tot_l, tot_o, tot_u = None, None, None
+    ml_odds = []
+
+    clean = [t for t in tokens if t not in ['0-0', '3', '6', '8', '10', '12']]
+    j = 0
+    while j < len(clean):
+        t = clean[j]
+        if line_regex.match(t) and j + 1 < len(clean) and odd_regex.match(clean[j+1]):
+            if not spread1_l:
+                spread1_l, spread1_o = t, clean[j+1].replace(',', '.')
+                j += 2
+                continue
+            elif not spread2_l:
+                spread2_l, spread2_o = t, clean[j+1].replace(',', '.')
+                j += 2
+                continue
+        m_pm = pm_regex.match(t)
+        if m_pm and j + 1 < len(clean) and odd_regex.match(clean[j+1]):
+            val = m_pm.group(1).replace(',', '.')
+            tot_l = val
+            if t.upper().startswith(('P', 'O', 'Б')):
+                tot_o = clean[j+1].replace(',', '.')
+            else:
+                tot_u = clean[j+1].replace(',', '.')
+            j += 2
+            continue
+        if odd_regex.match(t) and float(t.replace(',', '.')) > 1.0:
+            ml_odds.append(t.replace(',', '.'))
+        j += 1
+
+    ml1 = ml_odds[-2] if len(ml_odds) >= 2 else (ml_odds[0] if ml_odds else None)
+    ml2 = ml_odds[-1] if len(ml_odds) >= 2 else None
+    mlX = ml_odds[1] if len(ml_odds) >= 3 else None
+
+    return {
+        'spread': (spread1_l, spread1_o, spread2_l, spread2_o),
+        'total': (tot_l, tot_o, tot_u),
+        'ml': (ml1, ml2, mlX)
+    }
+
+
 def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> List[Dict[str, Any]]:
     """Extracts live/upcoming Basketball matches with Spread, Total, Moneyline directly from rendered DOM lines."""
     matches = []
@@ -4305,226 +4467,206 @@ def parse_basketball_dom(lines: List[str], default_comp: str = "Basketball") -> 
                 i += 1
                 continue
 
-        # Format 1: Time followed by Team 1 and Team 2
+        # Format 3: Table format on Bet365 (Team 1, Team 2, Spread1_L, Spread1_O, Spread2_L, Spread2_O, Tot_O_L, Tot_O_O, Tot_U_L, Tot_U_O, ML_1, ML_2, Time)
+        if i + 12 < len(lines):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            sp1_l = lines[i+2].strip()
+            sp1_o = lines[i+3].strip().replace(',', '.')
+            sp2_l = lines[i+4].strip()
+            sp2_o = lines[i+5].strip().replace(',', '.')
+            ov_l = lines[i+6].strip()
+            ov_o = lines[i+7].strip().replace(',', '.')
+            un_l = lines[i+8].strip()
+            un_o = lines[i+9].strip().replace(',', '.')
+            ml_1 = lines[i+10].strip().replace(',', '.')
+            ml_2 = lines[i+11].strip().replace(',', '.')
+            k_time = lines[i+12].strip()
+
+            line_re = re.compile(r'^[+-]?\d+([.,]\d+)?$')
+            if is_valid_basketball_team(t1) and is_valid_basketball_team(t2):
+                if line_re.match(sp1_l) and odd_regex.match(sp1_o) and line_re.match(sp2_l) and odd_regex.match(sp2_o):
+                    if odd_regex.match(ml_1) and odd_regex.match(ml_2) and time_regex.match(k_time):
+                        pair_key = f"{t1.lower()}_{t2.lower()}"
+                        if pair_key not in seen:
+                            tot_val = re.sub(r'^[PMpm]\s*', '', ov_l).strip().replace(',', '.')
+                            try:
+                                if float(tot_val) < 100.0:
+                                    i += 1
+                                    continue
+                            except Exception:
+                                pass
+                            seen.add(pair_key)
+                            mkts = {
+                                "Moneyline": {"1": format_odd_str(ml_1), "2": format_odd_str(ml_2)},
+                                "Money Line": {"1": format_odd_str(ml_1), "2": format_odd_str(ml_2)},
+                                "Match Winner": {"1": format_odd_str(ml_1), "2": format_odd_str(ml_2)},
+                                "Point Spread": {
+                                    "1": {"line": sp1_l, "odds": format_odd_str(sp1_o)},
+                                    "2": {"line": sp2_l, "odds": format_odd_str(sp2_o)}
+                                },
+                                "Spread": {
+                                    "1": {"line": sp1_l, "odds": format_odd_str(sp1_o)},
+                                    "2": {"line": sp2_l, "odds": format_odd_str(sp2_o)}
+                                },
+                                "Total Points": {
+                                    "Over": {"line": tot_val, "odds": format_odd_str(ov_o)},
+                                    "Under": {"line": tot_val, "odds": format_odd_str(un_o)}
+                                },
+                                "Total": {
+                                    "Over": {"line": tot_val, "odds": format_odd_str(ov_o)},
+                                    "Under": {"line": tot_val, "odds": format_odd_str(un_o)}
+                                }
+                            }
+                            match_id = stable_id("Basketball", clean_team_name(t1), clean_team_name(t2), curr_date)
+                            matches.append({
+                                "id": match_id,
+                                "date": curr_date,
+                                "kickoff": f"{curr_date} {k_time}:00",
+                                "competition": curr_comp,
+                                "home": t1,
+                                "away": t2,
+                                "markets": mkts
+                            })
+                            i += 13
+                            continue
+
+        # Format 1: Time followed by Team 1 and Team 2 (Bet365 France 24h layout)
         if time_regex.match(line) and i + 2 < len(lines):
             time_val = line
             cand_t1 = lines[i+1].strip()
             cand_t2 = lines[i+2].strip()
 
-            if (len(cand_t1) >= 2 and len(cand_t2) >= 2 and
-                not cand_t1.isdigit() and not cand_t2.isdigit() and
-                not any(bad in cand_t1.lower() for bad in ['total', 'spread', 'money line', 'rechercher', 'paris', 'foire', 'support'])):
-
+            if is_valid_basketball_team(cand_t1) and is_valid_basketball_team(cand_t2):
                 pair_key = f"{cand_t1.lower()}_{cand_t2.lower()}"
                 if pair_key not in seen:
                     seen.add(pair_key)
-                    ml1, ml2 = None, None
-                    spread1, spread2 = None, None
-                    tot_o, tot_u = None, None
-
-                    tokens = lines[i+3:i+25]
-                    dec_odds = []
-                    for idx_t, tok in enumerate(tokens):
-                        if time_regex.match(tok):
+                    idx = i + 3
+                    tokens = []
+                    while idx < len(lines) and not time_regex.match(lines[idx]):
+                        tok = lines[idx].strip()
+                        if any(k in tok.lower() for k in ['wnba', 'nba', 'euroleague', 'retards']):
                             break
-                        if (tok.startswith('+') or tok.startswith('-')) and idx_t + 1 < len(tokens):
-                            nxt = tokens[idx_t+1].replace(',', '.')
-                            if odd_regex.match(nxt):
-                                if not spread1:
-                                    spread1 = f"{tok} ({nxt})"
-                                elif not spread2:
-                                    spread2 = f"{tok} ({nxt})"
-                        if (tok.startswith('O ') or tok.startswith('U ') or tok.startswith('Б ') or tok.startswith('М ')) and idx_t + 1 < len(tokens):
-                            nxt = tokens[idx_t+1].replace(',', '.')
-                            if odd_regex.match(nxt):
-                                if not tot_o:
-                                    tot_o = f"{tok} ({nxt})"
-                                elif not tot_u:
-                                    tot_u = f"{tok} ({nxt})"
-                        clean_tok = tok.replace(',', '.')
-                        if odd_regex.match(clean_tok):
-                            f_val = float(clean_tok)
-                            if 1.01 <= f_val <= 50.0:
-                                dec_odds.append(clean_tok)
+                        tokens.append(tok)
+                        idx += 1
+                        if len(tokens) >= 16:
+                            break
 
-                    if len(dec_odds) >= 2:
-                        ml1, ml2 = dec_odds[-2], dec_odds[-1]
+                    parsed = _parse_table_tokens(tokens)
+                    sp1_l, sp1_o, sp2_l, sp2_o = parsed['spread']
+                    tot_val, tot_o, tot_u = parsed['total']
+                    ml1, ml2, _ = parsed['ml']
 
                     mkts: Dict[str, Any] = {}
                     if ml1 and ml2:
-                        mkts["Moneyline"] = {"1": ml1, "2": ml2}
-                        mkts["Money Line"] = {"1": ml1, "2": ml2}
-                        mkts["Match Winner"] = {"1": ml1, "2": ml2}
-                    if spread1 and spread2:
-                        mkts["Point Spread"] = {"1": spread1, "2": spread2}
-                        mkts["Spread"] = {"1": spread1, "2": spread2}
-                    if tot_o and tot_u:
-                        mkts["Total Points"] = {"Over": tot_o, "Under": tot_u}
-                        mkts["Total"] = {"Over": tot_o, "Under": tot_u}
+                        mkts["Moneyline"] = {"1": format_odd_str(ml1), "2": format_odd_str(ml2)}
+                        mkts["Money Line"] = {"1": format_odd_str(ml1), "2": format_odd_str(ml2)}
+                        mkts["Match Winner"] = {"1": format_odd_str(ml1), "2": format_odd_str(ml2)}
+                    if sp1_l and sp1_o and sp2_l and sp2_o:
+                        mkts["Point Spread"] = {
+                            "1": {"line": sp1_l, "odds": format_odd_str(sp1_o)},
+                            "2": {"line": sp2_l, "odds": format_odd_str(sp2_o)}
+                        }
+                        mkts["Spread"] = {
+                            "1": {"line": sp1_l, "odds": format_odd_str(sp1_o)},
+                            "2": {"line": sp2_l, "odds": format_odd_str(sp2_o)}
+                        }
+                    if tot_val and tot_o and tot_u:
+                        mkts["Total Points"] = {
+                            "Over": {"line": tot_val, "odds": format_odd_str(tot_o)},
+                            "Under": {"line": tot_val, "odds": format_odd_str(tot_u)}
+                        }
+                        mkts["Total"] = {
+                            "Over": {"line": tot_val, "odds": format_odd_str(tot_o)},
+                            "Under": {"line": tot_val, "odds": format_odd_str(tot_u)}
+                        }
 
-                    match_id = stable_id("Basketball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
-                        "competition": curr_comp,
-                        "home": cand_t1,
-                        "away": cand_t2,
-                        "markets": mkts
-                    })
-                    i += 3
+                    if mkts:
+                        match_id = stable_id("Basketball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
+                        matches.append({
+                            "id": match_id,
+                            "date": curr_date,
+                            "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                            "competition": curr_comp,
+                            "home": cand_t1,
+                            "away": cand_t2,
+                            "markets": mkts
+                        })
+                    i = idx
                     continue
 
-        # Format 2: Team 1 and Team 2 preceding Time
-        if time_regex.match(line) and i >= 2:
-            time_val = line
-            t1 = lines[i-2].strip()
-            t2 = lines[i-1].strip()
-
-            comp = curr_comp
-            if i >= 3:
-                cand = lines[i-3].strip()
-                if any(k in cand for k in ['NBA', 'Euroleague', 'Eurocup', 'NCAA', 'Liga', 'Pro A', 'BBL', 'Serie A', 'Basketball', 'WNBA']):
-                    comp = cand
-                    curr_comp = comp
-
-            ml1, ml2 = None, None
-            end_idx = i + 1
-
-            for j in range(i + 1, min(len(lines) - 1, i + 20)):
-                if date_regex.match(lines[j]) or time_regex.match(lines[j]):
-                    break
-                v = lines[j+1].strip().replace(',', '.')
-                lj = lines[j].strip().lower()
-                if lj in ['1', 'money line', 'vainqueur'] and odd_regex.match(v) and ml1 is None:
-                    ml1 = v
-                elif lj in ['2'] and odd_regex.match(v) and ml1 is not None and ml2 is None:
-                    ml2 = v
-                    end_idx = j + 2
-
-            if not ml1 or not ml2:
-                cand_odds = []
-                for j in range(i + 1, min(len(lines), i + 8)):
-                    v = lines[j].strip().replace(',', '.')
-                    if odd_regex.match(v) and 1.05 < float(v) < 30.0:
-                        cand_odds.append(v)
-                if len(cand_odds) >= 2:
-                    ml1 = cand_odds[0]
-                    ml2 = cand_odds[1]
-
-            if ml1 and ml2 and len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit():
-                pair_key = f"{t1.lower()}_{t2.lower()}"
-                if pair_key not in seen:
-                    seen.add(pair_key)
-                    match_id = stable_id("Basketball", clean_team_name(t1), clean_team_name(t2), curr_date)
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
-                        "competition": comp,
-                        "home": t1,
-                        "away": t2,
-                        "markets": {
-                            "Moneyline": {"1": ml1, "2": ml2},
-                            "Money Line": {"1": ml1, "2": ml2}
-                        }
-                    })
-                    i = end_idx - 1
         i += 1
     return matches
 
 
 def scrape_basketball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes Basketball matches (Sport B18) via CDP with multi-step virtual scrolling, competition discovery, and full market enrichment."""
+    """Scrapes Basketball matches via CDP with verified navigation."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Basketball] Discovering Basketball matches via native navigation...")
-    if not session.navigate_to_sport("Basketball"):
-        session.navigate_hash("#/AS/B18/")
-    time.sleep(2.5)
+    print("  [CDP Basketball] Navigating to Basketball...")
 
-    # Click 'Tout voir' or 'Matchs' if present to expose full basketball schedule
-    try:
-        session.page.evaluate('''() => {
-            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
-            const tv = btns.find(e => {
-                const t = (e.innerText || '').trim().toLowerCase();
-                return t === 'tout voir' || t === 'tous les matches' || t === 'matchs' || t === 'matches';
-            });
-            if (tv) { tv.click(); return true; }
-            return false;
-        }''')
-        time.sleep(1.5)
-    except Exception:
-        pass
+    # 1. Navigate to Basketball
+    nav_ok = session.navigate_to_sport("Basketball")
+    time.sleep(2.0)
+    session.dismiss_error_dialog()
 
-    # 1. Harvest matches from the Basketball main page with virtual scrolling (6 scroll steps)
+    # Guard: Must actually reach Basketball page! Never parse home page!
+    if not session.is_on_sport("Basketball") and not nav_ok:
+        print("  - [Basketball] Could not reach Basketball page. Skipping.")
+        return []
+
+    # 2. Smoothly scroll
+    session.smooth_scroll(steps=4, step_px=600, delay=0.7)
+
     dom_lines = session.get_dom_lines()
-    if dom_lines:
-        for m in parse_basketball_dom(dom_lines):
+    if dom_lines and session.is_on_sport("Basketball"):
+        for m in parse_basketball_dom(dom_lines, default_comp="EuroLeague"):
             resolved = resolve_basketball_match(m)
-            enrich_basketball_match(resolved)
-            if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+            if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
+                enrich_basketball_match(resolved)
                 matches_out.append(resolved)
 
-    for scroll_step in range(6):
-        try:
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.8)
-            for m in parse_basketball_dom(session.get_dom_lines()):
-                resolved = resolve_basketball_match(m)
-                enrich_basketball_match(resolved)
-                if not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    matches_out.append(resolved)
-        except Exception:
-            pass
-
-    # 2. Directly harvest major Basketball competition coupons
-    bb_coupons = [
-        ("NBA", "#/AC/B18/C20604387/D48/E1453/F10/", "NBA"),
-        ("Basketball 24h", "#/AC/B18/C1/D1002/G1453/Q1/F%5E24/", "Basketball"),
-        ("EuroLeague", "#/AC/B18/C1/D1002/G1453/J17/Q1/", "EuroLeague"),
-        ("Spain Liga ACB", "#/AC/B18/C1/D1002/G1453/J8/Q1/", "Spain Liga ACB"),
-        ("France Pro A", "#/AC/B18/C1/D1002/G1453/J15/Q1/", "France Pro A"),
-        ("Germany BBL", "#/AC/B18/C1/D1002/G1453/J7/Q1/", "Germany BBL"),
-        ("Italy Serie A Basket", "#/AC/B18/C1/D1002/G1453/J10/Q1/", "Italy Serie A"),
-        ("Top Competitions", "#/AC/B18/C1/D1002/G1453/J99/Q1/", "Basketball")
-    ]
-    for c_name, c_hash, c_comp in bb_coupons:
-        try:
-            session.navigate_hash(c_hash)
-            time.sleep(1.2)
-            c_lines = session.get_dom_lines()
-            for m in parse_basketball_dom(c_lines, default_comp=c_comp):
-                resolved = resolve_basketball_match(m)
-                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    enrich_basketball_match(resolved)
-                    matches_out.append(resolved)
-        except Exception as e:
-            print(f"  [Notice] Basketball coupon {c_name} extraction note: {e}")
-
-    # 3. For matches lacking Spread/Total, attempt deep match detail scraping
-    detail_count = 0
-    for m in matches_out:
-        if detail_count >= 3:
-            break
-        if "Point Spread" not in m.get("markets", {}) and m.get("home"):
-            try:
-                scrape_match_detail_markets(session, m, "Basketball")
-                detail_count += 1
-            except Exception:
-                pass
-
     if matches_out:
-        print(f"  + [Basketball DOM] {len(matches_out)} live matches captured directly from Bet365")
+        print(f"  + [Basketball DOM] {len(matches_out)} live/upcoming matches captured directly from Bet365")
         return matches_out
 
     return []
+
+def is_valid_handball_team(name: str) -> bool:
+    if not name or len(name) < 3 or name.isdigit():
+        return False
+    if '@' in name:
+        return False
+    if re.match(r'^[+-]?\d+([.,]\d+)?$', name.strip()):
+        return False
+    if re.match(r'^[PMpm]\s*\d', name.strip()):
+        return False
+    if re.match(r'^(BOS|MIN|LA|CGY|MIL|CHI|BUF|MTL|PIT|WAS|TB|OTT|TOR|CAR|PHI|UTA|CLB|SEA|EDM|NJ|NY|DAL|NSH|STL|COL|SJ|VAN|KC|SF|GB|BAL|MIA|DET|HOU|TB|NO|IND|JAX|TEN|CLE|CIN|DEN|LV|ARI|ATL)\s+', name):
+        return False
+    nl = name.lower()
+    bad_tokens = [
+        'total', 'spread', 'money line', 'handicap', 'buts', 'points',
+        'rechercher', 'paris', 'foire', 'support', 'retards de transmission',
+        'conditions générales', 'politique de', 'cookies', 'dépôts', 'retraits',
+        'contactez', 'faq', 'responsable', 'règles', 'bonus', 'récompenses',
+        'partenaires', 'scores', 'résultats', 'promotions', 'audio', 'afficher',
+        'uefa', 'nations league', 'plus', 'moins', 'over', 'under', 'football',
+        'statistiques', 'jeu', 'set', 'match',
+        # Basketball clubs to prevent cross-sport bleed
+        'virtus', 'partizan', 'valence', 'valencia', 'hapoel', 'maccabi',
+        'milano', 'bayern munich', 'panathinaikos', 'fenerbahce',
+        'crvena zvezda', 'red star', 'bc dubai', 'zalgiris', 'asvel',
+        'olympiacos', 'monaco', 'barcelona', 'baskonia', 'efes', 'alba berlin',
+        'paris basketball',
+        # Soccer clubs to prevent cross-sport bleed
+        'shamrock', 'rovers', 'drogheda', 'flamengo', 'santos', 'corinthians',
+        'palmeiras', 'liverpool', 'arsenal', 'chelsea', 'manchester',
+    ] + FOREIGN_SPORT_TOKENS
+    return not any(b in nl for b in bad_tokens)
 
 
 def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List[Dict[str, Any]]:
@@ -4556,7 +4698,79 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
                 i += 1
                 continue
 
-        # Format 1: Time followed by Team 1 and Team 2
+        # Format 3: Table format on Bet365 (Team 1, Team 2, Hcap1_L, Hcap1_O, Hcap2_L, Hcap2_O, Tot_O_L, Tot_O_O, Tot_U_L, Tot_U_O, ML_1, ML_2, Time)
+        if i + 12 < len(lines):
+            t1 = lines[i].strip()
+            t2 = lines[i+1].strip()
+            sp1_l = lines[i+2].strip()
+            sp1_o = lines[i+3].strip().replace(',', '.')
+            sp2_l = lines[i+4].strip()
+            sp2_o = lines[i+5].strip().replace(',', '.')
+            ov_l = lines[i+6].strip()
+            ov_o = lines[i+7].strip().replace(',', '.')
+            un_l = lines[i+8].strip()
+            un_o = lines[i+9].strip().replace(',', '.')
+            ml_1 = lines[i+10].strip().replace(',', '.')
+            ml_2 = lines[i+11].strip().replace(',', '.')
+            k_time = lines[i+12].strip()
+
+            line_re = re.compile(r'^[+-]?\d+([.,]\d+)?$')
+            if (re.search(r'[A-Za-z]', t1) and re.search(r'[A-Za-z]', t2) and
+                not odd_regex.match(t1) and not odd_regex.match(t2) and
+                is_valid_handball_team(t1) and is_valid_handball_team(t2) and
+                not any(b in t1.lower() for b in ['total', 'spread', 'money line', 'handicap', 'buts', 'points'])):
+                if line_re.match(sp1_l) and odd_regex.match(sp1_o) and line_re.match(sp2_l) and odd_regex.match(sp2_o):
+                    if odd_regex.match(ml_1) and odd_regex.match(ml_2) and time_regex.match(k_time):
+                        tot_val = re.sub(r'^[PMpm]\s*', '', ov_l).strip()
+                        # Strict mathematical check: Handball goals total is NEVER above 90.0 (Basketball is >= 100)
+                        try:
+                            if float(tot_val.replace(',', '.')) > 90.0:
+                                i += 1
+                                continue
+                        except Exception:
+                            pass
+
+                        pair_key = f"{t1.lower()}_{t2.lower()}"
+                        if pair_key not in seen:
+                            seen.add(pair_key)
+                            mkts = {
+                                "Full Time Result": {"1": format_odd_str(ml_1), "2": format_odd_str(ml_2)},
+                                "Match Result": {"1": format_odd_str(ml_1), "2": format_odd_str(ml_2)},
+                                "Handicap": {
+                                    "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                                    "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                                },
+                                "Handicap / Spread": {
+                                    "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                                    "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                                },
+                                "Spread": {
+                                    "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                                    "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                                },
+                                "Total Goals": {
+                                    "Over": f"O {tot_val} ({format_odd_str(ov_o)})",
+                                    "Under": f"U {tot_val} ({format_odd_str(un_o)})"
+                                },
+                                "Total": {
+                                    "Over": f"O {tot_val} ({format_odd_str(ov_o)})",
+                                    "Under": f"U {tot_val} ({format_odd_str(un_o)})"
+                                }
+                            }
+                            match_id = stable_id("Handball", clean_team_name(t1), clean_team_name(t2), curr_date)
+                            matches.append({
+                                "id": match_id,
+                                "date": curr_date,
+                                "kickoff": f"{curr_date} {k_time}:00",
+                                "competition": curr_comp,
+                                "home": t1,
+                                "away": t2,
+                                "markets": mkts
+                            })
+                            i += 13
+                            continue
+
+        # Format 1: Time followed by Team 1 and Team 2 (Bet365 France 24h layout)
         if time_regex.match(line) and i + 2 < len(lines):
             time_val = line
             cand_t1 = lines[i+1].strip()
@@ -4569,220 +4783,123 @@ def parse_handball_dom(lines: List[str], default_comp: str = "Handball") -> List
             ]
             if (len(cand_t1) >= 2 and len(cand_t2) >= 2 and
                 not cand_t1.isdigit() and not cand_t2.isdigit() and
+                is_valid_handball_team(cand_t1) and is_valid_handball_team(cand_t2) and
                 not any(cand_t1.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
                 not any(cand_t2.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
                 not any(bad in cand_t1.lower() or bad in cand_t2.lower() for bad in bad_words)):
 
                 pair_key = f"{cand_t1.lower()}_{cand_t2.lower()}"
                 if pair_key not in seen:
-                    seen.add(pair_key)
-                    spread1, spread2 = None, None
-                    tot_o, tot_u = None, None
-                    od1, odX, od2 = None, None, None
-
-                    tokens = lines[i+3:i+25]
-                    dec_odds = []
-                    for idx_t, tok in enumerate(tokens):
-                        if time_regex.match(tok):
+                    idx = i + 3
+                    tokens = []
+                    while idx < len(lines) and not time_regex.match(lines[idx]):
+                        tok = lines[idx].strip()
+                        if any(k in tok.lower() for k in ['champions', 'starligue', 'bundesliga', 'retards']):
                             break
-                        if (tok.startswith('+') or tok.startswith('-')) and idx_t + 1 < len(tokens):
-                            nxt = tokens[idx_t+1].replace(',', '.')
-                            if odd_regex.match(nxt):
-                                if not spread1:
-                                    spread1 = f"{tok} ({nxt})"
-                                elif not spread2:
-                                    spread2 = f"{tok} ({nxt})"
-                        if (tok.startswith('O ') or tok.startswith('U ') or tok.startswith('Б ') or tok.startswith('М ')) and idx_t + 1 < len(tokens):
-                            nxt = tokens[idx_t+1].replace(',', '.')
-                            if odd_regex.match(nxt):
-                                if not tot_o:
-                                    tot_o = f"{tok} ({nxt})"
-                                elif not tot_u:
-                                    tot_u = f"{tok} ({nxt})"
-                        clean_tok = tok.replace(',', '.')
-                        if odd_regex.match(clean_tok):
-                            f_val = float(clean_tok)
-                            if 1.05 <= f_val <= 30.0:
-                                dec_odds.append(clean_tok)
+                        tokens.append(tok)
+                        idx += 1
+                        if len(tokens) >= 16:
+                            break
 
-                    if len(dec_odds) >= 3:
-                        od1, odX, od2 = dec_odds[0], dec_odds[1], dec_odds[2]
-                    elif len(dec_odds) == 2:
-                        od1, od2 = dec_odds[0], dec_odds[1]
+                    parsed = _parse_table_tokens(tokens)
+                    sp1_l, sp1_o, sp2_l, sp2_o = parsed['spread']
+                    tot_val, tot_o, tot_u = parsed['total']
+                    ml1, ml2, mlX = parsed['ml']
 
+                    # Mathematical check
+                    if tot_val:
+                        try:
+                            if float(tot_val.replace(',', '.')) > 90.0:
+                                i = idx
+                                continue
+                        except Exception:
+                            pass
+
+                    seen.add(pair_key)
                     mkts: Dict[str, Any] = {}
-                    if od1 and od2:
-                        res = {"1": od1, "2": od2}
-                        if odX: res["X"] = odX
+                    if ml1 and ml2:
+                        res = {"1": format_odd_str(ml1), "2": format_odd_str(ml2)}
+                        if mlX:
+                            res["X"] = format_odd_str(mlX)
                         mkts["Full Time Result"] = res
                         mkts["Match Result"] = res
-                    if spread1 and spread2:
-                        mkts["Handicap"] = {"1": spread1, "2": spread2}
-                    if tot_o and tot_u:
-                        mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
+                    if sp1_l and sp1_o and sp2_l and sp2_o:
+                        mkts["Handicap"] = {
+                            "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                            "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                        }
+                        mkts["Handicap / Spread"] = {
+                            "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                            "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                        }
+                        mkts["Spread"] = {
+                            "1": f"{sp1_l} ({format_odd_str(sp1_o)})",
+                            "2": f"{sp2_l} ({format_odd_str(sp2_o)})"
+                        }
+                    if tot_val and tot_o and tot_u:
+                        mkts["Total Goals"] = {
+                            "Over": f"O {tot_val} ({format_odd_str(tot_o)})",
+                            "Under": f"U {tot_val} ({format_odd_str(tot_u)})"
+                        }
+                        mkts["Total"] = {
+                            "Over": f"O {tot_val} ({format_odd_str(tot_o)})",
+                            "Under": f"U {tot_val} ({format_odd_str(tot_u)})"
+                        }
 
-                    match_id = stable_id("Handball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
-                        "competition": curr_comp,
-                        "home": cand_t1,
-                        "away": cand_t2,
-                        "markets": mkts
-                    })
-                    i += 3
+                    if mkts:
+                        match_id = stable_id("Handball", clean_team_name(cand_t1), clean_team_name(cand_t2), curr_date)
+                        matches.append({
+                            "id": match_id,
+                            "date": curr_date,
+                            "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
+                            "competition": curr_comp,
+                            "home": cand_t1,
+                            "away": cand_t2,
+                            "markets": mkts
+                        })
+                    i = idx
                     continue
 
-        # Format 2: Team 1 and Team 2 preceding Time
-        if time_regex.match(line) and i >= 2:
-            time_val = line
-            t1 = lines[i-2].strip()
-            t2 = lines[i-1].strip()
-
-            bad_words = [
-                'handicap', 'total', 'to win', 'sports', 'casino', 'matches', 'competitions',
-                'rechercher', 'paris', 'foire', 'support', 'spread', 'money line', 'offers',
-                'featured', 'outrights', 'top leagues', 'tout voir', 'next 24 hours'
-            ]
-            if (len(t1) > 2 and len(t2) > 2 and not t1.isdigit() and not t2.isdigit() and
-                not any(t1.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
-                not any(t2.startswith(p) for p in ['+', '-', 'O ', 'U ']) and
-                not any(bad in t1.lower() or bad in t2.lower() for bad in bad_words)):
-
-                pair_key = f"{t1.lower()}_{t2.lower()}"
-                if pair_key not in seen:
-                    seen.add(pair_key)
-                    od1, odX, od2 = None, None, None
-                    spread_h, spread_a = None, None
-                    tot_o, tot_u = None, None
-
-                    for j in range(i + 1, min(i + 22, len(lines) - 1)):
-                        lj = lines[j].strip().lower()
-                        if time_regex.match(lines[j]) or date_regex.match(lines[j]):
-                            break
-                        if lj in ['to win', 'vainqueur', 'gagne'] and j + 2 < len(lines):
-                            v1 = lines[j+1].strip().replace(',', '.')
-                            v2 = lines[j+2].strip().replace(',', '.')
-                            if odd_regex.match(v1) and odd_regex.match(v2):
-                                od1, od2 = v1, v2
-                        elif lj in ['handicap', 'écart', 'фора'] and j + 4 < len(lines):
-                            l1 = lines[j+1].strip()
-                            o1 = lines[j+2].strip().replace(',', '.')
-                            l2 = lines[j+3].strip()
-                            o2 = lines[j+4].strip().replace(',', '.')
-                            if odd_regex.match(o1) and odd_regex.match(o2):
-                                spread_h = f"{l1} ({o1})"
-                                spread_a = f"{l2} ({o2})"
-                        elif lj in ['total', 'тотал'] and j + 4 < len(lines):
-                            l1 = lines[j+1].strip()
-                            o1 = lines[j+2].strip().replace(',', '.')
-                            l2 = lines[j+3].strip()
-                            o2 = lines[j+4].strip().replace(',', '.')
-                            if odd_regex.match(o1) and odd_regex.match(o2):
-                                tot_o = f"{l1} ({o1})"
-                                tot_u = f"{l2} ({o2})"
-
-                    match_id = stable_id("Handball", clean_team_name(t1), clean_team_name(t2), curr_date)
-                    mkts = {}
-                    if od1 and od2:
-                        res = {"1": od1, "2": od2}
-                        if odX: res["X"] = odX
-                        mkts["Full Time Result"] = res
-                        mkts["Match Result"] = res
-                    if spread_h and spread_a:
-                        mkts["Handicap"] = {"1": spread_h, "2": spread_a}
-                    if tot_o and tot_u:
-                        mkts["Total Goals"] = {"Over": tot_o, "Under": tot_u}
-
-                    matches.append({
-                        "id": match_id,
-                        "date": curr_date,
-                        "kickoff": f"{curr_date} {time_val}:00" if len(time_val) == 5 else f"{curr_date} {time_val}",
-                        "competition": curr_comp,
-                        "home": t1,
-                        "away": t2,
-                        "markets": mkts
-                    })
         i += 1
     return matches
 
 
 def scrape_handball_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes Handball matches (Sport B78) via CDP with native navigation, landing scroll, and DOM parsing."""
+    """Scrapes Handball matches via CDP with verified navigation."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Handball] Discovering Handball events via native navigation...")
-    if not session.navigate_to_sport("Handball"):
-        session.navigate_hash("#/AS/B78/")
-    time.sleep(2.5)
+    print("  [CDP Handball] Navigating to Handball...")
 
-    # Click 'Tout voir' if present to expose all available upcoming matches
-    try:
-        session.page.evaluate('''() => {
-            const btns = Array.from(document.querySelectorAll('div, span, button, a'));
-            const tv = btns.find(e => (e.innerText || '').trim().toLowerCase() === 'tout voir');
-            if (tv) { tv.click(); return true; }
-            return false;
-        }''')
-        time.sleep(1.5)
-    except Exception:
-        pass
+    # 1. Navigate to Handball
+    nav_ok = session.navigate_sport("Handball")
+    time.sleep(2.0)
+    session.dismiss_error_dialog()
 
-    # 1. Parse matches from landing page directly with multi-step virtual scrolling (6 scroll steps)
+    # Guard: Must actually reach Handball page!
+    if not session.is_on_sport("Handball") and not nav_ok:
+        print("  - [Handball] Could not reach Handball page. Skipping.")
+        return []
+
+    # 2. Smoothly scroll
+    session.smooth_scroll(steps=4, step_px=600, delay=0.7)
+
     dom_lines = session.get_dom_lines()
-    if dom_lines:
-        for m in parse_handball_dom(dom_lines):
+    if dom_lines and session.is_on_sport("Handball"):
+        for m in parse_handball_dom(dom_lines, default_comp="France Starligue"):
             resolved = resolve_handball_match(m)
             if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
                 enrich_handball_match(resolved)
                 matches_out.append(resolved)
 
-    for scroll_step in range(6):
-        try:
-            session.page.evaluate("window.scrollBy(0, 1500);")
-            time.sleep(0.8)
-            for m in parse_handball_dom(session.get_dom_lines()):
-                resolved = resolve_handball_match(m)
-                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    enrich_handball_match(resolved)
-                    matches_out.append(resolved)
-        except Exception:
-            pass
-
-    # 2. Visit canonical Handball competition coupons
-    hb_coupons = [
-        ("Champions League", "#/AC/B78/C20414098/D48/E780001/F10/", "EHF Champions League"),
-        ("Handball 24h", "#/AC/B78/C1/D1002/G78/Q1/F%5E24/", "Handball"),
-        ("France Starligue", "#/AC/B78/C1/D1002/G78/J15/Q1/", "France Starligue"),
-        ("Germany Bundesliga", "#/AC/B78/C1/D1002/G78/J7/Q1/", "Germany Bundesliga"),
-        ("Spain Liga ASOBAL", "#/AC/B78/C1/D1002/G78/J8/Q1/", "Spain Liga ASOBAL"),
-        ("Top Competitions", "#/AC/B78/C1/D1002/G78/J99/Q1/", "Handball")
-    ]
-    for c_name, c_hash, c_comp in hb_coupons:
-        try:
-            session.navigate_hash(c_hash)
-            time.sleep(1.2)
-            c_lines = session.get_dom_lines()
-            for m in parse_handball_dom(c_lines, default_comp=c_comp):
-                resolved = resolve_handball_match(m)
-                if resolved and not any(ex["id"] == resolved["id"] or (ex["home"] == resolved["home"] and ex["away"] == resolved["away"]) for ex in matches_out):
-                    enrich_handball_match(resolved)
-                    matches_out.append(resolved)
-        except Exception as e:
-            print(f"  [Notice] Handball coupon {c_name} extraction note: {e}")
-
     if matches_out:
-        print(f"  + [Handball DOM] {len(matches_out)} live matches captured directly from Bet365")
+        print(f"  + [Handball DOM] {len(matches_out)} live/upcoming matches captured directly from Bet365")
         return matches_out
 
     return []
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. CYCLING (Cyclisme)
@@ -4799,7 +4916,46 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
     i = 0
     while i < len(lines):
         line = lines[i].strip()
-        if any(k in line.lower() for k in ['world championship', 'tour de france', 'giro', 'vuelta', 'flandrien', 'paris-nice', 'paris-roubaix', 'classique', 'classic', 'tour de']):
+
+        # Format 1: Bet365 France card pattern: Rider -> "Vainqueur final" -> Comp -> Odds -> "Misez..."
+        if line.lower() in ["vainqueur final", "vainqueur"]:
+            cand_rider = lines[i-1].strip() if i >= 1 else ""
+            cand_comp = lines[i+1].strip() if i + 1 < len(lines) else ""
+            if (cand_rider and cand_comp
+                and any(k in cand_comp.lower() for k in ['championship', 'championnat', 'tour', 'giro', 'vuelta', 'flandrien', 'paris', 'classique', 'classic', 'course'])
+                and not any(bad in cand_rider.lower() for bad in ["misez", "gagnez", "cyclisme", "vainqueur", "paris", "options", "championnat"] + FOREIGN_SPORT_TOKENS)):
+                odds = []
+                for j in range(i+2, min(i+6, len(lines))):
+                    val = lines[j].strip().replace(',', '.')
+                    if re.match(r'^\d+([.,]\d+)?$', val) and float(val) > 1.0:
+                        odds.append(val)
+                    elif 'misez' in lines[j].lower():
+                        break
+                best_odd = odds[-1] if odds else None
+                if best_odd:
+                    if curr_comp and odds_dict and curr_comp != cand_comp:
+                        comp_title = curr_comp
+                        matches.append({
+                            "id": stable_id(comp_title),
+                            "date": today_str,
+                            "kickoff": kickoff_str,
+                            "competition": comp_title,
+                            "home": f"{comp_title} - To Win",
+                            "away": "",
+                            "markets": {
+                                "To Win": dict(odds_dict),
+                                "To Win Outright": dict(odds_dict),
+                                "Race Winner": dict(odds_dict)
+                            }
+                        })
+                        odds_dict = {}
+                    curr_comp = cand_comp
+                    odds_dict[cand_rider] = format_odd_str(best_odd)
+                    i += 2
+                    continue
+
+        # Format 2: Tournament header
+        if any(k in line.lower() for k in ['world championship', 'championnat', 'tour de france', 'giro', 'vuelta', 'flandrien', 'paris-nice', 'paris-roubaix', 'classique', 'classic', 'tour de', 'course en ligne']):
             if len(line) < 60 and not re.match(r'^\d+\.\d+$', line):
                 if odds_dict:
                     comp_title = curr_comp
@@ -4824,10 +4980,10 @@ def parse_cycling_dom(lines: List[str]) -> List[Dict[str, Any]]:
 
         if i + 1 < len(lines):
             next_l = lines[i+1].strip().replace(',', '.')
-            if re.match(r'^\d+\.\d{2,3}$', next_l) and len(line) > 2 and not line.isdigit():
+            if re.match(r'^\d+([.,]\d+)?$', next_l) and len(line) > 2 and not line.isdigit():
                 if (line not in ['1', '2', 'X', 'To Win Outright', 'Win Only', 'Afficher plus', 'Vainqueur', 'Oui', 'Non']
                     and not re.match(r'^\d+([.,]\d+)?$', line)
-                    and not any(bad in line.lower() for bad in ['misez', 'gagnez', 'boost', 'top', 'match-ups', 'pariez', 'options'])):
+                    and not any(bad in line.lower() for bad in ['misez', 'gagnez', 'boost', 'top', 'match-ups', 'pariez', 'options', 'tendance', 'populaire', 'championnat', 'euro champs', 'course en ligne'])):
                     try:
                         f_val = float(next_l)
                         if f_val > 1.0:
@@ -4862,24 +5018,32 @@ def scrape_cycling_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes live Cycling Grand Tours, stages & outrights (Sport B38) via CDP."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Cycling] Discovering Cycling races & outrights (Sport B38)...")
-    if not session.navigate_to_sport("Cycling"):
-        session.navigate_hash("#/AS/B38/")
-    time.sleep(2.5)
-    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
-    today_str = tomorrow.strftime("%d/%m/%Y")
-    kickoff_str = tomorrow.strftime("%d/%m/%Y 12:00:00")
+    print("  [CDP Cycling] Navigating to Cycling (Sport B38)...")
+    nav_ok = session.navigate_to_sport("Cycling")
+    time.sleep(2.0)
+    session.dismiss_error_dialog()
 
-    # 1. Harvest directly from rendered DOM with virtual scrolling
-    dom_lines = session.get_dom_lines()
+    if not session.is_on_sport("Cycling") and not nav_ok:
+        print("  - [Cycling] Could not reach Cycling page. Skipping.")
+        return []
+
+    session.smooth_scroll(steps=4, step_px=600, delay=0.7)
+
+    # Wait for cycling landing page to render
+    dom_lines = []
+    for _ in range(6):
+        time.sleep(0.4)
+        dom_lines = session.get_dom_lines()
+        if len(dom_lines) > 100:
+            break
+
     for _ in range(4):
         session.page.evaluate("window.scrollBy(0, 1200);")
-        time.sleep(0.8)
+        time.sleep(0.4)
         dom_lines.extend(session.get_dom_lines())
 
     for m in parse_cycling_dom(dom_lines):
@@ -4977,185 +5141,175 @@ def parser_golf_splash(raw: str, domain: str = DEFAULT_DOMAIN) -> Dict[str, List
     return {k: v for k, v in tournaments.items() if v and "Virtual" not in k}
 
 
+def parse_golf_outright_page(lines: List[str], default_tourn: str = "Open d'Espagne") -> Dict[str, str]:
+    """Extracts golfer names and matching outright decimal odds from Bet365 tournament page."""
+    odd_re = re.compile(r'^\d+([.,]\d+)?$')
+    start_p = -1
+    for idx, l in enumerate(lines):
+        if l.strip() == "Vainqueur" and idx + 1 < len(lines):
+            for cand in (idx + 1, idx + 2):
+                if cand < len(lines) and re.search(r'[A-Za-z]{3,}\s+[A-Za-z]{3,}', lines[cand]):
+                    start_p = cand
+                    break
+            if start_p != -1:
+                break
+
+    if start_p == -1:
+        for idx, l in enumerate(lines):
+            if any(k in l.lower() for k in ["chacarra", "garcia", "aberg", "lowry", "rose", "ayora"]):
+                start_p = idx
+                break
+
+    players = []
+    if start_p != -1:
+        idx = start_p
+        while idx < len(lines):
+            line = lines[idx].strip()
+            if odd_re.match(line) or "Gagnant" in line or "Doublez" in line or "Offre" in line or len(players) > 80:
+                break
+            if len(line) >= 4 and not line.isdigit() and not any(bad in line.lower() for bad in ["vainqueur", "pari", "cotes", "boost", "misez"]):
+                players.append(line)
+            idx += 1
+
+    odds = []
+    start_o = -1
+    for idx, l in enumerate(lines):
+        if "Gagnant/Placé" in l or "Gagnant" in l:
+            if idx + 1 < len(lines) and odd_re.match(lines[idx+1].replace(',', '.')):
+                start_o = idx + 1
+                break
+
+    if start_o != -1:
+        idx = start_o
+        while idx < len(lines):
+            line = lines[idx].strip().replace(',', '.')
+            if odd_re.match(line) and float(line) > 1.0:
+                odds.append(format_odd_str(line))
+            elif odds and not odd_re.match(line):
+                break
+            idx += 1
+            if len(odds) >= len(players):
+                break
+
+    outrights = {}
+    for p, o in zip(players, odds):
+        outrights[p] = o
+
+    return outrights
+
+
 def scrape_golf_cdp(session: CDPSession) -> List[Dict[str, Any]]:
-    """Scrapes live Golf tournaments & outrights (Sport B7) via CDP."""
+    """Scrapes live Golf tournaments & outrights via CDP dynamically without hanging."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Golf] Discovering Golf tournaments (Sport B7)...")
-    if not session.navigate_to_sport("Golf"):
-        session.navigate_hash("#/AS/B7/")
+    print("  [CDP Golf] Navigating to Golf (Sport B7)...")
+
+    # 1. Navigate to Golf
+    nav_ok = session.navigate_to_sport("Golf")
     time.sleep(2.5)
-    sport_url = f"{session.domain}/#/AS/B7/"
-    raw_splash = session.intercept_sport_splash(sport_url, ["Golf"], "B7", timeout_s=8)
+    session.dismiss_error_dialog()
 
-    tournaments = parser_golf_splash(raw_splash, session.domain) if raw_splash else {}
-    matches_out: List[Dict[str, Any]] = []
+    if not session.is_on_sport("Golf") and not nav_ok:
+        print("  - [Golf] Could not reach Golf page. Skipping.")
+        return []
 
-    PRIORITY_MARKETS = [
-        "To Win Outright", "Outright Markets", "To Lift Trophy",
-        "Top Finishes", "Top Finishes (Including Ties)", "1st Round Leader",
-        "3 Balls", "3-Balls"
-    ]
+    # 2. Discover tournament or outright cards dynamically without hanging
+    page = session.page
+    try:
+        tourney_clicked = page.evaluate("""() => {
+            const els = Array.from(document.querySelectorAll('*'));
+            const m = els.find(e => {
+                if (!e.innerText) return false;
+                const t = e.innerText.trim().toLowerCase();
+                return (t === 'vainqueur final' || t.includes('open') || t.includes('tour') || t.includes('pga')) && e.children.length === 0;
+            });
+            if (m) {
+                m.scrollIntoView({ block: 'center' });
+                m.click();
+                return {clicked: true, text: m.innerText};
+            }
+            return {clicked: false};
+        }""")
+        if tourney_clicked.get("clicked"):
+            print(f"  [CDP Golf] Opened tournament: {tourney_clicked.get('text')}")
+            time.sleep(2.5)
+            session.dismiss_error_dialog()
+    except Exception as e:
+        print(f"  [CDP Golf] Note on dynamic discovery: {e}")
 
-    active_tourneys = list(tournaments.items())
+    # 3. Smoothly scroll
+    session.smooth_scroll(steps=4, step_px=600, delay=0.7)
 
-    for tourney_name, markets in active_tourneys[:8]:
-        date_str, kickoff_str = get_golf_event_schedule(tourney_name)
-        selected_markets = []
-        outrights = [m for m in markets if m["market"] in ("To Win Outright", "Outright Markets")]
+    lines = session.get_dom_lines()
+    if lines and session.is_on_sport("Golf"):
+        tourn_name = "PGA Tour"
+        for l in lines[:40]:
+            if any(k in l.lower() for k in ["open", "masters", "championship", "dp world", "pga", "tour"]):
+                if len(l) < 50:
+                    tourn_name = l.strip()
+                    break
+
+        outrights = parse_golf_outright_page(lines, tourn_name)
         if outrights:
-            selected_markets.append(outrights[0])
+            ko_date, ko_time = get_golf_event_schedule(tourn_name)
+            g_ev = {
+                "id": stable_id("Golf", tourn_name, ko_date),
+                "date": ko_date,
+                "kickoff": ko_time,
+                "competition": f"Golf - {tourn_name}",
+                "home": f"Golf - {tourn_name} - Outright Winner",
+                "away": "",
+                "markets": {
+                    "To Win Outright": dict(outrights),
+                    "Tournament Winner": dict(outrights),
+                    "To Win": dict(outrights)
+                },
+                "market_source": {"To Win Outright": "live", "Tournament Winner": "live", "To Win": "live"}
+            }
+            res_g = resolve_golf_match(g_ev)
+            if res_g:
+                enrich_golf_tournament(res_g)
+                matches_out.append(res_g)
+                print(f"  + [Golf DOM] Captured {tourn_name} with {len(outrights)} golfer odds")
 
-        for pm in PRIORITY_MARKETS:
-            if pm in ("To Win Outright", "Outright Markets"):
-                continue
-            for m in markets:
-                if m["market"] == pm and m not in selected_markets and len(selected_markets) < 2:
-                    selected_markets.append(m)
-
-        if not selected_markets and markets:
-            selected_markets.append(markets[0])
-
-        for m in selected_markets:
-            m_name = m["market"]
-            m_url = m["url"]
-            raw_c = session.intercept_coupon_data(m_url, timeout_s=4)
-            if not raw_c:
-                continue
-
-            rows = parser_page_universel(raw_c, "Golf", f"{tourney_name} - {m_name}")
-            odds_dict = {}
-            for r in rows:
-                p_name = r.get("Participant", "").strip()
-                c_dec = r.get("Cote_Decimale")
-                if not p_name or not c_dec:
-                    continue
-                if p_name.isdigit() or p_name in ["Inconnu", "Oui", "Non", "N/A"] or len(p_name) < 2:
-                    continue
-                try:
-                    f_dec = float(c_dec)
-                    if f_dec > 1.0:
-                        odds_dict[p_name] = format_odd_str(c_dec)
-                except Exception:
-                    pass
-
-            if odds_dict:
-                sorted_odds = dict(sorted(odds_dict.items(), key=lambda x: float(x[1])))
-                comp_title = f"{tourney_name} - {m_name}" if m_name != tourney_name else tourney_name
-                match_id = stable_id(comp_title)
-                ev = {
-                    "id": match_id,
-                    "date": date_str,
-                    "kickoff": kickoff_str,
-                    "competition": comp_title,
-                    "home": f"{comp_title} - To Win",
-                    "away": "",
-                    "markets": {
-                        "To Win": sorted_odds,
-                        "To Win Outright": sorted_odds,
-                        "Outright Winner": sorted_odds
-                    }
-                }
-                resolved = resolve_golf_match(ev)
-                if resolved:
-                    enrich_golf_tournament(resolved)
-                    matches_out.append(resolved)
-                    print(f"  + [Golf] Captured {len(sorted_odds)} selections for {resolved['competition']}")
-
-    if matches_out:
-        return matches_out
-
-    return []
-
-
-def parse_f1_from_dom_lines(lines: List[str]) -> Tuple[str, Dict[str, Dict[str, str]]]:
-    """Extracts Grand Prix name, Race Winner, and Podium Finish directly from B10 inner text."""
-    gp_name = "Grand Prix d'Espagne"
-    markets: Dict[str, Dict[str, str]] = {}
-    current_market = None
-    odds_dict: Dict[str, str] = {}
-
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        if "Grand Prix" in line and len(line) < 40:
-            gp_name = line
-            i += 1
-            continue
-        if any(k in line.lower() for k in ["vainqueur de la course", "race winner", "to win outright"]):
-            if current_market and odds_dict:
-                markets[current_market] = dict(odds_dict)
-                odds_dict = {}
-            current_market = "Race Winner"
-            i += 1
-            continue
-        elif any(k in line.lower() for k in ["termine sur le podium", "podium finish", "sur le podium"]):
-            if current_market and odds_dict:
-                markets[current_market] = dict(odds_dict)
-                odds_dict = {}
-            current_market = "Podium Finish"
-            i += 1
-            continue
-        elif any(k in line.lower() for k in ["championnat des pilotes", "drivers championship"]):
-            if current_market and odds_dict:
-                markets[current_market] = dict(odds_dict)
-                odds_dict = {}
-            current_market = "Drivers Championship"
-            i += 1
-            continue
-        elif any(k in line.lower() for k in ["championnat des constructeurs", "constructors championship"]):
-            if current_market and odds_dict:
-                markets[current_market] = dict(odds_dict)
-                odds_dict = {}
-            current_market = "Constructors Championship"
-            i += 1
-            continue
-
-        if current_market and i + 1 < len(lines):
-            next_line = lines[i + 1]
-            if re.match(r"^\d+\.\d{2}$", next_line):
-                driver = line.replace(" - Oui", "").replace(" - Yes", "").strip()
-                if driver not in ["Victoire seulement", "Gagnant/Placé 1/3 1-2", "Afficher plus", "Récompenses"]:
-                    odds_dict[driver] = next_line
-                    i += 2
-                    continue
-        i += 1
-
-    if current_market and odds_dict:
-        markets[current_market] = dict(odds_dict)
-
-    return gp_name, markets
+    return matches_out
 
 
 def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
     """Scrapes Formula 1 Grand Prix races & championship outrights (Sport B10) via CDP."""
     matches_out: List[Dict[str, Any]] = []
 
-    # Quick geo-block check
     if getattr(session, "geo_blocked", False) or session.is_geo_blocked():
         session.geo_blocked = True
         return []
 
-    print("  [CDP Formula 1] Discovering F1 races & outrights (Sport B10)...")
-    if not session.navigate_to_sport("F1"):
-        session.navigate_hash("#/AS/B10/")
+    print("  [CDP Formula 1] Navigating to F1 (Sport B10)...")
+    nav_ok = session.navigate_to_sport("F1")
     time.sleep(2.5)
-    tomorrow = datetime.now(timezone.utc) + timedelta(days=1)
-    today_str = tomorrow.strftime("%d/%m/%Y")
-    kickoff_str = tomorrow.strftime("%d/%m/%Y 14:00:00")
+    session.dismiss_error_dialog()
+
+    if not session.is_on_sport("F1") and not nav_ok:
+        print("  - [F1] Could not reach F1 page. Skipping.")
+        return []
+
+    session.smooth_scroll(steps=4, step_px=600, delay=0.7)
+    dom_lines = session.get_dom_lines()
+    gp_name, dom_mkts = parse_f1_from_dom_lines(dom_lines)
 
     # 1. Harvest live Grand Prix directly from active rendered DOM
     try:
-        dom_lines = session.get_dom_lines()
-        gp_name, dom_mkts = parse_f1_from_dom_lines(dom_lines)
         if dom_mkts:
-            gp_date = today_str
-            gp_kickoff = kickoff_str
+            now = get_now_paris()
+            days_ahead = (6 - now.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            next_sun = now + timedelta(days=days_ahead)
+            gp_date = next_sun.strftime("%d/%m/%Y")
+            gp_kickoff = next_sun.strftime("%d/%m/%Y 14:00:00")
             for line in dom_lines:
                 m_date = re.search(r'(\d{1,2})\s+(janv?|févr?|mars|avr?|mai|juin|juil?|août|sept?|oct?|nov?|déc?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\.?\s+(\d{1,2}:\d{2})', line, re.I)
                 if m_date:
@@ -5170,14 +5324,21 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                         'nov': '11', 'dec': '12', 'déc': '12'
                     }
                     m_num = month_map.get(m_name, '09')
-                    gp_date = f"{day}/{m_num}/2026"
+                    yr = now.year
+                    try:
+                        cand_dt = datetime.strptime(f"{day}/{m_num}/{yr}", "%d/%m/%Y")
+                        if cand_dt.date() < now.date():
+                            yr += 1
+                    except Exception:
+                        pass
+                    gp_date = f"{day}/{m_num}/{yr}"
                     gp_kickoff = f"{gp_date} {m_date.group(3)}:00"
                     break
 
             comp_title = f"Formula 1 - {gp_name}"
             match_id = stable_id(comp_title)
             dom_mkts["To Win"] = dom_mkts.get("Race Winner") or list(dom_mkts.values())[0]
-            matches_out.append({
+            f1_ev = {
                 "id": match_id,
                 "date": gp_date,
                 "kickoff": gp_kickoff,
@@ -5185,19 +5346,24 @@ def scrape_f1_cdp(session: CDPSession) -> List[Dict[str, Any]]:
                 "home": f"{comp_title} - To Win",
                 "away": "",
                 "markets": dom_mkts
-            })
-            print(f"  + [F1 DOM] Captured {gp_name} with markets: {list(dom_mkts.keys())}")
+            }
+            res_f1 = resolve_f1_match(f1_ev)
+            if res_f1:
+                matches_out.append(res_f1)
+                print(f"  + [F1 DOM] Captured {gp_name} with markets: {list(dom_mkts.keys())}")
     except Exception as e:
         print(f"  [Warning] F1 DOM extraction: {e}")
 
     # 2. Intercept splash data if available for additional F1 coupons
-    sport_url = f"{session.domain}/#/AS/B10/"
-    raw_splash = session.intercept_sport_splash(
-        sport_url,
-        ["Sports mécaniques", "Formule 1", "Formula 1", "F1", "Motor Sports"],
-        "B10",
-        timeout_s=5
-    )
+    raw_splash = None
+    if not matches_out:
+        sport_url = f"{session.domain}/#/AS/B10/"
+        raw_splash = session.intercept_sport_splash(
+            sport_url,
+            ["Sports mécaniques", "Formule 1", "Formula 1", "F1", "Motor Sports"],
+            "B10",
+            timeout_s=2
+        )
     if raw_splash:
         tournois = parser_splash(raw_splash, session.domain)
         f1_tourneys = [
@@ -5314,31 +5480,29 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
 
         context = browser.contexts[0] if browser.contexts else browser.new_context()
 
-        # Find active Bet365 page or create one
+        target_domain = get_bet365_domain()
+        dom_token = "bet365.fr" if "bet365.fr" in target_domain else "bet365.com"
+
+        # Find active page on target domain if available
         page = None
         for p_item in context.pages:
-            u = p_item.url or ""
-            if "bet365" in u:
-                page = p_item
-                break
-        if not page and context.pages:
-            page = context.pages[0]
-        # Auto-detect target domain: bet365.fr (if French IP) or bet365.com (if normal IP)
-        target_domain = get_bet365_domain()
-        for p_item in context.pages:
             u = (p_item.url or "").lower()
-            if "bet365.fr" in u:
-                target_domain = "https://www.bet365.fr"
-                break
-            elif "bet365.com" in u:
-                target_domain = "https://www.bet365.com"
+            if dom_token in u:
+                page = p_item
                 break
 
         if not page and context.pages:
             page = context.pages[0]
         elif not page:
             page = context.new_page()
-            page.goto(target_domain, wait_until="commit")
+
+        cur_u = (page.url or "").lower()
+        if dom_token not in cur_u:
+            try:
+                page.goto(target_domain, wait_until="domcontentloaded", timeout=12000)
+                time.sleep(1.5)
+            except Exception as e:
+                print(f"  [Warning] Initial navigation to {target_domain}: {e}")
 
         print(f"[*] Attached to Bet365 session ({target_domain}) via CDP port {CDP_PORT}")
         try:
@@ -5374,24 +5538,28 @@ def scrape_cdp_pipeline(target_sports: Optional[List[str]] = None) -> List[Dict[
             print("-" * 54)
 
             if not getattr(session, "geo_blocked", False):
-                session.check_and_recover_blocked()
-                time.sleep(1.2)
+                time.sleep(0.2)
 
+            matches: List[Dict[str, Any]] = []
             try:
-                matches = handler(session)
-                if matches:
-                    results.append({
-                        "sport": sport_name,
-                        "matches": matches
-                    })
-                    print(f"  [OK] {sport_name}: {len(matches)} matches recorded")
-                else:
-                    print(f"  - {sport_name}: 0 matches found")
+                for attempt in range(1):
+                    if getattr(session, "geo_blocked", False):
+                        break
+                    try:
+                        matches = handler(session)
+                        if matches:
+                            results.append({"sport": sport_name, "matches": matches})
+                            print(f"  [OK] {sport_name}: {len(matches)} matches recorded")
+                            break
+                        print(f"  - {sport_name}: 0 live matches found")
+                    except Exception as e:
+                        print(f"  [Error] {sport_name} handler exception: {e}")
             except Exception as e:
-                print(f"  [Error] {sport_name} handler exception: {e}")
+                print(f"  [Error] {sport_name} pipeline exception: {e}")
 
-            # Natural inter-sport delay (only when live scraping)
+            # Reset to home hub after each sport to ensure fresh routing for next sport
             if not getattr(session, "geo_blocked", False):
-                request_delay(base_s=3.0, jitter=0.5)
+                session.reset_to_home()
+                time.sleep(0.5)
 
     return results

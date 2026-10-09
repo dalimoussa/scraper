@@ -1,9 +1,9 @@
 {
   "cdp_port": 9222,
-  "request_delay_seconds": 3.5,
-  "delay_jitter": 0.8,
-  "default_domain": "auto",
-  "keep_unverified_matches": true,
+  "request_delay_seconds": 1.5,
+  "delay_jitter": 0.4,
+  "default_domain": "https://www.bet365.fr",
+  "keep_unverified_matches": false,
   "proxy": "",
   "sports": [
     "Soccer",

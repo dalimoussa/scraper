@@ -19,7 +19,7 @@ import time
 from datetime import datetime
 
 try:
-    from bet365_engine import scrape_all_sports, safe_merge_matches
+    from bet365_engine import scrape_all_sports
 except ImportError as exc:
     print(f"[FATAL] Cannot import bet365_engine: {exc}")
     sys.exit(1)
@@ -59,18 +59,15 @@ def run_loop(interval: int, out_path: str) -> None:
 
         try:
             data = scrape_all_sports()
-            data = safe_merge_matches(data, out_path=out_path)
             n = _count_matches(data)
 
             if n > 0:
                 _write_atomic(data, out_path)
                 sports = [s.get("sport", "?") for s in data]
-                print(f"  ✓  Saved {n} matches across {len(data)} sports → {out_path}")
+                print(f"  ✓  Saved {n} fresh matches across {len(data)} sports → {out_path} (no cache)")
                 print(f"     Sports: {', '.join(sports)}")
             else:
-                if os.path.exists(out_path):
-                    size_kb = os.path.getsize(out_path) / 1024
-                    print(f"  [Notice] Keeping previous file ({size_kb:.1f} KB) — cycle returned 0 matches.")
+                print(f"  [Notice] Cycle #{cycle} returned 0 matches.")
 
         except KeyboardInterrupt:
             raise

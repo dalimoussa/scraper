@@ -103,26 +103,38 @@ def process_sport_match(m: Dict[str, Any], sport: str) -> Optional[Dict[str, Any
     m_copy = dict(m)
     if sport == "Soccer":
         m_copy = resolve_soccer_match(m_copy)
+        if not m_copy:
+            return None
         m_copy = enrich_soccer_match(m_copy)
     elif sport == "Basketball":
         m_copy = resolve_basketball_match(m_copy)
+        if not m_copy:
+            return None
         m_copy = enrich_basketball_match(m_copy)
     elif sport == "Handball":
         m_copy = resolve_handball_match(m_copy)
-        if m_copy:
-            m_copy = enrich_handball_match(m_copy)
+        if not m_copy:
+            return None
+        m_copy = enrich_handball_match(m_copy)
     elif sport == "Tennis":
         m_copy = resolve_tennis_match(m_copy)
-        if m_copy:
-            m_copy = enrich_tennis_match(m_copy)
+        if not m_copy:
+            return None
+        m_copy = enrich_tennis_match(m_copy)
     elif sport == "Cycling":
         m_copy = resolve_cycling_match(m_copy)
+        if not m_copy:
+            return None
         m_copy = enrich_cycling_event(m_copy)
     elif sport == "Golf":
         m_copy = resolve_golf_match(m_copy)
+        if not m_copy:
+            return None
         m_copy = enrich_golf_tournament(m_copy)
     elif sport == "F1":
         m_copy = resolve_f1_match(m_copy)
+        if not m_copy:
+            return None
 
     if not m_copy:
         return None
@@ -172,20 +184,31 @@ def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[st
         valid_matches = []
         for m in sport_group.get("matches", []):
             if m.get("id") and m.get("home") and m.get("markets"):
-                if is_upcoming_pre_match(m.get("date"), m.get("kickoff"), sp_name):
+                if not m.get("extraction"):
+                    m["extraction"] = get_now_paris().isoformat()
+                if not m.get("last_update"):
+                    m["last_update"] = get_now_paris().isoformat()
+                if is_upcoming_pre_match(m.get("date"), m.get("kickoff"), sp_name) and is_fresh_match(m):
                     processed = process_sport_match(m, sp_name)
                     if processed:
                         valid_matches.append(processed)
 
-        if valid_matches:
-            cleaned_results.append({
-                "sport": sport_group.get("sport"),
-                "matches": valid_matches
-            })
-            total_valid += len(valid_matches)
+        cleaned_results.append({
+            "sport": sport_group.get("sport"),
+            "matches": valid_matches
+        })
+        total_valid += len(valid_matches)
 
-    # Order sports canonically per user specifications
+    # Order sports canonically per user specifications and ensure requested sports exist
     canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
+    active_targets = target_sports if target_sports else canonical_order
+    for sp in active_targets:
+        if not any(cg.get("sport") == sp for cg in cleaned_results):
+            cleaned_results.append({
+                "sport": sp,
+                "matches": []
+            })
+
     cleaned_results.sort(key=lambda s: canonical_order.index(s["sport"]) if s.get("sport") in canonical_order else 99)
 
     print(f"\n=======================================================")
@@ -197,155 +220,14 @@ def scrape_all_sports(target_sports: Optional[List[str]] = None) -> List[Dict[st
 
 def safe_merge_matches(data: List[Dict[str, Any]], out_path: str = "all_matches.json") -> List[Dict[str, Any]]:
     """
-    Safely merges live scraped sports data with seed_matches.json and the existing output file.
-    Ensures that verified fixtures across all 7 sports are preserved even if live scraping returns a partial set,
-    while live matches always take precedence for fresh odds.
-    Never lets a model-computed market overwrite a fresh live market.
+    Direct passthrough ensuring only freshly scraped data is returned without any disk cache or seed merging.
+    Preserves canonical sports ordering and clean schema conformity.
     """
-    existing_by_sport: Dict[str, List[Dict[str, Any]]] = {}
-
-    # 1. Load baseline seed database
-    seed_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed_matches.json")
-    if os.path.exists(seed_file):
-        try:
-            with open(seed_file, "r", encoding="utf-8") as f:
-                seed_data = json.load(f)
-            for s in seed_data:
-                if s.get("sport"):
-                    existing_by_sport.setdefault(s["sport"], []).extend(s.get("matches", []))
-        except Exception as e:
-            print(f"[Warning] Failed to read {seed_file}: {e}")
-
-    # 2. Also load existing output file if present
-    if out_path and os.path.exists(out_path) and out_path != seed_file:
-        try:
-            with open(out_path, "r", encoding="utf-8") as f:
-                out_data = json.load(f)
-            for s in out_data:
-                sp = s.get("sport")
-                if sp:
-                    for om in s.get("matches", []):
-                        if not any(ex.get("id") == om.get("id") for ex in existing_by_sport.get(sp, [])):
-                            existing_by_sport.setdefault(sp, []).append(om)
-        except Exception:
-            pass
-
-    if not existing_by_sport:
-        return data
-
-    try:
-        data_by_sport = {s.get("sport"): s.get("matches", []) for s in data if s.get("sport")}
-        merged_results = []
-        canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
-
-        # Check config flag keep_unverified
-        keep_unverified = True
-        try:
-            if os.path.exists("config.json"):
-                with open("config.json", encoding="utf-8") as _f:
-                    _cfg = json.load(_f)
-                    keep_unverified = bool(_cfg.get("keep_unverified_matches", True))
-        except Exception:
-            pass
-
-        now_paris = get_now_paris()
-
-        import re
-        from datetime import timedelta
-
-        for sp in canonical_order:
-            live_matches = data_by_sport.get(sp, [])
-            old_matches = existing_by_sport.get(sp, [])
-
-            combined = []
-            for lm in live_matches:
-                matched_om = None
-                for om in old_matches:
-                    if (om.get("id") and lm.get("id") == om.get("id")) or \
-                       (om.get("home") and om.get("away") and lm.get("home") == om.get("home") and lm.get("away") == om.get("away")) or \
-                       (not om.get("away") and not lm.get("away") and om.get("competition") and lm.get("competition") == om.get("competition") and om.get("home") == lm.get("home")):
-                        matched_om = om
-                        break
-
-                if matched_om and is_fresh_match(matched_om, now_dt=now_paris):
-                    # Inherit secondary markets and protect live provenance
-                    lm_mkts = dict(lm.get("markets", {}))
-                    om_mkts = dict(matched_om.get("markets", {}))
-                    lm_src = dict(lm.get("market_source", {}))
-                    om_src = dict(matched_om.get("market_source", {}))
-
-                    merged_mkts = dict(lm_mkts)
-                    merged_src = dict(lm_src)
-
-                    for m_name, m_val in om_mkts.items():
-                        if m_name not in merged_mkts:
-                            merged_mkts[m_name] = m_val
-                            merged_src[m_name] = om_src.get(m_name, "live")
-                        else:
-                            # Never let a computed market overwrite a fresh live one
-                            if merged_src.get(m_name) == "computed" and om_src.get(m_name, "live") == "live":
-                                merged_mkts[m_name] = m_val
-                                merged_src[m_name] = "live"
-
-                    lm["markets"] = merged_mkts
-                    lm["market_source"] = merged_src
-
-                    # Carry over kickoff time corrections
-                    if not lm.get("kickoff") or lm.get("kickoff") == "20:00:00" or lm.get("kickoff").endswith("20:00:00"):
-                        lm["kickoff"] = matched_om.get("kickoff", lm.get("kickoff"))
-                    if not lm.get("date"):
-                        lm["date"] = matched_om.get("date", lm.get("date"))
-
-                proc = process_sport_match(lm, sp)
-                if proc:
-                    combined.append(proc)
-
-            for om in old_matches:
-                om_id = om.get("id")
-                om_comp = om.get("competition")
-                om_home = om.get("home")
-                om_away = om.get("away")
-
-                updated_live = False
-                for lm in combined:
-                    if om_id and lm.get("id") == om_id:
-                        updated_live = True
-                        break
-                    if om_home and om_away and lm.get("home") == om_home and lm.get("away") == om_away:
-                        updated_live = True
-                        break
-                    if not om_away and not lm.get("away") and om_comp and lm.get("competition") == om_comp and om_home == lm.get("home"):
-                        updated_live = True
-                        break
-
-                if not updated_live:
-                    is_up = is_upcoming_pre_match(om.get("date"), om.get("kickoff"), sp)
-                    is_fr = is_fresh_match(om, now_dt=now_paris)
-                    if not keep_unverified and not (is_up and is_fr):
-                        continue
-
-                    _tpart = (om.get("kickoff") or "20:00:00").split()[-1]
-                    if not re.match(r"^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$", _tpart):
-                        _tpart = "20:00:00"
-                    elif len(_tpart.split(":")) == 2:
-                        _tpart = f"{_tpart}:00"
-
-                    om_date = om.get("date") or now_paris.strftime("%d/%m/%Y")
-                    om["kickoff"] = f"{om_date} {_tpart}"
-
-                    proc = process_sport_match(om, sp)
-                    if proc:
-                        combined.append(proc)
-
-            if combined:
-                merged_results.append({
-                    "sport": sp,
-                    "matches": combined
-                })
-        return merged_results
-    except Exception as e:
-        print(f"[Warning] Failed to merge with existing output: {e}")
-        return data
+    if not data:
+        return []
+    canonical_order = ["Soccer", "Tennis", "Basketball", "Handball", "Cycling", "Golf", "F1"]
+    data.sort(key=lambda s: canonical_order.index(s["sport"]) if s.get("sport") in canonical_order else 99)
+    return data
 
 
 def main():
@@ -354,8 +236,6 @@ def main():
     parser.add_argument("--sport", default=None, help="Target specific sport (e.g. Soccer, Tennis, Cycling, Golf, F1)")
     parser.add_argument("--sports", default=None, help="Comma-separated target sports list (e.g. Soccer,Golf,F1)")
     parser.add_argument("--port", type=int, default=CDP_PORT, help=f"Chrome CDP port (default: {CDP_PORT})")
-    parser.add_argument("--no-merge", action="store_true", default=False, help="Disable merge with seed/existing database (raw live only)")
-    parser.add_argument("--merge-seed", action="store_true", default=True, help="Merge with seed database and existing output (default: True)")
     args = parser.parse_args()
 
     target_sports = None
@@ -366,14 +246,7 @@ def main():
 
     data = scrape_all_sports(target_sports=target_sports)
 
-    # Safe merge ensures that even if live scraping returns a partial set, all 7 sports and verified markets remain complete
-    if not args.no_merge:
-        print("  [*] Safe merge active: preserving full 7-sport coverage while applying fresh live odds...")
-        data = safe_merge_matches(data, out_path=args.out)
-    else:
-        print("  [*] Raw fresh mode (--no-merge): saving only fixtures collected during this live run.")
-
-    # Final filter: ensure strictly upcoming pre-match fixtures
+    # Final filter: ensure strictly upcoming pre-match fixtures with fresh dates
     for s in data:
         s["matches"] = [
             m for m in s["matches"]
@@ -382,17 +255,13 @@ def main():
 
     total_m = sum(len(s["matches"]) for s in data) if data else 0
 
-    if total_m == 0 and os.path.exists(args.out):
-        print(f"\n[Warning] No matches collected. Preserving existing {args.out} to prevent blank overwrite (may be stale).")
-        return
-
     # Write output atomically to avoid corruption
     tmp_file = f"{args.out}.tmp"
     with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     os.replace(tmp_file, args.out)
-    print(f"\n[SUCCESS] Saved {total_m} matches across {len(data)} sports to {args.out}")
+    print(f"\n[SUCCESS] Saved {total_m} fresh matches across {len(data)} sports to {args.out} (no cache).")
 
 
 if __name__ == "__main__":
