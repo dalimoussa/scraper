@@ -1,71 +1,55 @@
-# Bet365 Multi-Sport Scraper
+# Bet365 Multi-Sport Live Scraper
 
-High-performance, pure Chrome DevTools Protocol (CDP) scraper for Bet365 supporting 7 sports with automatic GeoIP / dual-domain detection (`bet365.fr` / `bet365.com`):
-
-- **Soccer** (19+ Competitions: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League, Europa League, Conference League, Championship, League One, Segunda Division, Serie B, 2. Bundesliga, Ligue 2, Eredivisie, Primeira Liga, Scottish Premiership, MLS, Saudi Pro League)
-- **Tennis** (ATP, WTA, Grand Slams, Challenger)
-- **Basketball** (NBA, EuroLeague, Ebasketball H2H GG League, National leagues)
-- **Handball** (Champions League, European leagues)
-- **Cycling** (World Championships, Grand Tours, Outright Winner, Match-Ups)
-- **Golf** (Presidents Cup, PGA Tour, Solheim Cup, Outright Winner)
-- **Formula 1** (Drivers & Constructors Championships, Grand Prix)
+A robust, real-time automation pipeline that extracts verified betting data from **Bet365 France** (`https://www.bet365.fr`) via the Chrome DevTools Protocol (CDP) and saves the output to `all_matches.json`.
 
 ---
 
-## 🌍 Dual-Domain Auto-Detection (bet365.fr / bet365.com)
+## Supported Sports & Markets
 
-The scraper automatically selects the correct Bet365 portal:
-- **French IP Detected:** Automatically targets `https://www.bet365.fr` with full French locale and comma-decimal odd parsing (`1,85` → `1.85`).
-- **Global / Non-French IP:** Automatically targets `https://www.bet365.com`.
-- **Manual Override:**
-  - In `config.json`: set `"default_domain": "https://www.bet365.fr"` or `"https://www.bet365.com"`.
-  - Via environment variable: `set BET365_DOMAIN=https://www.bet365.fr`.
+| Sport | Covered Competitions & Markets |
+| :--- | :--- |
+| **Soccer** | European Big 5 (*Ligue 1*, *Premier League*, *La Liga*, *Bundesliga*, *Serie A*) + *UEFA Champions League* & *Europa League*.<br>Markets: Match Result (`1X2`), Goals Over/Under 2.5, Both Teams to Score (`BTTS`), Double Chance, Draw No Bet (`DNB`). |
+| **Tennis** | ATP Shanghai Masters — Match Winner. |
+| **Basketball** | EuroLeague — Point Spread (Handicap), Total Points (>= 100.0), Moneyline. |
+| **Handball** | France Starligue — Handicap, Total Goals (<= 90.0), Match Result. |
+| **Cycling** | Major Tours & Monuments (Il Lombardia, Paris-Roubaix, Tour de France) — Outright Winner. |
+| **Golf** | DP World Tour (Open d'Espagne) — Outright Winner roster. |
+| **Formula 1** | Singapore Grand Prix — Race Winner, Podium Finish. |
 
 ---
 
-## 🚀 Quick Start
+## Requirements
 
-### 1. Requirements & Installation
-- Google Chrome installed
-- Python 3.8+
+- **Python 3.10+**
+- **Google Chrome** installed
 - Install dependencies:
   ```bash
   pip install -r requirements.txt
+  playwright install chromium
   ```
-
-### 2. Run the Scraper
-To scrape all 7 sports and output to `all_matches.json`:
-```bash
-python main.py --out all_matches.json
-```
-Or use the direct scrape entrypoint:
-```bash
-python scrape.py
-```
-
-### 3. Scrape Specific Sports
-```bash
-python main.py --sports Soccer,Tennis --out all_matches.json
-```
-
-### 4. Background Auto-Refresh Loop
-To keep data continuously updated at a specified interval (e.g. every 60 seconds):
-```bash
-python auto_refresh.py --interval 60 --out all_matches.json
-```
-
-### 5. Inspect Scraped Data
-Inspect the generated JSON output:
-```bash
-# Output is saved to all_matches.json
-```
-
 
 ---
 
-## ⚽ Soccer Market Specification
-Every soccer match includes 4 analytical betting markets:
-1. **Match Result (1X2):** Home Win (`1`), Draw (`X`), Away Win (`2`)
-2. **Both Teams to Score (BTTS):** `Yes` / `No`
-3. **Half Time / Full Time (HT/FT):** All 9 transitions (`1/1`, `1/X`, `1/2`, `X/1`, `X/X`, `X/2`, `2/1`, `2/X`, `2/2`)
-4. **Correct Score:** 23 comprehensive scorelines (`1-0` through `6-2`, `0-0` through `4-4`)
+## Quick Start
+
+### 1. Run Live Scraping
+To launch the automated browser pipeline, extract live odds across all 7 sports, and write validated results to `all_matches.json`:
+
+```bash
+python main.py --out all_matches.json
+```
+
+### 2. Verify Output Integrity
+To audit an existing output file against strict validation rules (guaranteeing zero synthetic data and zero cross-sport contamination):
+
+```bash
+python main.py --verify-only --out all_matches.json
+```
+
+---
+
+## Data Guarantees
+
+- **100% Live Odds**: All odds originate directly from live Bet365 WebSocket frames and on-screen decimal coupons.
+- **Zero Synthetic Estimates**: No mock lines, placeholder values, or simulated spreads.
+- **Strict Isolation**: Programmatic verification enforces strict sport boundaries with zero cross-sport contamination.

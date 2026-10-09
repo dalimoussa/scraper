@@ -51,7 +51,7 @@ except ImportError:
         return hashlib.md5("_".join(str(a) for a in args).encode("utf-8")).hexdigest()[:8]
 
 from playwright.sync_api import sync_playwright
-from test_sports_complet_final import (
+from bet365_parser import (
     intercepter_onglet,
     parse_bet365,
     parser_markets,
