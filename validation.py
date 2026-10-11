@@ -70,6 +70,12 @@ def validate_match_common(m: Dict[str, Any], sport: str) -> Tuple[bool, str]:
         if src != "live":
             return False, f"Market '{mkt_name}' has non-live provenance: '{src}' (Violates Zero Synthetic Data)"
 
+    # Live In-play validation
+    if "is_live" in m and not isinstance(m["is_live"], bool):
+        return False, "is_live must be a boolean"
+    if "live_status" in m and not isinstance(m["live_status"], dict):
+        return False, "live_status must be a dictionary"
+
     return True, "OK"
 
 
@@ -140,18 +146,48 @@ def validate_soccer_match(m: Dict[str, Any]) -> Tuple[bool, str]:
         if not is_valid_odds_str(dnb[k]):
             return False, f"Invalid Draw No Bet odd for {k}: {dnb[k]}"
 
+    # 6. Asian Handicap (Extended)
+    ah = mkts.get("Asian Handicap")
+    if ah is not None:
+        if not isinstance(ah, dict) or not any(k in ah for k in ("Home", "Away", "1", "2")):
+            return False, "Invalid Asian Handicap structure"
+        for side in ah.values():
+            if isinstance(side, dict):
+                if not is_valid_odds_str(side.get("odds")):
+                    return False, "Invalid Asian Handicap odds"
+            elif not is_valid_odds_str(side):
+                return False, "Invalid Asian Handicap odds"
+
+    # 7. Correct Score (Extended)
+    cs = mkts.get("Correct Score")
+    if cs is not None:
+        if not isinstance(cs, dict) or len(cs) < 4:
+            return False, "Invalid Correct Score structure"
+        for sc_k, sc_odd in cs.items():
+            if not is_valid_odds_str(sc_odd):
+                return False, f"Invalid Correct Score odd for {sc_k}"
+
+    # 8. Half Time / Full Time (Extended)
+    htft = mkts.get("Half Time / Full Time")
+    if htft is not None:
+        if not isinstance(htft, dict) or len(htft) < 6:
+            return False, "Invalid Half Time / Full Time structure"
+        for tr_k, tr_odd in htft.items():
+            if not is_valid_odds_str(tr_odd):
+                return False, f"Invalid HT/FT odd for {tr_k}"
+
     return True, "OK"
 
 
 def validate_tennis_match(m: Dict[str, Any]) -> Tuple[bool, str]:
-    """Validates Tennis match adheres to ATP Shanghai Match Winner constraint."""
+    """Validates Tennis match adheres to recognized tournament and Match Winner constraint."""
     ok, why = validate_match_common(m, "Tennis")
     if not ok:
         return False, why
 
     comp = str(m.get("competition", "")).lower()
-    if "shanghai" not in comp:
-        return False, f"Tennis tournament must be ATP Shanghai, got: '{m.get('competition')}'"
+    if not any(t in comp for t in ("atp", "wta", "itf", "challenger", "grand slam", "open", "masters", "cup", "tennis", "shanghai")):
+        return False, f"Tennis tournament must be a recognized competition, got: '{m.get('competition')}'"
 
     home = str(m.get("home", "")).strip().lower()
     away = str(m.get("away", "")).strip().lower()
@@ -169,14 +205,14 @@ def validate_tennis_match(m: Dict[str, Any]) -> Tuple[bool, str]:
 
 
 def validate_basketball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
-    """Validates Basketball match adheres to EuroLeague, Point Spread, Total >= 100.0, Moneyline."""
+    """Validates Basketball match adheres to recognized top-flight league, Point Spread, Total >= 100.0, Moneyline."""
     ok, why = validate_match_common(m, "Basketball")
     if not ok:
         return False, why
 
     comp = str(m.get("competition", "")).lower()
-    if "euro" not in comp:
-        return False, f"Basketball competition must be EuroLeague, got: '{m.get('competition')}'"
+    if not any(k in comp for k in ("euro", "nba", "pro a", "acb", "basket", "league", "champions", "elite")):
+        return False, f"Basketball competition must be recognized top flight, got: '{m.get('competition')}'"
 
     home = str(m.get("home", "")).strip().lower()
     away = str(m.get("away", "")).strip().lower()
@@ -222,14 +258,14 @@ def validate_basketball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
 
 
 def validate_handball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
-    """Validates Handball match adheres to Starligue/EHF, Handicap, Total <= 90.0, Match Result."""
+    """Validates Handball match adheres to recognized top-flight league, Handicap, Total <= 90.0, Match Result."""
     ok, why = validate_match_common(m, "Handball")
     if not ok:
         return False, why
 
     comp = str(m.get("competition", "")).lower()
-    if not any(k in comp for k in ("starligue", "ehf", "liqui moly", "champions league")):
-        return False, f"Handball competition must be Starligue or EHF, got: '{m.get('competition')}'"
+    if not any(k in comp for k in ("starligue", "ehf", "liqui moly", "champions league", "bundesliga", "division", "handball", "pro")):
+        return False, f"Handball competition must be recognized top flight, got: '{m.get('competition')}'"
 
     home = str(m.get("home", "")).strip().lower()
     away = str(m.get("away", "")).strip().lower()
@@ -302,16 +338,15 @@ def validate_f1_match(m: Dict[str, Any]) -> Tuple[bool, str]:
 
     if not rw or not isinstance(rw, dict) or len(rw) < 3:
         return False, "Formula 1 must contain Race Winner market with at least 3 drivers"
-    if not pod or not isinstance(pod, dict) or len(pod) < 3:
-        return False, "Formula 1 must contain Podium market with at least 3 drivers"
 
     for d, o in list(rw.items())[:5]:
         if not is_valid_odds_str(o):
             return False, f"Invalid F1 Race Winner odd for driver '{d}': {o}"
 
-    for d, o in list(pod.items())[:5]:
-        if not is_valid_odds_str(o):
-            return False, f"Invalid F1 Podium odd for driver '{d}': {o}"
+    if pod and isinstance(pod, dict):
+        for d, o in list(pod.items())[:5]:
+            if not is_valid_odds_str(o):
+                return False, f"Invalid F1 Podium odd for driver '{d}': {o}"
 
     return True, "OK"
 
@@ -356,8 +391,13 @@ def validate_pipeline_dataset(dataset: List[Dict[str, Any]]) -> Tuple[bool, List
     for sport_group in dataset:
         sp_name = sport_group.get("sport")
         matches = sport_group.get("matches", [])
+        status = sport_group.get("status", "available")
         if not isinstance(matches, list):
             errors.append(f"Sport group '{sp_name}' matches property must be a list")
+            continue
+
+        if not matches:
+            # Valid off-season or currently inactive sport
             continue
 
         for idx, m in enumerate(matches):

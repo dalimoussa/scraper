@@ -446,6 +446,41 @@ def parser_soccertab(raw):
     return trouves
 
 
+def extraire_tournois_splash(raw):
+    """Extrait dynamiquement tous les tournois/compétitions disponibles dans une réponse splash ou tab Bet365."""
+    if not raw:
+        return []
+    blocs = parse_bet365(raw)
+    trouves = []
+    vus = set()
+    current_group = ""
+    for b in blocs:
+        t = b.get('_type', '')
+        if t in ('MG', 'MA', 'CT', 'CL') and b.get('NA'):
+            current_group = b.get('NA', '').strip()
+        nom = b.get('NA', '').strip()
+        pd = b.get('PD', '').strip()
+        if not pd:
+            continue
+        # Vérifier que le descripteur PD pointe vers un coupon, une compétition ou un marché
+        if any(token in pd for token in (
+            'D1002', 'D1', 'D48', 'D19', 'D725', 'D720', 'G83', 'G40', 'G101', 'G102',
+            'G1453', 'G780001', 'C1', 'F1', 'F2', 'F19', 'F725', 'F720', 'E2', 'E1',
+            'B18', 'B78', 'B7', 'B10', 'B38'
+        )):
+            url = pd_vers_url(pd)
+            if url not in vus:
+                vus.add(url)
+                final_name = nom
+                if current_group and (nom in ('Paris principaux', 'Vainqueur final', 'Termine sur le Podium', 'Gagnant', 'Victoire à cotes optimisées') or len(nom) < 3):
+                    final_name = f"{current_group} - {nom}"
+                elif not final_name and current_group:
+                    final_name = current_group
+                if len(final_name) > 1 and final_name not in ('Direct', 'Compétitions'):
+                    trouves.append({'nom': final_name, 'url': url, 'pd': pd, 'group': current_group})
+    return trouves
+
+
 def extraire_metadonnees_pv(parsed):
     classification_id = ""
     league_code = ""
@@ -903,7 +938,15 @@ def intercepter_onglet(context, url, api, nom_sport="Inconnu", timeout_s=TIMEOUT
                 'matchmarketscontentapi/markets',
                 'othersportsmatchbettingcontentapi/coupon',
                 'othersportsmatchmarketscontentapi/coupon',
-            ))
+                'golfcouponcontentapi',
+                'cyclingcouponcontentapi',
+                'motorsportcouponcontentapi',
+                'couponcontentapi',
+                'inplaybettingcontentapi',
+                'inplaymarketscontentapi',
+                'inplaycontentapi',
+                'inplay',
+            )) or ('contentapi' in url_reponse and 'coupon' in url_reponse)
         return api_attendu in url_reponse
 
     def handler(response):

@@ -1,0 +1,8 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.tmp
+DEBUG_BET365_trace.log
+.pytest_cache

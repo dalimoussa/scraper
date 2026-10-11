@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    container_name: bet365-dashboard
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./all_matches.json:/app/all_matches.json
+      - ./odds_history.db:/app/odds_history.db
+    command: ["python", "api_server.py", "--host", "0.0.0.0", "--port", "8080"]
+
+  daemon:
+    build: .
+    container_name: bet365-daemon
+    restart: unless-stopped
+    volumes:
+      - ./all_matches.json:/app/all_matches.json
+      - ./odds_history.db:/app/odds_history.db
+    command: ["python", "main.py", "--interval", "120", "--out", "all_matches.json"]
