@@ -110,41 +110,45 @@ def validate_soccer_match(m: Dict[str, Any]) -> Tuple[bool, str]:
         if not is_valid_odds_str(mr[k]):
             return False, f"Invalid Match Result odd for {k}: {mr[k]}"
 
-    # 2. Goals Over/Under (O/U 2.5)
+    # 2. Goals Over/Under (O/U 2.5) - validated if present
     ou = mkts.get("Goals Over/Under") or mkts.get("Total Goals")
-    if not ou or not isinstance(ou, dict):
-        return False, "Missing Goals Over/Under"
-    over_side = ou.get("Over") or {}
-    under_side = ou.get("Under") or {}
-    if not isinstance(over_side, dict) or not isinstance(under_side, dict):
-        return False, "Goals Over/Under must contain Over and Under dicts"
-    if str(over_side.get("line")) != "2.5" or str(under_side.get("line")) != "2.5":
-        return False, f"Goals Over/Under line must be 2.5, got Over={over_side.get('line')}, Under={under_side.get('line')}"
-    if not is_valid_odds_str(over_side.get("odds")) or not is_valid_odds_str(under_side.get("odds")):
-        return False, "Invalid Over/Under 2.5 odds"
+    if ou is not None:
+        if not isinstance(ou, dict):
+            return False, "Goals Over/Under must be a dict"
+        over_side = ou.get("Over") or {}
+        under_side = ou.get("Under") or {}
+        if not isinstance(over_side, dict) or not isinstance(under_side, dict):
+            return False, "Goals Over/Under must contain Over and Under dicts"
+        if str(over_side.get("line")) != "2.5" or str(under_side.get("line")) != "2.5":
+            return False, f"Goals Over/Under line must be 2.5, got Over={over_side.get('line')}, Under={under_side.get('line')}"
+        if not is_valid_odds_str(over_side.get("odds")) or not is_valid_odds_str(under_side.get("odds")):
+            return False, "Invalid Over/Under 2.5 odds"
 
-    # 3. Both Teams to Score (BTTS)
+    # 3. Both Teams to Score (BTTS) - validated if present
     btts = mkts.get("Both Teams to Score")
-    if not btts or not isinstance(btts, dict) or not all(k in btts for k in ("Yes", "No")):
-        return False, "Missing or incomplete Both Teams to Score (Yes/No)"
-    if not is_valid_odds_str(btts["Yes"]) or not is_valid_odds_str(btts["No"]):
-        return False, "Invalid BTTS odds"
+    if btts is not None:
+        if not isinstance(btts, dict) or not all(k in btts for k in ("Yes", "No")):
+            return False, "Missing or incomplete Both Teams to Score (Yes/No)"
+        if not is_valid_odds_str(btts["Yes"]) or not is_valid_odds_str(btts["No"]):
+            return False, "Invalid BTTS odds"
 
-    # 4. Double Chance
+    # 4. Double Chance - validated if present
     dc = mkts.get("Double Chance")
-    if not dc or not isinstance(dc, dict) or not all(k in dc for k in ("1X", "12", "X2")):
-        return False, "Missing or incomplete Double Chance (1X, 12, X2)"
-    for k in ("1X", "12", "X2"):
-        if not is_valid_odds_str(dc[k]):
-            return False, f"Invalid Double Chance odd for {k}: {dc[k]}"
+    if dc is not None:
+        if not isinstance(dc, dict) or not all(k in dc for k in ("1X", "12", "X2")):
+            return False, "Missing or incomplete Double Chance (1X, 12, X2)"
+        for k in ("1X", "12", "X2"):
+            if not is_valid_odds_str(dc[k]):
+                return False, f"Invalid Double Chance odd for {k}: {dc[k]}"
 
-    # 5. Draw No Bet
+    # 5. Draw No Bet - validated if present
     dnb = mkts.get("Draw No Bet")
-    if not dnb or not isinstance(dnb, dict) or not all(k in dnb for k in ("1", "2")):
-        return False, "Missing or incomplete Draw No Bet (1, 2)"
-    for k in ("1", "2"):
-        if not is_valid_odds_str(dnb[k]):
-            return False, f"Invalid Draw No Bet odd for {k}: {dnb[k]}"
+    if dnb is not None:
+        if not isinstance(dnb, dict) or not all(k in dnb for k in ("1", "2")):
+            return False, "Missing or incomplete Draw No Bet (1, 2)"
+        for k in ("1", "2"):
+            if not is_valid_odds_str(dnb[k]):
+                return False, f"Invalid Draw No Bet odd for {k}: {dnb[k]}"
 
     # 6. Asian Handicap (Extended)
     ah = mkts.get("Asian Handicap")
@@ -168,7 +172,7 @@ def validate_soccer_match(m: Dict[str, Any]) -> Tuple[bool, str]:
                 return False, f"Invalid Correct Score odd for {sc_k}"
 
     # 8. Half Time / Full Time (Extended)
-    htft = mkts.get("Half Time / Full Time")
+    htft = mkts.get("Half Time / Full Time") or mkts.get("Half Time/Full Time")
     if htft is not None:
         if not isinstance(htft, dict) or len(htft) < 6:
             return False, "Invalid Half Time / Full Time structure"
@@ -221,44 +225,51 @@ def validate_basketball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
             return False, f"Cross-sport contamination: non-basketball participant '{bad}' detected in {home} vs {away}"
 
     mkts = m.get("markets", {})
+    if not isinstance(mkts, dict) or not mkts:
+        return False, "Basketball match has no markets"
 
-    # Point Spread
+    # Point Spread (validated if present)
     sp = mkts.get("Spread") or mkts.get("Point Spread")
-    if not sp or not isinstance(sp, dict) or not all(k in sp for k in ("1", "2")):
-        return False, "Missing or incomplete Point Spread (1, 2)"
-    for side in ("1", "2"):
-        if not isinstance(sp[side], dict) or "line" not in sp[side] or not is_valid_odds_str(sp[side].get("odds")):
-            return False, f"Invalid Point Spread specification for side {side}"
+    if sp is not None:
+        if not isinstance(sp, dict):
+            return False, "Point Spread must be a dictionary"
+        for side, side_val in sp.items():
+            if not isinstance(side_val, dict) or "line" not in side_val or not is_valid_odds_str(side_val.get("odds")):
+                return False, f"Invalid Point Spread specification for side {side}"
 
-    # Total >= 100.0 (Key Anti-Contamination Gate)
+    # Total >= 100.0 (Key Anti-Contamination Gate, validated if present)
     tot = mkts.get("Total") or mkts.get("Total Points")
-    if not tot or not isinstance(tot, dict) or not all(k in tot for k in ("Over", "Under")):
-        return False, "Missing or incomplete Total market (Over, Under)"
-    over_side = tot.get("Over", {})
-    under_side = tot.get("Under", {})
-    if not isinstance(over_side, dict) or not isinstance(under_side, dict):
-        return False, "Total market must contain Over and Under dicts"
-    try:
-        t_line = float(str(over_side.get("line")).replace(',', '.'))
-        if t_line < 100.0:
-            return False, f"Total line {t_line} is < 100.0 (Cross-sport contamination rejected!)"
-    except (ValueError, TypeError):
-        return False, f"Invalid Total line value: {over_side.get('line')}"
-    if not is_valid_odds_str(over_side.get("odds")) or not is_valid_odds_str(under_side.get("odds")):
-        return False, "Invalid Total odds"
+    if tot is not None:
+        if not isinstance(tot, dict):
+            return False, "Total market must be a dictionary"
+        for side_name in ("Over", "Under"):
+            if side_name in tot:
+                side_data = tot[side_name]
+                if not isinstance(side_data, dict):
+                    return False, f"Total {side_name} must be a dict"
+                try:
+                    t_line = float(str(side_data.get("line", "")).replace(',', '.'))
+                    if t_line < 100.0:
+                        return False, f"Total line {t_line} is < 100.0 (Cross-sport contamination rejected!)"
+                except (ValueError, TypeError):
+                    return False, f"Invalid Total line value: {side_data.get('line')}"
+                if not is_valid_odds_str(side_data.get("odds")):
+                    return False, f"Invalid Total {side_name} odds"
 
-    # Moneyline
+    # Moneyline (validated if present)
     ml = mkts.get("Moneyline") or mkts.get("Money Line") or mkts.get("Match Winner")
-    if not ml or not isinstance(ml, dict) or not all(k in ml for k in ("1", "2")):
-        return False, "Missing or incomplete Basketball Moneyline (1, 2)"
-    if not is_valid_odds_str(ml["1"]) or not is_valid_odds_str(ml["2"]):
-        return False, "Invalid Basketball Moneyline odds"
+    if ml is not None:
+        if not isinstance(ml, dict):
+            return False, "Moneyline must be a dictionary"
+        for side in ("1", "2"):
+            if side in ml and not is_valid_odds_str(ml[side]):
+                return False, f"Invalid Basketball Moneyline odd for {side}"
 
     return True, "OK"
 
 
 def validate_handball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
-    """Validates Handball match adheres to recognized top-flight league, Handicap, Total <= 90.0, Match Result."""
+    """Validates Handball match adheres to recognized top-flight league and authentic live markets."""
     ok, why = validate_match_common(m, "Handball")
     if not ok:
         return False, why
@@ -274,38 +285,47 @@ def validate_handball_match(m: Dict[str, Any]) -> Tuple[bool, str]:
             return False, f"Cross-sport contamination: non-handball participant '{bad}' detected in {home} vs {away}"
 
     mkts = m.get("markets", {})
+    if not isinstance(mkts, dict) or not mkts:
+        return False, "Handball match has no markets"
 
-    # Handicap
+    # Handicap (validated if present)
     hc = mkts.get("Handicap") or mkts.get("Handicap / Spread") or mkts.get("Spread")
-    if not hc or not isinstance(hc, dict) or not all(k in hc for k in ("1", "2")):
-        return False, "Missing or incomplete Handball Handicap (1, 2)"
-    for side in ("1", "2"):
-        if not isinstance(hc[side], dict) or "line" not in hc[side] or not is_valid_odds_str(hc[side].get("odds")):
-            return False, f"Invalid Handball Handicap specification for side {side}"
+    if hc is not None:
+        if not isinstance(hc, dict):
+            return False, "Handicap must be a dictionary"
+        for side, side_val in hc.items():
+            if not isinstance(side_val, dict) or "line" not in side_val or not is_valid_odds_str(side_val.get("odds")):
+                return False, f"Invalid Handball Handicap specification for side {side}"
 
-    # Total <= 90.0 (Key Anti-Contamination Gate)
+    # Total <= 90.0 (Key Anti-Contamination Gate, validated if present)
     tot = mkts.get("Total") or mkts.get("Total Goals")
-    if not tot or not isinstance(tot, dict) or not all(k in tot for k in ("Over", "Under")):
-        return False, "Missing or incomplete Handball Total (Over, Under)"
-    over_side = tot.get("Over", {})
-    under_side = tot.get("Under", {})
-    if not isinstance(over_side, dict) or not isinstance(under_side, dict):
-        return False, "Handball Total must contain Over and Under dicts"
-    try:
-        t_line = float(str(over_side.get("line")).replace(',', '.'))
-        if t_line > 90.0:
-            return False, f"Total line {t_line} is > 90.0 (Cross-sport contamination rejected!)"
-    except (ValueError, TypeError):
-        return False, f"Invalid Handball Total line: {over_side.get('line')}"
-    if not is_valid_odds_str(over_side.get("odds")) or not is_valid_odds_str(under_side.get("odds")):
-        return False, "Invalid Handball Total odds"
+    if tot is not None:
+        if not isinstance(tot, dict):
+            return False, "Handball Total must be a dict"
+        for side_name in ("Over", "Under"):
+            if side_name in tot:
+                side_data = tot[side_name]
+                if not isinstance(side_data, dict):
+                    return False, f"Handball Total {side_name} must be a dict"
+                try:
+                    t_line = float(str(side_data.get("line", "")).replace(',', '.'))
+                    if t_line > 90.0:
+                        return False, f"Total line {t_line} is > 90.0 (Cross-sport contamination rejected!)"
+                except (ValueError, TypeError):
+                    return False, f"Invalid Handball Total line: {side_data.get('line')}"
+                if not is_valid_odds_str(side_data.get("odds")):
+                    return False, f"Invalid Handball Total {side_name} odds"
 
-    # Match Result (1, X, 2) or Money Line
+    # Match Result (1, 2 required if present; X is optional since many Bet365 Handball coupons are 2-way)
     mr = mkts.get("Match Result") or mkts.get("Full Time Result") or mkts.get("Money Line")
-    if not mr or not isinstance(mr, dict) or not ("1" in mr and "2" in mr):
-        return False, "Missing Handball Match Result (1, X, 2)"
-    if not is_valid_odds_str(mr["1"]) or not is_valid_odds_str(mr["2"]):
-        return False, "Invalid Handball Match Result odds"
+    if mr is not None:
+        if not isinstance(mr, dict):
+            return False, "Handball Match Result must be a dict"
+        for side in ("1", "2"):
+            if side in mr and not is_valid_odds_str(mr[side]):
+                return False, f"Invalid Handball Match Result odd for {side}"
+        if "X" in mr and not is_valid_odds_str(mr["X"]):
+            return False, f"Invalid Handball Match Result draw odd: {mr['X']}"
 
     return True, "OK"
 

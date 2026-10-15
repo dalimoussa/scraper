@@ -14,6 +14,8 @@ import time
 import re
 import sys
 import os
+import random
+import urllib.parse
 from collections import Counter
 from fractions import Fraction
 from playwright.sync_api import sync_playwright
@@ -137,7 +139,18 @@ def est_cyclisme(nom_sport):
 
 
 def appliquer_pv_fallback(row):
-    """PV deduction disabled per user requirement - preserves exact on-screen decimal odds."""
+    """Applies official Bet365 French regulatory Price Variance deduction to raw odds."""
+    try:
+        from bet365_pv import apply_bet365_pv
+        cote = row.get("Cote_Decimale_Brute") or row.get("Cote_Decimale")
+        if cote and isinstance(cote, (int, float)) and float(cote) > 1.0:
+            adj = apply_bet365_pv(float(cote))
+            row["Cote_Decimale_PV"] = adj
+            row["Cote_Decimale"] = adj
+            row["Cote_PV_Applique"] = True
+            return True
+    except Exception:
+        pass
     return False
 
 
@@ -472,10 +485,21 @@ def extraire_tournois_splash(raw):
             if url not in vus:
                 vus.add(url)
                 final_name = nom
-                if current_group and (nom in ('Paris principaux', 'Vainqueur final', 'Termine sur le Podium', 'Gagnant', 'Victoire à cotes optimisées') or len(nom) < 3):
-                    final_name = f"{current_group} - {nom}"
+                generic_tokens = {'paris principaux', 'principaux', 'vainqueur final', 'termine sur le podium',
+                                  'gagnant', 'victoire à cotes optimisées', 'to win outright', 'paris',
+                                  'principaux - paris principaux', 'tous les paris', 'général'}
+                if current_group and (nom.lower() in generic_tokens or len(nom) < 3):
+                    if current_group.lower() not in generic_tokens and len(current_group) > 2:
+                        final_name = current_group if nom.lower() in generic_tokens else f"{current_group} - {nom}"
+                    else:
+                        final_name = nom
                 elif not final_name and current_group:
                     final_name = current_group
+
+                # Filter out purely generic names (like 'Principaux - Paris principaux' or 'To Win Outright')
+                if final_name.lower().strip() in generic_tokens:
+                    continue
+
                 if len(final_name) > 1 and final_name not in ('Direct', 'Compétitions'):
                     trouves.append({'nom': final_name, 'url': url, 'pd': pd, 'group': current_group})
     return trouves
@@ -906,10 +930,107 @@ def installer_filtre_ressources(page):
         pass
 
 
-def intercepter_onglet(context, url, api, nom_sport="Inconnu", timeout_s=TIMEOUT_S):
+class SessionGuard:
+    """Détecte un blocage/throttling Bet365 (réponses vides consécutives).
+
+    - Après `threshold` réponses vides d'affilée : pause de `pause_s` secondes puis nouvel essai.
+    - Si la requête suivant la pause est encore vide : session marquée `blocked`,
+      plus aucune requête n'est envoyée jusqu'au prochain `reset()`.
+    """
+
+    def __init__(self, threshold=5, pause_s=45):
+        self.threshold = threshold
+        self.pause_s = pause_s
+        self.reset()
+
+    def reset(self):
+        self.consecutive_empty = 0
+        self.paused = False
+        self.blocked = False
+
+    def record(self, success):
+        if success:
+            self.consecutive_empty = 0
+            self.paused = False
+            return
+        self.consecutive_empty += 1
+        if self.consecutive_empty < self.threshold or self.blocked:
+            return
+        if not self.paused:
+            print(f"    [Guard] {self.consecutive_empty} réponses vides consécutives -> "
+                  f"pause {self.pause_s}s avant nouvel essai...")
+            time.sleep(self.pause_s)
+            self.paused = True
+            # La prochaine requête vide déclenchera le blocage ; un succès réinitialise tout.
+            self.consecutive_empty = self.threshold - 1
+        else:
+            self.blocked = True
+            print("    [Guard] Toujours aucune réponse après la pause -> session BLOQUÉE, arrêt des requêtes.")
+
+
+SESSION_GUARD = SessionGuard()
+_ONGLETS_PARTAGES = {}
+_DERNIERE_NAVIGATION_TS = {}
+
+
+def pause_anti_throttling(context):
+    """Pause aléatoire de 3 à 8 secondes entre les pages (Change D: Less burst traffic)."""
+    cid = id(context)
+    derniere = _DERNIERE_NAVIGATION_TS.get(cid)
+    maintenant = time.time()
+    if derniere:
+        ecoule = maintenant - derniere
+        cible = random.uniform(3.0, 7.0)
+        if ecoule < cible:
+            a_attendre = cible - ecoule
+            time.sleep(a_attendre)
+    _DERNIERE_NAVIGATION_TS[cid] = time.time()
+
+
+def _onglet_partage(context):
+    """Retourne un onglet unique réutilisé pour toutes les navigations (au lieu d'un onglet par URL)."""
+    try:
+        page = _ONGLETS_PARTAGES.get(id(context))
+        if page is None or page.is_closed():
+            page = context.new_page()
+            installer_filtre_ressources(page)
+            _ONGLETS_PARTAGES[id(context)] = page
+        return page
+    except Exception as e:
+        print(f"    [Onglet Partagé] Erreur accès/création onglet: {e}")
+        return None
+
+
+def fermer_onglets_partages():
+    """Ferme proprement tous les onglets partagés et réinitialise les compteurs."""
+    for page in list(_ONGLETS_PARTAGES.values()):
+        try:
+            if not page.is_closed():
+                page.close()
+        except Exception:
+            pass
+    _ONGLETS_PARTAGES.clear()
+    _DERNIERE_NAVIGATION_TS.clear()
+
+
+def _token_sport(url_ou_pd):
+    """Extrait le code sport (ex: 'B18') d'une URL Bet365 ou d'un PD."""
+    m = re.search(r'(?:^|[/#])(B\d+)(?:[/#]|$)', urllib.parse.unquote(str(url_ou_pd or '')))
+    return m.group(1) if m else None
+
+
+def intercepter_onglet(context, url, api, nom_sport="Inconnu", timeout_s=TIMEOUT_S, count_failure=True):
+    if SESSION_GUARD.blocked:
+        return None
+
+    # Pause humaine anti-burst (3 à 7 secondes) entre requêtes consécutives
+    pause_anti_throttling(context)
+
     t = time.time()
-    page = context.new_page()
-    installer_filtre_ressources(page)
+    page = _onglet_partage(context)
+    if page is None:
+        return None
+    sport_cible = _token_sport(url)
     raw = [None]
     raw_secours = []
     ok = [False]
@@ -949,10 +1070,19 @@ def intercepter_onglet(context, url, api, nom_sport="Inconnu", timeout_s=TIMEOUT
             )) or ('contentapi' in url_reponse and 'coupon' in url_reponse)
         return api_attendu in url_reponse
 
+    def reponse_autre_sport(url_reponse):
+        """Ignore les réponses tardives d'une navigation précédente (autre sport) dans l'onglet partagé."""
+        if not sport_cible or 'pd=' not in url_reponse:
+            return False
+        sport_reponse = _token_sport(urllib.parse.parse_qs(urllib.parse.urlparse(url_reponse).query).get('pd', [''])[0])
+        return bool(sport_reponse and sport_reponse != sport_cible)
+
     def handler(response):
         if response.request.resource_type not in ("fetch", "xhr"):
             return
         try:
+            if reponse_autre_sport(response.url):
+                return
             txt = response.text()
             if not txt or '|' not in txt:
                 return
@@ -968,27 +1098,47 @@ def intercepter_onglet(context, url, api, nom_sport="Inconnu", timeout_s=TIMEOUT
         except Exception:
             pass
 
+    def attendre(duree_s):
+        deadline = time.time() + duree_s
+        while time.time() < deadline:
+            if FAST_MODE and ok[0] and raw[0] and 'PA;' in raw[0] and 'OD=' in raw[0]:
+                break
+            try:
+                page.wait_for_timeout(POLL_MS)
+            except Exception:
+                break
+
     page.on("response", handler)
     try:
-        page.goto(url, wait_until="commit")
-    except Exception:
-        pass
-    deadline = time.time() + timeout_s
-    while time.time() < deadline:
-        if FAST_MODE and ok[0] and raw[0] and 'PA;' in raw[0] and 'OD=' in raw[0]:
-            break
         try:
-            page.wait_for_timeout(POLL_MS)
+            if page.url == url:
+                page.reload(wait_until="commit")
+            else:
+                page.goto(url, wait_until="commit")
         except Exception:
-            break
+            pass
+        attendre(timeout_s)
+        if not ok[0]:
+            # Un seul rafraîchissement (comportement utilisateur normal) si l'application n'a rien chargé.
+            try:
+                page.reload(wait_until="commit")
+            except Exception:
+                pass
+            attendre(max(2, timeout_s / 2))
+    finally:
+        try:
+            page.remove_listener("response", handler)
+        except Exception:
+            pass
+
+    succes_reel = ok[0]
     if not ok[0] and raw_secours and not event_token:
         avec_cotes = [x for x in raw_secours if 'PA;' in x and 'OD=' in x]
         raw[0] = max(avec_cotes or raw_secours, key=len)
         ok[0] = True
-    try:
-        page.close()
-    except Exception:
-        pass
+        succes_reel = bool(avec_cotes)
+    if count_failure or succes_reel:
+        SESSION_GUARD.record(succes_reel)
     return raw[0]
 
 

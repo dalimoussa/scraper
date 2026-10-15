@@ -24,6 +24,7 @@ Guarantees:
 - Zero cross-sport contamination
 """
 
+import json
 import math
 import os
 import re
@@ -36,12 +37,15 @@ sys.path.append(os.path.abspath("../bet365"))
 try:
     from bet365_internal import (
         CDP_PORT,
+        compute_soccer_detailed_markets,
         ensure_chrome_cdp,
         format_odd_str,
         stable_id,
     )
 except ImportError:
     CDP_PORT = 9222
+    def compute_soccer_detailed_markets(mr):
+        return {}
     def ensure_chrome_cdp(port=9222):
         pass
     def format_odd_str(val):
@@ -53,7 +57,9 @@ except ImportError:
 from datetime import datetime, timezone
 from playwright.sync_api import sync_playwright
 from bet365_parser import (
+    SESSION_GUARD,
     extraire_tournois_splash,
+    fermer_onglets_partages,
     intercepter_onglet,
     parse_bet365,
     parser_markets,
@@ -61,6 +67,7 @@ from bet365_parser import (
     pd_vers_url,
 )
 from margin_validator import compute_match_margins
+from bet365_pv import apply_bet365_pv, get_pv_adjustment
 
 
 def get_scraped_at_timestamp() -> str:
@@ -166,18 +173,17 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
         live_odds = [p.get("OD") for p in plist if p.get("OD")]
         if len(live_odds) >= 2:
             now_ts = get_scraped_at_timestamp()
-            o1_dec = safe_odd(fraction_to_decimal(live_odds[0]))
-            o2_dec = safe_odd(fraction_to_decimal(live_odds[1]))
+            o1_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[0])))
+            o2_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[1])))
 
             if sport_name == "Soccer":
-                ox_dec = safe_odd(fraction_to_decimal(live_odds[2])) if len(live_odds) >= 3 else "3.20"
+                ox_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[2]))) if len(live_odds) >= 3 else safe_odd(3.20)
                 s_markets = {
-                    "Match Result": {"1": o1_dec, "X": ox_dec, "2": o2_dec},
-                    "Goals Over/Under": {"Over": {"line": "2.5", "odds": "1.85"}, "Under": {"line": "2.5", "odds": "1.95"}},
-                    "Both Teams to Score": {"Yes": "1.90", "No": "1.90"},
-                    "Double Chance": {"1X": "1.30", "12": "1.30", "X2": "1.40"},
-                    "Draw No Bet": {"1": "1.60", "2": "2.20"},
+                    "Match Result": {"1": o1_dec, "X": ox_dec, "2": o2_dec}
                 }
+                detailed = compute_soccer_detailed_markets(s_markets["Match Result"])
+                for m_name, m_val in detailed.items():
+                    s_markets[m_name] = m_val
                 m_obj = {
                     "id": stable_id("Soccer", h_team, a_team, "Live In-Play", ev_date),
                     "date": ev_date,
@@ -186,13 +192,7 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
                     "home": h_team,
                     "away": a_team,
                     "markets": s_markets,
-                    "market_source": {
-                        "Match Result": "live",
-                        "Goals Over/Under": "live",
-                        "Both Teams to Score": "live",
-                        "Double Chance": "live",
-                        "Draw No Bet": "live",
-                    },
+                    "market_source": {k: "live" for k in s_markets},
                     "market_margins": compute_match_margins(s_markets),
                     "is_live": True,
                     "live_status": {"period": period, "score": score, "clock": clock},
@@ -222,8 +222,6 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
 
             elif sport_name == "Basketball":
                 b_markets = {
-                    "Point Spread": {"1": {"line": "-3.5", "odds": o1_dec}, "2": {"line": "+3.5", "odds": o2_dec}},
-                    "Total": {"Over": {"line": "158.5", "odds": "1.88"}, "Under": {"line": "158.5", "odds": "1.88"}},
                     "Moneyline": {"1": o1_dec, "2": o2_dec}
                 }
                 m_obj = {
@@ -234,7 +232,7 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
                     "home": h_team,
                     "away": a_team,
                     "markets": b_markets,
-                    "market_source": {"Point Spread": "live", "Total": "live", "Moneyline": "live"},
+                    "market_source": {"Moneyline": "live"},
                     "market_margins": compute_match_margins(b_markets),
                     "is_live": True,
                     "live_status": {"period": period, "score": score, "clock": clock},
@@ -245,12 +243,14 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
     return inplay_matches
 
 
-def scrape_soccer(context) -> List[Dict[str, Any]]:
+def scrape_soccer(context, deep_fetch: bool = False) -> List[Dict[str, Any]]:
     """
     Scrapes verified live Soccer matches across all 7 European club competitions:
     Big 5 (Ligue 1, Premier League, La Liga, Bundesliga, Serie A) + UCL + UEL.
     Each match is equipped with all 5 core markets:
     Match Result (1X2), Goals Over/Under 2.5, BTTS, Double Chance, and Draw No Bet.
+    In Coupon-First Mode (default), all matches are extracted directly from the
+    competition coupon with authentic live 1X2 odds, preventing rate-limiting on bet365.fr.
     """
     print("  [1/7] Scraping Soccer across 7 European Competitions (Big 5 + UCL + UEL)...")
     matches_out: List[Dict[str, Any]] = []
@@ -269,8 +269,9 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
         fixtures = parser_markets(raw_markets)
         blocs_m = parse_bet365(raw_markets)
 
-        # Extract 1X2 odds directly from the competition coupon blocks
+        # Extract 1X2 odds directly from the competition coupon blocks with French PV applied
         comp_1x2_map: Dict[str, Dict[str, float]] = {}
+        comp_1x2_raw_map: Dict[str, Dict[str, float]] = {}
         curr_m = ""
         for bl in blocs_m:
             if bl.get("_type") == "MA":
@@ -279,13 +280,17 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
                 fi = bl.get("FI")
                 od = bl.get("OD")
                 if curr_m in ["1", "X", "2"]:
-                    comp_1x2_map.setdefault(fi, {})[curr_m] = fraction_to_decimal(od)
+                    raw_dec = fraction_to_decimal(od)
+                    screen_dec = apply_bet365_pv(raw_dec)
+                    comp_1x2_map.setdefault(fi, {})[curr_m] = screen_dec
+                    comp_1x2_raw_map.setdefault(fi, {})[curr_m] = raw_dec
 
         print(f"       Discovered {len(fixtures)} fixtures, {len(comp_1x2_map)} with verified live 1X2 odds")
 
-        # Process upcoming fixtures in the gameweek (take up to 9 fixtures per competition)
+        # In Coupon-First Mode, process all verified fixtures from the competition coupon
         seen_fi = set()
-        for i, f in enumerate(fixtures[:9]):
+        fixtures_to_process = fixtures if not deep_fetch else fixtures[:9]
+        for i, f in enumerate(fixtures_to_process):
             fi = f.get("fi")
             nom = f.get("nom", "")
             m_url = f.get("url", "")
@@ -330,7 +335,7 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
             cs_dict: Dict[str, str] = {}
             htft_dict: Dict[str, str] = {}
 
-            if m_url:  # Deep-fetch all upcoming fixtures in the gameweek
+            if deep_fetch and m_url:  # Deep-fetch only when explicitly requested
                 raw_c = intercepter_onglet(context, m_url, "contentapi", "Football", timeout_s=4)
                 if raw_c:
                     rows = parser_page_universel(raw_c, "Football", nom)
@@ -404,120 +409,48 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
                                 if tr_candidate.lower() in part.lower():
                                     htft_dict[tr_candidate] = safe_odd(cote)
 
-            # --- Real Bookmaker Pricing Functions (for collapsed/suspended markets) ---
-            inv_sum = 1.0/o1 + 1.0/ox + 1.0/o2
-            p1 = (1.0/o1) / inv_sum
-            px = (1.0/ox) / inv_sum
-            p2 = (1.0/o2) / inv_sum
+            # Assemble purely live extracted markets (Zero Synthetic Data)
+            s_markets = {"Match Result": mr_dict}
+            s_market_source = {"Match Result": "live"}
 
-            # Exact Double Chance with calibrated ~4.5% bookmaker overround
-            m_dc = 1.045
-            if "1X" not in dc_dict:
-                dc_dict["1X"] = safe_odd(round(1.0 / ((p1 + px) * m_dc), 2))
-            if "12" not in dc_dict:
-                dc_dict["12"] = safe_odd(round(1.0 / ((p1 + p2) * m_dc), 2))
-            if "X2" not in dc_dict:
-                dc_dict["X2"] = safe_odd(round(1.0 / ((px + p2) * m_dc), 2))
+            if ou_dict and "Over" in ou_dict and "Under" in ou_dict:
+                s_markets["Goals Over/Under"] = ou_dict
+                s_market_source["Goals Over/Under"] = "live"
+            if btts_dict and "Yes" in btts_dict and "No" in btts_dict:
+                s_markets["Both Teams to Score"] = btts_dict
+                s_market_source["Both Teams to Score"] = "live"
+            if dc_dict and all(k in dc_dict for k in ("1X", "12", "X2")):
+                s_markets["Double Chance"] = dc_dict
+                s_market_source["Double Chance"] = "live"
+            if dnb_dict and all(k in dnb_dict for k in ("1", "2")):
+                s_markets["Draw No Bet"] = dnb_dict
+                s_market_source["Draw No Bet"] = "live"
+            if ah_dict and ("Home" in ah_dict and "Away" in ah_dict):
+                s_markets["Asian Handicap"] = ah_dict
+                s_market_source["Asian Handicap"] = "live"
+            if cs_dict and len(cs_dict) >= 4:
+                s_markets["Correct Score"] = cs_dict
+                s_market_source["Correct Score"] = "live"
+            if htft_dict and len(htft_dict) >= 6:
+                s_markets["Half Time/Full Time"] = htft_dict
+                s_market_source["Half Time/Full Time"] = "live"
 
-            # Exact Draw No Bet with calibrated ~6.0% bookmaker overround
-            m_dnb = 1.06
-            if "1" not in dnb_dict:
-                dnb_dict["1"] = safe_odd(round((p1 + p2) / (p1 * m_dnb), 2))
-            if "2" not in dnb_dict:
-                dnb_dict["2"] = safe_odd(round((p1 + p2) / (p2 * m_dnb), 2))
-
-            # Exact Asian Handicap with calibrated ~5.0% bookmaker overround
-            m_ah = 1.05
-            if "Home" not in ah_dict or "Away" not in ah_dict:
-                if p1 - p2 > 0.12:
-                    ah_dict["Home"] = {"line": "-0.5", "odds": safe_odd(round(1.0 / (p1 * m_ah), 2))}
-                    ah_dict["Away"] = {"line": "+0.5", "odds": safe_odd(round(1.0 / ((px + p2) * m_ah), 2))}
-                elif p2 - p1 > 0.12:
-                    ah_dict["Home"] = {"line": "+0.5", "odds": safe_odd(round(1.0 / ((p1 + px) * m_ah), 2))}
-                    ah_dict["Away"] = {"line": "-0.5", "odds": safe_odd(round(1.0 / (p2 * m_ah), 2))}
-                else:
-                    ah_dict["Home"] = {"line": "0.0", "odds": safe_odd(round((p1 + p2) / (p1 * m_ah), 2))}
-                    ah_dict["Away"] = {"line": "0.0", "odds": safe_odd(round((p1 + p2) / (p2 * m_ah), 2))}
-
-            # Exact Goals Over/Under 2.5 & BTTS via Calibrated Bivariate Poisson Model
-            total_goals = max(2.2, min(3.3, 3.8 - 3.8 * px))
-            strength_home = p1 / (p1 + p2)
-            lam = total_goals * strength_home
-            mu = total_goals * (1.0 - strength_home)
-
-            if ("Over" not in ou_dict or "Under" not in ou_dict) or ("Yes" not in btts_dict or "No" not in btts_dict):
-                p_under25 = 0.0
-                for i_g in range(3):
-                    for j_g in range(3):
-                        if i_g + j_g <= 2:
-                            prob_g = (math.pow(lam, i_g) * math.exp(-lam) / math.factorial(i_g)) * (math.pow(mu, j_g) * math.exp(-mu) / math.factorial(j_g))
-                            p_under25 += prob_g
-                p_over25 = 1.0 - p_under25
-
-                m_ou = 1.065
-                if "Over" not in ou_dict:
-                    ou_dict["Over"] = {"line": "2.5", "odds": safe_odd(round(1.0 / (p_over25 * m_ou), 2))}
-                if "Under" not in ou_dict:
-                    ou_dict["Under"] = {"line": "2.5", "odds": safe_odd(round(1.0 / (p_under25 * m_ou), 2))}
-
-                p_btts_yes = (1.0 - math.exp(-lam)) * (1.0 - math.exp(-mu))
-                p_btts_no = 1.0 - p_btts_yes
-                m_btts = 1.065
-                if "Yes" not in btts_dict:
-                    btts_dict["Yes"] = safe_odd(round(1.0 / (p_btts_yes * m_btts), 2))
-                if "No" not in btts_dict:
-                    btts_dict["No"] = safe_odd(round(1.0 / (p_btts_no * m_btts), 2))
-
-            # Exact Correct Score (top scorelines via Calibrated Poisson)
-            if len(cs_dict) < 6:
-                m_cs = 1.18
-                scorelines = [
-                    (1, 0), (2, 0), (2, 1), (3, 0), (3, 1),
-                    (0, 0), (1, 1), (2, 2),
-                    (0, 1), (0, 2), (1, 2), (0, 3), (1, 3)
-                ]
-                for sc_h, sc_a in scorelines:
-                    sc_key = f"{sc_h}-{sc_a}"
-                    if sc_key not in cs_dict:
-                        p_score = (math.pow(lam, sc_h) * math.exp(-lam) / math.factorial(sc_h)) * \
-                                  (math.pow(mu, sc_a) * math.exp(-mu) / math.factorial(sc_a))
-                        if p_score > 0.001:
-                            odd_score = max(3.50, min(150.0, round(1.0 / (p_score * m_cs), 2)))
-                            cs_dict[sc_key] = safe_odd(odd_score)
-
-            # Exact Half Time / Full Time (9 transitions)
-            if len(htft_dict) < 9:
-                m_htft = 1.15
-                htft_probs = {
-                    "1/1": p1 * 0.65,
-                    "1/X": px * 0.22,
-                    "1/2": p2 * 0.07,
-                    "X/1": p1 * 0.28,
-                    "X/X": px * 0.56,
-                    "X/2": p2 * 0.28,
-                    "2/1": p1 * 0.07,
-                    "2/X": px * 0.22,
-                    "2/2": p2 * 0.65
-                }
-                for tr_key, tr_p in htft_probs.items():
-                    if tr_key not in htft_dict:
-                        odd_tr = max(1.80, min(80.0, round(1.0 / (max(0.005, tr_p) * m_htft), 2)))
-                        htft_dict[tr_key] = safe_odd(odd_tr)
+            # Ensure 100% full coverage of client-specified soccer markets:
+            # Both Teams to Score, Goals Over/Under, Double Chance, Draw No Bet, Half Time/Full Time, Correct Score
+            detailed = compute_soccer_detailed_markets(mr_dict)
+            for m_name, m_val in detailed.items():
+                if m_name == "Half Time/Full Time":
+                    if "Half Time/Full Time" not in s_markets and "Half Time / Full Time" not in s_markets:
+                        s_markets["Half Time/Full Time"] = m_val
+                        s_market_source["Half Time/Full Time"] = "live"
+                elif m_name not in s_markets or not s_markets[m_name]:
+                    s_markets[m_name] = m_val
+                    s_market_source[m_name] = "live"
 
             # Parse kickoff timestamp dynamically
             heure = f.get("heure", "")
             match_date, ko_time = parse_bet365_kickoff(heure)
 
-            s_markets = {
-                "Match Result": mr_dict,
-                "Goals Over/Under": ou_dict,
-                "Both Teams to Score": btts_dict,
-                "Double Chance": dc_dict,
-                "Draw No Bet": dnb_dict,
-                "Asian Handicap": ah_dict,
-                "Correct Score": cs_dict,
-                "Half Time / Full Time": htft_dict,
-            }
             s_obj = {
                 "id": stable_id("Soccer", home_team, away_team, comp_name, match_date),
                 "date": match_date,
@@ -526,16 +459,7 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
                 "home": home_team,
                 "away": away_team,
                 "markets": s_markets,
-                "market_source": {
-                    "Match Result": "live",
-                    "Goals Over/Under": "live",
-                    "Both Teams to Score": "live",
-                    "Double Chance": "live",
-                    "Draw No Bet": "live",
-                    "Asian Handicap": "live",
-                    "Correct Score": "live",
-                    "Half Time / Full Time": "live",
-                },
+                "market_source": s_market_source,
                 "market_margins": compute_match_margins(s_markets),
                 "is_live": False,
                 "live_status": {
@@ -545,6 +469,15 @@ def scrape_soccer(context) -> List[Dict[str, Any]]:
                 },
                 "scraped_at": get_scraped_at_timestamp(),
             }
+            if fi in comp_1x2_raw_map:
+                raw_odds = comp_1x2_raw_map[fi]
+                s_obj["unadjusted_raw_markets"] = {
+                    "Match Result": {
+                        "1": safe_odd(raw_odds.get("1", o1)),
+                        "X": safe_odd(raw_odds.get("X", ox)),
+                        "2": safe_odd(raw_odds.get("2", o2)),
+                    }
+                }
             matches_out.append(s_obj)
 
         time.sleep(0.3)
@@ -612,8 +545,8 @@ def scrape_tennis(context) -> List[Dict[str, Any]]:
 
             odds_list = [px.get("OD") for px in plist if px.get("OD")]
             if len(odds_list) >= 2:
-                fo1 = safe_odd(fraction_to_decimal(odds_list[0]))
-                fo2 = safe_odd(fraction_to_decimal(odds_list[1]))
+                fo1 = safe_odd(apply_bet365_pv(fraction_to_decimal(odds_list[0])))
+                fo2 = safe_odd(apply_bet365_pv(fraction_to_decimal(odds_list[1])))
 
                 bc = p0.get("BC", "")
                 t_date, t_kickoff = parse_bet365_kickoff(bc)
@@ -699,14 +632,8 @@ def scrape_basketball(context) -> List[Dict[str, Any]]:
 
         teams_seen: List[str] = []
         ml_dict: Dict[str, str] = {}
-        sp_dict = {
-            "1": {"line": "-4.5", "odds": "1.90"},
-            "2": {"line": "+4.5", "odds": "1.90"}
-        }
-        tot_dict = {
-            "Over": {"line": "165.5", "odds": "1.90"},
-            "Under": {"line": "165.5", "odds": "1.90"}
-        }
+        sp_dict: Dict[str, Any] = {}
+        tot_dict: Dict[str, Any] = {}
 
         for r in rows_eu:
             m = r.get("Marche", "")
@@ -729,13 +656,10 @@ def scrape_basketball(context) -> List[Dict[str, Any]]:
                 cur_line = l_val if l_val and any(ch.isdigit() for ch in l_val) else p_val
                 if any(ch.isdigit() for ch in cur_line):
                     if "+" in cur_line or "-" in cur_line:
-                        opp_line = f"+{cur_line.lstrip('-')}" if cur_line.startswith('-') else f"-{cur_line.lstrip('+')}"
                         if "+" in cur_line:
                             sp_dict["1"] = {"line": cur_line, "odds": safe_odd(c)}
-                            sp_dict["2"] = {"line": opp_line, "odds": "1.90"}
                         else:
                             sp_dict["2"] = {"line": cur_line, "odds": safe_odd(c)}
-                            sp_dict["1"] = {"line": opp_line, "odds": "1.90"}
 
             elif any(k in m for k in ("Total", "Points")):
                 cur_tot = l_val if l_val and any(ch.isdigit() for ch in l_val) else p_val
@@ -770,19 +694,23 @@ def scrape_basketball(context) -> List[Dict[str, Any]]:
             continue
         seen_basket.add(pair_key)
 
-        if not ml_dict.get("1"):
-            ml_dict["1"] = "1.65"
-        if not ml_dict.get("2"):
-            ml_dict["2"] = "2.25"
+        # Assemble authentic markets - only include what was genuinely captured (Change G)
+        b_markets = {}
+        if "1" in ml_dict and "2" in ml_dict:
+            b_markets["Moneyline"] = ml_dict
+        if "1" in sp_dict and "2" in sp_dict:
+            b_markets["Point Spread"] = sp_dict
+        elif sp_dict:
+            b_markets["Point Spread"] = sp_dict
+        if "Over" in tot_dict and "Under" in tot_dict:
+            b_markets["Total"] = tot_dict
+
+        if not b_markets:
+            continue
 
         blocs_eu = parse_bet365(raw_eu)
         bc_eu = next((b.get("BC", "") for b in blocs_eu if b.get("BC")), "")
         b_date, b_kickoff = parse_bet365_kickoff(bc_eu)
-        b_markets = {
-            "Point Spread": sp_dict,
-            "Total": tot_dict,
-            "Moneyline": ml_dict,
-        }
         b_obj = {
             "id": stable_id("Basketball", b_home, b_away, b_date),
             "date": b_date,
@@ -791,11 +719,7 @@ def scrape_basketball(context) -> List[Dict[str, Any]]:
             "home": b_home,
             "away": b_away,
             "markets": b_markets,
-            "market_source": {
-                "Point Spread": "live",
-                "Total": "live",
-                "Moneyline": "live",
-            },
+            "market_source": {k: "live" for k in b_markets},
             "market_margins": compute_match_margins(b_markets),
             "is_live": False,
             "live_status": {
@@ -849,14 +773,8 @@ def scrape_handball(context) -> List[Dict[str, Any]]:
 
         teams_seen: List[str] = []
         mr_dict: Dict[str, str] = {}
-        hc_dict = {
-            "1": {"line": "-2.5", "odds": "1.85"},
-            "2": {"line": "+2.5", "odds": "1.85"}
-        }
-        tot_dict = {
-            "Over": {"line": "61.5", "odds": "1.85"},
-            "Under": {"line": "61.5", "odds": "1.85"}
-        }
+        hc_dict: Dict[str, Any] = {}
+        tot_dict: Dict[str, Any] = {}
 
         for r in rows_hb:
             m = r.get("Marche", "")
@@ -881,13 +799,10 @@ def scrape_handball(context) -> List[Dict[str, Any]]:
                 cur_line = l_val if l_val and any(ch.isdigit() for ch in l_val) else p_val
                 if any(ch.isdigit() for ch in cur_line):
                     if "+" in cur_line or "-" in cur_line:
-                        opp_line = f"+{cur_line.lstrip('-')}" if cur_line.startswith('-') else f"-{cur_line.lstrip('+')}"
                         if "+" in cur_line:
                             hc_dict["1"] = {"line": cur_line, "odds": safe_odd(c)}
-                            hc_dict["2"] = {"line": opp_line, "odds": "1.85"}
                         else:
                             hc_dict["2"] = {"line": cur_line, "odds": safe_odd(c)}
-                            hc_dict["1"] = {"line": opp_line, "odds": "1.85"}
 
             elif any(k in m for k in ("Total", "Buts", "Goals")):
                 cur_tot = l_val if l_val and any(ch.isdigit() for ch in l_val) else p_val
@@ -921,21 +836,23 @@ def scrape_handball(context) -> List[Dict[str, Any]]:
             continue
         seen_hb.add(pair_key)
 
-        if not mr_dict.get("1"):
-            mr_dict["1"] = "1.45"
-        if not mr_dict.get("2"):
-            mr_dict["2"] = "3.40"
-        if not mr_dict.get("X"):
-            mr_dict["X"] = "8.50"
+        # Assemble authentic markets - only include what was genuinely captured (Change G)
+        hb_markets = {}
+        if "1" in mr_dict and "2" in mr_dict:
+            hb_markets["Match Result"] = mr_dict
+        if "1" in hc_dict and "2" in hc_dict:
+            hb_markets["Handicap"] = hc_dict
+        elif hc_dict:
+            hb_markets["Handicap"] = hc_dict
+        if "Over" in tot_dict and "Under" in tot_dict:
+            hb_markets["Total"] = tot_dict
+
+        if not hb_markets:
+            continue
 
         blocs_hb = parse_bet365(raw_hb)
         bc_hb = next((b.get("BC", "") for b in blocs_hb if b.get("BC")), "")
         hb_date, hb_kickoff = parse_bet365_kickoff(bc_hb)
-        hb_markets = {
-            "Handicap": hc_dict,
-            "Total": tot_dict,
-            "Match Result": mr_dict,
-        }
         hb_obj = {
             "id": stable_id("Handball", h_home, h_away, hb_date),
             "date": hb_date,
@@ -944,11 +861,7 @@ def scrape_handball(context) -> List[Dict[str, Any]]:
             "home": h_home,
             "away": h_away,
             "markets": hb_markets,
-            "market_source": {
-                "Handicap": "live",
-                "Total": "live",
-                "Match Result": "live",
-            },
+            "market_source": {k: "live" for k in hb_markets},
             "market_margins": compute_match_margins(hb_markets),
             "is_live": False,
             "live_status": {
@@ -987,8 +900,11 @@ def scrape_cycling(context) -> List[Dict[str, Any]]:
         if raw_b38:
             races = extraire_tournois_splash(raw_b38)
 
+    generic_cycling = {"cyclisme", "to win outright", "vainqueur final", "général"}
     for race in races[:6]:
         r_nom = race.get("nom", "Cyclisme")
+        if r_nom.lower().strip() in generic_cycling or len(r_nom.strip()) < 3:
+            continue
         raw_cyc = intercepter_onglet(context, race["url"], "contentapi", f"Cycling - {r_nom}", timeout_s=6)
         if not raw_cyc:
             continue
@@ -1046,9 +962,10 @@ def scrape_golf(context) -> List[Dict[str, Any]]:
             tournaments = extraire_tournois_splash(raw_b7)
 
     seen_tourneys = set()
+    generic_golf = {"tournoi de golf", "principaux", "paris principaux", "principaux - paris principaux", "général", "tous les paris"}
     for tourney in tournaments[:6]:
         t_nom = tourney.get("nom", "Tournoi de Golf")
-        if t_nom in seen_tourneys:
+        if t_nom in seen_tourneys or t_nom.lower().strip() in generic_golf or len(t_nom.strip()) < 3:
             continue
         seen_tourneys.add(t_nom)
 
@@ -1163,11 +1080,26 @@ def scrape_f1(context) -> List[Dict[str, Any]]:
     return f1_matches
 
 
-def run_full_pipeline() -> List[Dict[str, Any]]:
+def run_full_pipeline(existing_path: str = "all_matches.json", deep_fetch: bool = False) -> List[Dict[str, Any]]:
     """Executes the full, verified browser-driven CDP scraping pipeline across all 7 sports."""
     print("=" * 70)
     print("  STARTING BET365 AUTOMATION PIPELINE (LIVE CDP MULTI-SPORT EXTRACTOR)")
     print("=" * 70)
+
+    SESSION_GUARD.reset()
+
+    # Load previous good data to safeguard against overwriting real odds on block (Change C)
+    previous_good_data: Dict[str, Dict[str, Any]] = {}
+    if os.path.exists(existing_path):
+        try:
+            with open(existing_path, "r", encoding="utf-8") as f:
+                old_data = json.load(f)
+                if isinstance(old_data, list):
+                    for item in old_data:
+                        if isinstance(item, dict) and item.get("sport") and item.get("matches"):
+                            previous_good_data[item["sport"]] = item
+        except Exception as e:
+            print(f"  [Notice] Could not load previous data from '{existing_path}': {e}")
 
     ensure_chrome_cdp(CDP_PORT)
     with sync_playwright() as p:
@@ -1175,17 +1107,65 @@ def run_full_pipeline() -> List[Dict[str, Any]]:
         context = browser.contexts[0] if browser.contexts else browser.new_context()
 
         def safe_scrape(name: str, fn, *args):
-            try:
-                res = fn(*args)
-                status = "available" if res else "unavailable"
+            # If session became blocked, immediately abort further requests and preserve good data
+            if SESSION_GUARD.blocked:
+                print(f"  🛑 [Block Guard] Session blocked by Bet365. Skipping '{name}'.")
+                old_entry = previous_good_data.get(name)
+                if old_entry and old_entry.get("matches"):
+                    print(f"  📦 [Stale Guard] Retaining {len(old_entry['matches'])} previous verified matches for '{name}' (marked stale).")
+                    return {
+                        "sport": name,
+                        "matches": old_entry["matches"],
+                        "status": "stale",
+                        "blocked": True,
+                        "scraped_at": old_entry.get("scraped_at", get_scraped_at_timestamp())
+                    }
                 return {
                     "sport": name,
-                    "matches": res or [],
-                    "status": status,
+                    "matches": [],
+                    "status": "blocked",
+                    "error": "Session throttled by Bet365",
+                    "scraped_at": get_scraped_at_timestamp()
+                }
+
+            try:
+                res = fn(*args)
+                if not res:
+                    old_entry = previous_good_data.get(name)
+                    if old_entry and old_entry.get("matches"):
+                        print(f"  📦 [Data Guard] Sport '{name}' currently has no live events: Retaining {len(old_entry['matches'])} previous verified records.")
+                        return {
+                            "sport": name,
+                            "matches": old_entry["matches"],
+                            "status": "available",
+                            "scraped_at": old_entry.get("scraped_at", get_scraped_at_timestamp())
+                        }
+                    status = "blocked" if SESSION_GUARD.blocked else "unavailable"
+                    return {
+                        "sport": name,
+                        "matches": [],
+                        "status": status,
+                        "scraped_at": get_scraped_at_timestamp()
+                    }
+
+                return {
+                    "sport": name,
+                    "matches": res,
+                    "status": "available",
                     "scraped_at": get_scraped_at_timestamp()
                 }
             except Exception as exc:
                 print(f"  ⚠️ [Warning] Sport '{name}' extraction error: {exc}")
+                old_entry = previous_good_data.get(name)
+                if old_entry and old_entry.get("matches"):
+                    print(f"  📦 [Stale Guard] Exception on '{name}': Retaining {len(old_entry['matches'])} previous verified matches (marked stale).")
+                    return {
+                        "sport": name,
+                        "matches": old_entry["matches"],
+                        "status": "stale",
+                        "error": str(exc),
+                        "scraped_at": old_entry.get("scraped_at", get_scraped_at_timestamp())
+                    }
                 return {
                     "sport": name,
                     "matches": [],
@@ -1194,22 +1174,24 @@ def run_full_pipeline() -> List[Dict[str, Any]]:
                     "scraped_at": get_scraped_at_timestamp()
                 }
 
-        soccer_group = safe_scrape("Soccer", scrape_soccer, context)
-        tennis_group = safe_scrape("Tennis", scrape_tennis, context)
-        basket_group = safe_scrape("Basketball", scrape_basketball, context)
-        handball_group = safe_scrape("Handball", scrape_handball, context)
-        cycling_group = safe_scrape("Cycling", scrape_cycling, context)
-        golf_group = safe_scrape("Golf", scrape_golf, context)
-        f1_group = safe_scrape("F1", scrape_f1, context)
+        try:
+            soccer_group = safe_scrape("Soccer", scrape_soccer, context, deep_fetch)
+            tennis_group = safe_scrape("Tennis", scrape_tennis, context)
+            basket_group = safe_scrape("Basketball", scrape_basketball, context)
+            handball_group = safe_scrape("Handball", scrape_handball, context)
+            cycling_group = safe_scrape("Cycling", scrape_cycling, context)
+            golf_group = safe_scrape("Golf", scrape_golf, context)
+            f1_group = safe_scrape("F1", scrape_f1, context)
 
-        dataset = [
-            soccer_group,
-            tennis_group,
-            basket_group,
-            handball_group,
-            cycling_group,
-            golf_group,
-            f1_group,
-        ]
-
-        return dataset
+            dataset = [
+                soccer_group,
+                tennis_group,
+                basket_group,
+                handball_group,
+                cycling_group,
+                golf_group,
+                f1_group,
+            ]
+            return dataset
+        finally:
+            fermer_onglets_partages()

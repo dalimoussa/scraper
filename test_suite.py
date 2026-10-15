@@ -17,11 +17,17 @@ import tempfile
 import unittest
 from datetime import datetime
 
-from bet365_parser import extraire_tournois_splash, parse_bet365
+from bet365_parser import SessionGuard, extraire_tournois_splash, parse_bet365
 from history_tracker import get_odds_movement, init_history_db, record_odds_snapshot
 from margin_validator import calculate_market_margin, compute_match_margins, validate_market_margins
 from scraper_engine import fraction_to_decimal, parse_bet365_kickoff, safe_odd
-from validation import validate_match_common, validate_pipeline_dataset, validate_soccer_match
+from validation import (
+    validate_basketball_match,
+    validate_handball_match,
+    validate_match_common,
+    validate_pipeline_dataset,
+    validate_soccer_match,
+)
 
 
 class TestBet365Parser(unittest.TestCase):
@@ -44,6 +50,16 @@ class TestBet365Parser(unittest.TestCase):
         self.assertAlmostEqual(fraction_to_decimal("5/4"), 2.25, places=2)
         self.assertAlmostEqual(fraction_to_decimal("2.10"), 2.10, places=2)
         self.assertEqual(fraction_to_decimal("invalid"), 1.0)
+
+    def test_bet365_pv_french_deductions(self):
+        from bet365_pv import apply_bet365_pv, get_pv_adjustment
+        # Verified against Bet365 live JavaScript PriceVarianceLib (Chart 6 - French Market on-screen standard)
+        self.assertEqual(apply_bet365_pv(2.90, "6"), 2.82)
+        self.assertEqual(apply_bet365_pv(3.50, "6"), 3.40)
+        self.assertEqual(apply_bet365_pv(2.35, "6"), 2.29)
+        # Chart 9
+        self.assertEqual(apply_bet365_pv(2.90, "9"), 2.72)
+        self.assertEqual(apply_bet365_pv(3.50, "9"), 3.30)
 
     def test_safe_odd(self):
         self.assertEqual(safe_odd("2.50"), "2.50")
@@ -209,6 +225,92 @@ class TestValidationEngine(unittest.TestCase):
         ok, why = validate_match_common(match_with_mock, "Soccer")
         self.assertFalse(ok)
         self.assertIn("non-live provenance", why)
+
+    def test_relaxed_handball_two_way(self):
+        # Handball without draw ('X') and without handicap passes without made-up odds
+        hb_match = {
+            "id": "hb_001",
+            "date": "15/10/2026",
+            "kickoff": "15/10/2026 20:00:00",
+            "competition": "Handball - France Starligue",
+            "home": "Paris SG Handball",
+            "away": "Montpellier Handball",
+            "markets": {
+                "Match Result": {"1": "1.35", "2": "3.80"}
+            },
+            "market_source": {
+                "Match Result": "live"
+            },
+            "is_live": False,
+            "live_status": {"period": "pre-match", "score": "0-0", "clock": "00:00"}
+        }
+        ok, why = validate_handball_match(hb_match)
+        self.assertTrue(ok, f"Validation failed: {why}")
+
+    def test_relaxed_basketball_partial_markets(self):
+        # Basketball with only Moneyline (no synthetic 1.65/2.25/1.90) passes cleanly
+        b_match = {
+            "id": "bk_001",
+            "date": "15/10/2026",
+            "kickoff": "15/10/2026 20:00:00",
+            "competition": "Basketball - EuroLeague",
+            "home": "Real Madrid",
+            "away": "Barcelona",
+            "markets": {
+                "Moneyline": {"1": "1.52", "2": "2.65"}
+            },
+            "market_source": {
+                "Moneyline": "live"
+            },
+            "is_live": False,
+            "live_status": {"period": "pre-match", "score": "0-0", "clock": "00:00"}
+        }
+        ok, why = validate_basketball_match(b_match)
+        self.assertTrue(ok, f"Validation failed: {why}")
+
+    def test_stale_and_blocked_dataset_validation(self):
+        # Datasets containing stale retained sports or blocked sports are accepted
+        dataset = [
+            {"sport": "Soccer", "matches": [], "status": "blocked", "error": "Throttled"},
+            {"sport": "Tennis", "matches": [], "status": "unavailable"},
+            {"sport": "Basketball", "matches": [], "status": "available"},
+            {"sport": "Handball", "matches": [], "status": "available"},
+            {"sport": "Cycling", "matches": [], "status": "available"},
+            {"sport": "Golf", "matches": [], "status": "available"},
+            {"sport": "F1", "matches": [], "status": "available"},
+        ]
+        ok, errors = validate_pipeline_dataset(dataset)
+        self.assertTrue(ok, f"Dataset validation failed: {errors}")
+
+
+class TestSessionGuard(unittest.TestCase):
+    """Validates anti-throttling session guard logic."""
+
+    def test_session_guard_flow(self):
+        guard = SessionGuard(threshold=3, pause_s=0.01)
+        self.assertFalse(guard.blocked)
+        self.assertFalse(guard.paused)
+
+        # 2 failures do not trigger pause
+        guard.record(False)
+        guard.record(False)
+        self.assertFalse(guard.paused)
+        self.assertFalse(guard.blocked)
+
+        # 3rd failure triggers pause
+        guard.record(False)
+        self.assertTrue(guard.paused)
+        self.assertFalse(guard.blocked)
+
+        # Next failure after pause triggers blocked state
+        guard.record(False)
+        self.assertTrue(guard.blocked)
+
+        # Reset clears blocked state
+        guard.reset()
+        self.assertFalse(guard.blocked)
+        self.assertFalse(guard.paused)
+        self.assertEqual(guard.consecutive_empty, 0)
 
 
 if __name__ == "__main__":

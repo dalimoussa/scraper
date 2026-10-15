@@ -35,7 +35,7 @@ def run_single_cycle(args, cycle_num: int = 1) -> bool:
     print("=" * 70)
 
     start_time = time.time()
-    raw_dataset = run_full_pipeline()
+    raw_dataset = run_full_pipeline(existing_path=args.out, deep_fetch=getattr(args, "deep", False))
 
     print("\n" + "=" * 70)
     print("  RUNNING PROGRAMMATIC VALIDATION ENGINE")
@@ -93,6 +93,7 @@ def main():
     parser.add_argument("--db", default="odds_history.db", help="SQLite history database path (default: odds_history.db)")
     parser.add_argument("--interval", type=int, default=0, help="Daemon auto-refresh interval in seconds (default: 0 = single run)")
     parser.add_argument("--max-runs", type=int, default=None, help="Maximum number of cycles before exiting in daemon mode")
+    parser.add_argument("--deep", action="store_true", help="Enable deep individual match page fetching for soccer (slower, risk of throttling)")
     parser.add_argument("--verify-only", action="store_true", help="Only validate existing JSON file without scraping")
     args = parser.parse_args()
 
