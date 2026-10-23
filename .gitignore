@@ -16,3 +16,8 @@ scratch/
 .agents/
 scraper_state.json
 
+# Runtime artifacts and databases
+*.db
+odds_history.db
+all_matches.json
+*.json.tmp
