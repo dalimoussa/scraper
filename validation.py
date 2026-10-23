@@ -70,6 +70,22 @@ def validate_match_common(m: Dict[str, Any], sport: str) -> Tuple[bool, str]:
         if src != "live":
             return False, f"Market '{mkt_name}' has non-live provenance: '{src}' (Violates Zero Synthetic Data)"
 
+    # Every emitted market must carry its own live provenance entry, and where a
+    # capture method is recorded it must be one we trust. This closes the hole
+    # where a model-derived price was labelled "live" without being captured.
+    mkts_audit = m.get("markets", {})
+    if isinstance(mkts_audit, dict):
+        for mkt_name in mkts_audit.keys():
+            if src_map.get(mkt_name) != "live":
+                return False, f"Market '{mkt_name}' has no live provenance entry (Violates Zero Synthetic Data)"
+
+    prov = m.get("market_provenance", {})
+    if isinstance(prov, dict):
+        allowed_methods = {"dom", "js", "chart"}
+        for mkt_name, method in prov.items():
+            if method not in allowed_methods:
+                return False, f"Market '{mkt_name}' has invalid capture method '{method}'"
+
     # Live In-play validation
     if "is_live" in m and not isinstance(m["is_live"], bool):
         return False, "is_live must be a boolean"
@@ -389,6 +405,85 @@ def validate_golf_match(m: Dict[str, Any]) -> Tuple[bool, str]:
     return True, "OK"
 
 
+def audit_pv_consistency(m: Dict[str, Any], sport: str = "Soccer", tolerance: float = 0.05) -> List[str]:
+    """Reconciles reported on-screen odds against the raw feed odds under the ANJ engine.
+
+    Every market carrying `unadjusted_raw_markets` is re-derived through the local
+    chart engine and compared with the reported screen odd. Markets whose value was
+    taken from the DOM or the site's own JS (`market_provenance` in {dom, js}) are
+    authoritative and therefore skipped. Differences larger than `tolerance` are
+    returned as human-readable audit strings.
+
+    This is the check that would have caught the client's original report: raw
+    2.90/3.50/2.35 must reconcile to 2.82/3.40/2.29 on Chart 6.
+    """
+    from bet365_pv import apply_bet365_pv, resolve_chart_id
+
+    issues: List[str] = []
+    raw_markets = m.get("unadjusted_raw_markets") or {}
+    markets = m.get("markets") or {}
+    prov = m.get("market_provenance") or {}
+
+    for mkt_name, raw_vals in raw_markets.items():
+        if prov.get(mkt_name) in ("dom", "js"):
+            continue  # authoritative source, nothing to reconcile
+        screen = markets.get(mkt_name)
+        if not isinstance(raw_vals, dict) or not isinstance(screen, dict):
+            continue
+        chart_id = resolve_chart_id(sport, mkt_name)
+        for key, raw_odd in raw_vals.items():
+            rv = raw_odd.get("odds") if isinstance(raw_odd, dict) else raw_odd
+            sv = screen.get(key)
+            if isinstance(sv, dict):
+                sv = sv.get("odds")
+            if rv is None or sv is None:
+                continue
+            try:
+                expected = apply_bet365_pv(float(str(rv)), chart_id=chart_id)
+                got = float(str(sv))
+            except (TypeError, ValueError):
+                continue
+            if abs(expected - got) > tolerance:
+                issues.append(
+                    f"{mkt_name}[{key}] screen={got} != chart-expected={expected} (raw={rv}, chart={chart_id})"
+                )
+    return issues
+
+
+_SOCCER_SECONDARY_MARKETS = (
+    "Both Teams to Score",
+    "Goals Over/Under",
+    "Double Chance",
+    "Draw No Bet",
+    "Half Time/Full Time",
+    "Correct Score",
+)
+
+
+def audit_capture_evidence(m: Dict[str, Any], sport: str = "Soccer") -> List[str]:
+    """Detects markets that claim to be live but carry no proof of capture.
+
+    The old pipeline modelled the soccer secondary markets with a Poisson model
+    and tagged them "live". That is impossible to see from the prices alone, so
+    every market now records *how* it was captured (`market_provenance`). A
+    secondary market with no recorded capture method is therefore reported as
+    unverified provenance rather than being silently trusted.
+    """
+    issues: List[str] = []
+    markets = m.get("markets") or {}
+    prov = m.get("market_provenance") or {}
+    unverified = [
+        name for name in _SOCCER_SECONDARY_MARKETS
+        if name in markets and name not in prov
+    ]
+    if unverified:
+        issues.append(
+            "secondary markets present without capture evidence "
+            f"(suspected non-live): {unverified}"
+        )
+    return issues
+
+
 def validate_pipeline_dataset(dataset: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
     """
     Validates entire multi-sport dataset against all strict constraints:
@@ -441,5 +536,16 @@ def validate_pipeline_dataset(dataset: List[Dict[str, Any]]) -> Tuple[bool, List
 
             if not ok:
                 errors.append(f"[{sp_name} match #{idx} :: {m.get('home')} vs {m.get('away', '')}] Validation failed: {why}")
+            else:
+                # ANJ Price Variance reconciliation (raw feed -> on-screen odds)
+                for issue in audit_pv_consistency(m, sp_name):
+                    errors.append(
+                        f"[{sp_name} match #{idx} :: {m.get('home')} vs {m.get('away', '')}] PV audit mismatch: {issue}"
+                    )
+                # Capture-evidence audit (would have caught the Poisson markets)
+                for issue in audit_capture_evidence(m, sp_name):
+                    errors.append(
+                        f"[{sp_name} match #{idx} :: {m.get('home')} vs {m.get('away', '')}] {issue}"
+                    )
 
     return len(errors) == 0, errors

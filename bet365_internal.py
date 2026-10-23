@@ -36,6 +36,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from bet365_pv import apply_bet365_pv
+
 try:
     from zoneinfo import ZoneInfo
     PARIS_TZ = ZoneInfo("Europe/Paris")
@@ -3172,6 +3174,9 @@ def apply_tab_stream(raw: str, fixtures_by_fi: Dict[str, Dict[str, Any]], kind: 
             dec = fraction_to_decimal(od)
             if dec <= 1.0:
                 continue
+            # ANJ Price Variance: persist the on-screen French price, not the raw
+            # international feed price. Raw values remain available upstream.
+            dec = apply_bet365_pv(dec)
             odd_str = format_odd_str(dec)
             fi = b.get("FI", "").strip()
             oi = b.get("OI", "").strip()
@@ -3313,6 +3318,14 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
 
         # Stream-first secondary market capture when in a match/coupon view
         if sport == "Soccer":
+            # Map the current match by its fixture id so apply_tab_stream can
+            # attach the captured markets to it (was an undefined name -> the
+            # whole deep-market capture silently failed).
+            fixtures_by_fi: Dict[str, Dict[str, Any]] = {}
+            for key in (str(match.get("fi", "")), str(match.get("id", ""))):
+                if key:
+                    fixtures_by_fi[key] = match
+
             for mkt_name, tab_terms, mkt_type in [
                 ("Both Teams to Score", ["both teams to score", "les deux équipes marquent", "les 2 équipes marquent"], "btts"),
                 ("Goals Over/Under", ["plus / moins de buts", "total de buts", "goals over/under", "plus/moins de buts"], "ou"),
@@ -3321,12 +3334,8 @@ def scrape_match_detail_markets(session: CDPSession, match: Dict[str, Any], spor
             ]:
                 try:
                     raw_stream = click_tab_and_capture(session, tab_terms, timeout_s=5.0)
-                    if raw_stream and fixtures_by_fi:
-                        if mkt_type == "cs":
-                            # Correct Score is not handled by apply_tab_stream; parse raw stream DOM-like lines as fallback below
-                            pass
-                        else:
-                            apply_tab_stream(raw_stream, fixtures_by_fi, mkt_type)
+                    if raw_stream and mkt_type != "cs":
+                        apply_tab_stream(raw_stream, fixtures_by_fi, mkt_type)
                 except Exception:
                     pass
 
@@ -3544,6 +3553,14 @@ def compute_soccer_detailed_markets(match_result: Dict[str, str]) -> Dict[str, A
     Dixon-Coles bivariate Poisson goal distribution model.
     All outputs strictly match official Bet365 bookmaker board price ladders.
     """
+    # ── DISABLED: model-derived (synthetic) pricing is forbidden by contract ──
+    # This function used to derive BTTS / O/U / Double Chance / Draw No Bet /
+    # HT-FT / Correct Score from a Dixon-Coles bivariate Poisson model and those
+    # modelled prices were then tagged "live". That is exactly the defect the
+    # client caught. It now yields nothing; real secondary markets come only from
+    # live_markets.build_soccer_markets() (live feed/DOM capture).
+    return {}
+
     try:
         od_1 = float(str(match_result.get("1", 0)).replace(",", "."))
         od_x = float(str(match_result.get("X", 0)).replace(",", "."))
@@ -3765,14 +3782,10 @@ def enrich_soccer_match(match: Dict[str, Any]) -> Dict[str, Any]:
             dnb[k] = format_odd_str(dnb[k])
 
     # Enrich missing secondary markets (Correct Score, BTTS, Over/Under, HT/FT, Double Chance, Draw No Bet)
-    if mr and isinstance(mr, dict) and "1" in mr and "2" in mr:
-        detailed = compute_soccer_detailed_markets(mr)
-        for m_name, m_val in detailed.items():
-            if m_name not in mkts or not mkts[m_name]:
-                mkts[m_name] = m_val
-                if "market_source" in match and isinstance(match["market_source"], dict):
-                    match["market_source"][m_name] = "live"
-
+    # ── NO FABRICATION ──
+    # Secondary markets are NOT modelled here. A market is present only if it was
+    # scraped live (see live_markets.build_soccer_markets). Missing markets stay
+    # missing so the export never claims a live price we did not actually capture.
     return match
 
 

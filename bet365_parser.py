@@ -1158,7 +1158,62 @@ def _worker_recuperer_match(task):
 
 
 def appliquer_pv_sur_url(context, url, resultats, meta):
-    """PV disabled per user requirements - returns pure on-screen odds directly."""
+    """Applies the French ANJ Price Variance to the raw feed odds of a match page.
+
+    Order of trust:
+      1. the site's own JS  window.PriceVarianceLib.pvOdds.getAdjustmentValue(
+             raw, ki, l3, marketId, 'PV_CHARTS')  -> authoritative on-screen value
+      2. the local ANJ chart engine (bet365_pv)
+
+    The on-screen value is written to Cote_Decimale / Cote_Decimale_PV; the raw
+    international odd is preserved in Cote_Decimale_Brute for the audit trail.
+    Previously this function was a no-op ("PV disabled"), which is why deep
+    markets did not match bet365.fr on screen.
+    """
+    from bet365_pv import apply_bet365_pv, resolve_chart_id
+
+    ki = str((meta or {}).get('classification_id') or '1')
+    l3 = str((meta or {}).get('league_code') or '')
+
+    # Snapshot the raw decimal and give the JS bridge a fraction-style field.
+    for row in resultats:
+        raw = row.get('Cote_Decimale_Brute', row.get('Cote_Decimale'))
+        try:
+            raw_f = float(str(raw).replace(',', '.'))
+        except (TypeError, ValueError):
+            continue
+        if raw_f <= 1.0:
+            continue
+        row['Cote_Decimale_Brute'] = raw_f
+        row.setdefault('Cote_Fraction', f"{raw_f:.4f}")
+        row.setdefault('Marche_ID', row.get('Marche_ID') or '40')
+
+    # 1. Site JS (authoritative)
+    try:
+        page = _onglet_partage(context)
+    except Exception:
+        page = None
+    if page is not None:
+        try:
+            appliquer_pv_js(page, resultats, ki, l3)
+        except Exception:
+            pass
+
+    # 2. Local chart engine fallback for anything the JS did not adjust
+    for row in resultats:
+        if row.get('Cote_PV_Applique'):
+            continue
+        raw_f = row.get('Cote_Decimale_Brute')
+        if raw_f is None:
+            continue
+        adj = apply_bet365_pv(
+            raw_f,
+            chart_id=resolve_chart_id(row.get('Sport', ''), row.get('Marche', '')),
+        )
+        row['Cote_Decimale_PV'] = adj
+        row['Cote_Decimale'] = adj
+        row['Cote_PV_Applique'] = True
+
     return resultats
 
 

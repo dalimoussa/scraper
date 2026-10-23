@@ -1,0 +1,33 @@
+{
+  "_comment": "Maps a pipeline (sport, market) to the ANJ Price Variance chart id Bet365 France applies. Chart 6 is the standard FR main-market chart and is verified against the worked example (2.90/3.50/2.35 -> 2.82/3.40/2.29). Regenerate/refresh with: python pv_calibrate.py --url https://www.bet365.fr/#/AS/B1/ --write. The live-JS and on-screen-DOM paths always take precedence over this map; it only governs the offline feed->screen reconstruction.",
+  "default": "6",
+  "sports": {
+    "Soccer": "6",
+    "Tennis": "6",
+    "Basketball": "6",
+    "Handball": "6",
+    "Cycling": "6",
+    "Golf": "6",
+    "F1": "6"
+  },
+  "markets": {
+    "Match Result": "6",
+    "Full Time Result": "6",
+    "Both Teams to Score": "6",
+    "Goals Over/Under": "6",
+    "Total Goals": "6",
+    "Double Chance": "6",
+    "Draw No Bet": "6",
+    "Half Time/Full Time": "6",
+    "Correct Score": "6",
+    "Asian Handicap": "6",
+    "Match Winner": "6",
+    "Moneyline": "6",
+    "Point Spread": "6",
+    "Total": "6",
+    "Handicap": "6",
+    "Race Winner": "6",
+    "Podium Finish": "6",
+    "Outright Winner": "6"
+  }
+}

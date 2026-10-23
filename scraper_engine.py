@@ -19,9 +19,15 @@ Extracts verified, real-time sports data from Bet365 France via Chrome DevTools 
 - Formula 1: Singapore Grand Prix (Race Winner, Podium Finish)
 
 Guarantees:
-- Zero synthetic data (every odds item originates from authentic live bookmaker coupons)
-- Pure on-screen decimal odds (no artificial Price Variance deductions)
-- Zero cross-sport contamination
+- Zero synthetic data: a market is emitted only when it was captured live from the
+  bookmaker feed/DOM. There is no Poisson / model / interpolation fallback anywhere.
+- On-screen French odds: every raw feed odd is converted through the ANJ Price Variance
+  (Chart 6 by default via pv_market_map.json) using, in order of trust, the value already
+  rendered in the DOM, the site's own PriceVarianceLib, then the local chart engine.
+  The raw (unadjusted) price is always retained in `unadjusted_raw_markets`.
+- Zero cross-sport contamination.
+
+live_markets.py owns all market assembly for the pipeline.
 """
 
 import json
@@ -37,15 +43,12 @@ sys.path.append(os.path.abspath("../bet365"))
 try:
     from bet365_internal import (
         CDP_PORT,
-        compute_soccer_detailed_markets,
         ensure_chrome_cdp,
         format_odd_str,
         stable_id,
     )
 except ImportError:
     CDP_PORT = 9222
-    def compute_soccer_detailed_markets(mr):
-        return {}
     def ensure_chrome_cdp(port=9222):
         pass
     def format_odd_str(val):
@@ -58,6 +61,8 @@ from datetime import datetime, timezone
 from playwright.sync_api import sync_playwright
 from bet365_parser import (
     SESSION_GUARD,
+    _onglet_partage,
+    extraire_metadonnees_pv,
     extraire_tournois_splash,
     fermer_onglets_partages,
     intercepter_onglet,
@@ -68,6 +73,20 @@ from bet365_parser import (
 )
 from margin_validator import compute_match_margins
 from bet365_pv import apply_bet365_pv, get_pv_adjustment
+from live_markets import (
+    build_soccer_markets,
+    extract_market_rows,
+    filter_synthetic,
+    screen_rows,
+)
+
+
+def _shared_page(context):
+    """Best-effort access to the shared Playwright tab (for on-page PV/DOM reads)."""
+    try:
+        return _onglet_partage(context)
+    except Exception:
+        return None
 
 
 def get_scraped_at_timestamp() -> str:
@@ -177,13 +196,15 @@ def scrape_inplay_events(context, sport_name: str, sport_id: str) -> List[Dict[s
             o2_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[1])))
 
             if sport_name == "Soccer":
-                ox_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[2]))) if len(live_odds) >= 3 else safe_odd(3.20)
+                # 1X2 needs a real draw price. If the feed gave us only two
+                # selections we cannot form a Match Result market, so we skip
+                # rather than invent a draw odd (no synthetic default).
+                if len(live_odds) < 3:
+                    continue
+                ox_dec = safe_odd(apply_bet365_pv(fraction_to_decimal(live_odds[2])))
                 s_markets = {
                     "Match Result": {"1": o1_dec, "X": ox_dec, "2": o2_dec}
                 }
-                detailed = compute_soccer_detailed_markets(s_markets["Match Result"])
-                for m_name, m_val in detailed.items():
-                    s_markets[m_name] = m_val
                 m_obj = {
                     "id": stable_id("Soccer", h_team, a_team, "Live In-Play", ev_date),
                     "date": ev_date,
@@ -326,126 +347,49 @@ def scrape_soccer(context, deep_fetch: bool = False) -> List[Dict[str, Any]]:
                 "2": safe_odd(o2),
             }
 
-            # Specific markets extraction (Hybrid: Live Coupon primary + real bookmaker pricing functions)
-            dc_dict: Dict[str, str] = {}
-            ou_dict: Dict[str, Any] = {}
-            btts_dict: Dict[str, str] = {}
-            dnb_dict: Dict[str, str] = {}
-            ah_dict: Dict[str, Any] = {}
-            cs_dict: Dict[str, str] = {}
-            htft_dict: Dict[str, str] = {}
+            # ── Secondary markets: real capture only, PV-corrected, no fabrication ──
+            # live_markets only emits a market when every selection was actually
+            # captured from the live feed. Missing markets are omitted, never
+            # modelled. Raw (pre-PV) odds are kept for the audit trail.
+            extra_markets: Dict[str, Any] = {}
+            extra_source: Dict[str, str] = {}
+            extra_prov: Dict[str, str] = {}
+            raw_markets: Dict[str, Any] = {}
 
             if deep_fetch and m_url:  # Deep-fetch only when explicitly requested
-                raw_c = intercepter_onglet(context, m_url, "contentapi", "Football", timeout_s=4)
+                raw_c = intercepter_onglet(context, m_url, "contentapi", "Football", timeout_s=5)
                 if raw_c:
-                    rows = parser_page_universel(raw_c, "Football", nom)
-                    for r in rows:
-                        m_name = r.get("Marche", "").strip()
-                        part = str(r.get("Participant", "")).strip()
-                        cote = r.get("Cote_Decimale")
-                        if not cote:
-                            continue
+                    meta = extraire_metadonnees_pv(parse_bet365(raw_c))
+                    rows_m = extract_market_rows(raw_c)
+                    if rows_m:
+                        rows_m = screen_rows(
+                            _shared_page(context),
+                            rows_m,
+                            ki=meta.get("classification_id", "1") or "1",
+                            l3=meta.get("league_code", ""),
+                            sport="Soccer",
+                        )
+                        extra_markets, extra_source, extra_prov, raw_markets = build_soccer_markets(
+                            rows_m, home_team, away_team
+                        )
 
-                        # 1. Goals Over/Under 2.5
-                        if "total de buts" in m_name.lower():
-                            part_clean = part.replace(',', '.').strip()
-                            if part_clean == "2.5" or "2.5" in part_clean:
-                                suffix = m_name.split(" - ")[-1].strip().lower()
-                                if "plus de" in suffix or "over" in suffix:
-                                    ou_dict["Over"] = {"line": "2.5", "odds": safe_odd(cote)}
-                                elif "moins de" in suffix or "under" in suffix:
-                                    ou_dict["Under"] = {"line": "2.5", "odds": safe_odd(cote)}
+            # Assemble purely live extracted markets (Zero Synthetic Data).
+            # Coupon-sourced Match Result (already PV-adjusted) is the baseline;
+            # a match-page capture supersedes it when available.
+            s_markets: Dict[str, Any] = {"Match Result": mr_dict}
+            s_market_source: Dict[str, str] = {"Match Result": "live"}
+            s_market_prov: Dict[str, str] = {"Match Result": "chart"}
 
-                        # 2. Both Teams to Score (BTTS)
-                        elif m_name in ["Les deux équipes marquent", "Les deux equipes marquent", "Both Teams to Score"]:
-                            if part.lower() in ["oui", "yes"]:
-                                btts_dict["Yes"] = safe_odd(cote)
-                            elif part.lower() in ["non", "no"]:
-                                btts_dict["No"] = safe_odd(cote)
+            if "Match Result" in extra_markets:
+                s_markets["Match Result"] = extra_markets["Match Result"]
+                s_market_prov["Match Result"] = extra_prov.get("Match Result", "chart")
 
-                        # 3. Draw No Bet (DNB)
-                        elif m_name in ["Remboursé si nul", "Rembourse si nul", "Draw No Bet"]:
-                            p_lower = part.lower()
-                            h_lower = home_team.lower()
-                            a_lower = away_team.lower()
-                            if h_lower in p_lower or p_lower in h_lower:
-                                dnb_dict["1"] = safe_odd(cote)
-                            elif a_lower in p_lower or p_lower in a_lower:
-                                dnb_dict["2"] = safe_odd(cote)
-
-                        # 4. Double Chance (if in live coupon)
-                        elif m_name in ["Double chance", "Double Chance"] and "buts" not in m_name.lower():
-                            p_lower = part.lower()
-                            h_lower = home_team.lower()
-                            a_lower = away_team.lower()
-                            if (h_lower in p_lower and any(d in p_lower for d in ["nul", "draw", "x"])) or part.strip() == "1X":
-                                dc_dict["1X"] = safe_odd(cote)
-                            elif (h_lower in p_lower and a_lower in p_lower) or part.strip() == "12":
-                                dc_dict["12"] = safe_odd(cote)
-                            elif (a_lower in p_lower and any(d in p_lower for d in ["nul", "draw", "x"])) or part.strip() == "X2":
-                                dc_dict["X2"] = safe_odd(cote)
-
-                        # 5. Asian Handicap (if in live coupon)
-                        elif any(k in m_name.lower() for k in ["handicap asiatique", "asian handicap"]):
-                            p_lower = part.lower()
-                            h_lower = home_team.lower()
-                            a_lower = away_team.lower()
-                            line_match = re.search(r'([+-]?\d+(\.\d+)?)', part)
-                            line_val = line_match.group(1) if line_match else "-0.5"
-                            if h_lower in p_lower or p_lower in h_lower:
-                                ah_dict["Home"] = {"line": line_val, "odds": safe_odd(cote)}
-                            elif a_lower in p_lower or p_lower in a_lower:
-                                ah_dict["Away"] = {"line": line_val, "odds": safe_odd(cote)}
-
-                        # 6. Correct Score (if in live coupon)
-                        elif any(k in m_name.lower() for k in ["score exact", "correct score"]):
-                            if re.match(r'^\d+\s*[-–]\s*\d+$', part):
-                                score_key = re.sub(r'\s*', '', part).replace('–', '-')
-                                cs_dict[score_key] = safe_odd(cote)
-
-                        # 7. Half Time / Full Time (if in live coupon)
-                        elif any(k in m_name.lower() for k in ["mi-temps / fin de match", "half time/full time"]):
-                            for tr_candidate in ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"]:
-                                if tr_candidate.lower() in part.lower():
-                                    htft_dict[tr_candidate] = safe_odd(cote)
-
-            # Assemble purely live extracted markets (Zero Synthetic Data)
-            s_markets = {"Match Result": mr_dict}
-            s_market_source = {"Match Result": "live"}
-
-            if ou_dict and "Over" in ou_dict and "Under" in ou_dict:
-                s_markets["Goals Over/Under"] = ou_dict
-                s_market_source["Goals Over/Under"] = "live"
-            if btts_dict and "Yes" in btts_dict and "No" in btts_dict:
-                s_markets["Both Teams to Score"] = btts_dict
-                s_market_source["Both Teams to Score"] = "live"
-            if dc_dict and all(k in dc_dict for k in ("1X", "12", "X2")):
-                s_markets["Double Chance"] = dc_dict
-                s_market_source["Double Chance"] = "live"
-            if dnb_dict and all(k in dnb_dict for k in ("1", "2")):
-                s_markets["Draw No Bet"] = dnb_dict
-                s_market_source["Draw No Bet"] = "live"
-            if ah_dict and ("Home" in ah_dict and "Away" in ah_dict):
-                s_markets["Asian Handicap"] = ah_dict
-                s_market_source["Asian Handicap"] = "live"
-            if cs_dict and len(cs_dict) >= 4:
-                s_markets["Correct Score"] = cs_dict
-                s_market_source["Correct Score"] = "live"
-            if htft_dict and len(htft_dict) >= 6:
-                s_markets["Half Time/Full Time"] = htft_dict
-                s_market_source["Half Time/Full Time"] = "live"
-
-            # Ensure 100% full coverage of client-specified soccer markets:
-            # Both Teams to Score, Goals Over/Under, Double Chance, Draw No Bet, Half Time/Full Time, Correct Score
-            detailed = compute_soccer_detailed_markets(mr_dict)
-            for m_name, m_val in detailed.items():
-                if m_name == "Half Time/Full Time":
-                    if "Half Time/Full Time" not in s_markets and "Half Time / Full Time" not in s_markets:
-                        s_markets["Half Time/Full Time"] = m_val
-                        s_market_source["Half Time/Full Time"] = "live"
-                elif m_name not in s_markets or not s_markets[m_name]:
-                    s_markets[m_name] = m_val
-                    s_market_source[m_name] = "live"
+            for m_name, m_val in extra_markets.items():
+                if m_name == "Match Result" or not m_val:
+                    continue
+                s_markets[m_name] = m_val
+                s_market_source[m_name] = "live"
+                s_market_prov[m_name] = extra_prov.get(m_name, "chart")
 
             # Parse kickoff timestamp dynamically
             heure = f.get("heure", "")
@@ -461,6 +405,7 @@ def scrape_soccer(context, deep_fetch: bool = False) -> List[Dict[str, Any]]:
                 "markets": s_markets,
                 "market_source": s_market_source,
                 "market_margins": compute_match_margins(s_markets),
+                "market_provenance": s_market_prov,
                 "is_live": False,
                 "live_status": {
                     "period": "pre-match",
@@ -469,15 +414,16 @@ def scrape_soccer(context, deep_fetch: bool = False) -> List[Dict[str, Any]]:
                 },
                 "scraped_at": get_scraped_at_timestamp(),
             }
-            if fi in comp_1x2_raw_map:
+            # Audit trail: keep the raw (pre-PV) odds for every market we hold.
+            if fi in comp_1x2_raw_map and "Match Result" not in raw_markets:
                 raw_odds = comp_1x2_raw_map[fi]
-                s_obj["unadjusted_raw_markets"] = {
-                    "Match Result": {
-                        "1": safe_odd(raw_odds.get("1", o1)),
-                        "X": safe_odd(raw_odds.get("X", ox)),
-                        "2": safe_odd(raw_odds.get("2", o2)),
-                    }
+                raw_markets["Match Result"] = {
+                    "1": safe_odd(raw_odds.get("1", o1)),
+                    "X": safe_odd(raw_odds.get("X", ox)),
+                    "2": safe_odd(raw_odds.get("2", o2)),
                 }
+            if raw_markets:
+                s_obj["unadjusted_raw_markets"] = raw_markets
             matches_out.append(s_obj)
 
         time.sleep(0.3)
@@ -1192,6 +1138,8 @@ def run_full_pipeline(existing_path: str = "all_matches.json", deep_fetch: bool 
                 golf_group,
                 f1_group,
             ]
-            return dataset
+            # Final safety net: nothing leaves the pipeline unless it was captured
+            # live. This makes a synthetic leak structurally impossible.
+            return filter_synthetic(dataset)
         finally:
             fermer_onglets_partages()
