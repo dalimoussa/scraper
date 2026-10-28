@@ -24,7 +24,6 @@ import sys
 import time
 from typing import Any, Dict, List
 
-from history_tracker import record_odds_snapshot
 from scraper_engine import run_full_pipeline
 from validation import validate_pipeline_dataset
 
@@ -60,12 +59,6 @@ def run_single_cycle(args, cycle_num: int = 1) -> bool:
     os.replace(tmp_path, args.out)
     elapsed = time.time() - start_time
 
-    # Record historical odds snapshot in SQLite
-    try:
-        new_updates = record_odds_snapshot(raw_dataset, args.db)
-        print(f"[HISTORY] Logged {new_updates} price movements to database '{args.db}'.")
-    except Exception as e:
-        print(f"[WARNING] History tracking error: {e}")
 
     # Summary report
     print("\n" + "=" * 70)
@@ -90,7 +83,6 @@ def run_single_cycle(args, cycle_num: int = 1) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Bet365 France Live Multi-Sport Scraper")
     parser.add_argument("--out", default="all_matches.json", help="Output file path (default: all_matches.json)")
-    parser.add_argument("--db", default="odds_history.db", help="SQLite history database path (default: odds_history.db)")
     parser.add_argument("--interval", type=int, default=0, help="Daemon auto-refresh interval in seconds (default: 0 = single run)")
     parser.add_argument("--max-runs", type=int, default=None, help="Maximum number of cycles before exiting in daemon mode")
     parser.add_argument("--deep", action="store_true", help="Enable deep individual match page fetching for soccer (slower, risk of throttling)")

@@ -12,13 +12,10 @@ Covers:
 
 import json
 import os
-import sqlite3
-import tempfile
 import unittest
 from datetime import datetime
 
 from bet365_parser import SessionGuard, extraire_tournois_splash, parse_bet365
-from history_tracker import get_odds_movement, init_history_db, record_odds_snapshot
 from margin_validator import calculate_market_margin, compute_match_margins, validate_market_margins
 from scraper_engine import fraction_to_decimal, parse_bet365_kickoff, safe_odd
 from validation import (
@@ -113,55 +110,6 @@ class TestMarginValidator(unittest.TestCase):
         warnings = validate_market_margins(arb_mkt)
         self.assertTrue(len(warnings) > 0)
 
-
-class TestHistoryTracker(unittest.TestCase):
-    """Validates SQLite historical odds logging and price deduplication."""
-
-    def setUp(self):
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
-        self.temp_db.close()
-        self.db_path = self.temp_db.name
-
-    def tearDown(self):
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
-
-    def test_record_and_query_history(self):
-        sample_dataset = [
-            {
-                "sport": "Soccer",
-                "matches": [
-                    {
-                        "id": "match_test_01",
-                        "date": "15/10/2026",
-                        "kickoff": "15/10/2026 21:00:00",
-                        "competition": "France Ligue 1",
-                        "home": "PSG",
-                        "away": "Marseille",
-                        "markets": {
-                            "Match Result": {"1": "1.60", "X": "4.20", "2": "5.50"}
-                        }
-                    }
-                ]
-            }
-        ]
-
-        # First recording -> 3 new rows (1, X, 2)
-        count_first = record_odds_snapshot(sample_dataset, self.db_path)
-        self.assertEqual(count_first, 3)
-
-        # Second recording with IDENTICAL odds -> 0 new rows (deduplicated)
-        count_second = record_odds_snapshot(sample_dataset, self.db_path)
-        self.assertEqual(count_second, 0)
-
-        # Third recording with CHANGED odds -> exactly 1 new row
-        sample_dataset[0]["matches"][0]["markets"]["Match Result"]["1"] = "1.65"
-        count_third = record_odds_snapshot(sample_dataset, self.db_path)
-        self.assertEqual(count_third, 1)
-
-        # Retrieve chronological movements
-        movements = get_odds_movement("match_test_01", "Match Result", self.db_path)
-        self.assertEqual(len(movements), 4)
 
 
 class TestValidationEngine(unittest.TestCase):
