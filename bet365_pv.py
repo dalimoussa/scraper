@@ -143,12 +143,7 @@ def load_market_map() -> Dict[str, Any]:
 
 
 def resolve_chart_id(sport: str = "", market: str = "") -> str:
-    """Pick the chart id for a (sport, market) pair.
 
-    Resolution order: exact market key -> sport default -> global default.
-    Keys are matched case-insensitively against the stock market names the
-    pipeline emits (e.g. "Match Result", "Both Teams to Score").
-    """
     cfg = load_market_map()
     markets = cfg.get("markets") or {}
     sports = cfg.get("sports") or {}
@@ -181,8 +176,7 @@ def get_pv_adjustment(raw_decimal: float, chart_id: str = DEFAULT_CHART_ID) -> O
     chart = charts.get(chart_key)
     if chart is None:
         chart = charts.get(f"PV_CHARTS~{DEFAULT_CHART_ID}")
-    if not chart:
-        return None
+    
 
     for row in chart:
         try:
