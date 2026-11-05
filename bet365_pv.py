@@ -187,7 +187,7 @@ def get_pv_adjustment(raw_decimal: float, chart_id: str = DEFAULT_CHART_ID) -> O
             continue
         if lr <= raw_decimal <= ur:
             return pv
-    return None
+    return -1
 
 
 def _round_screen(adjusted: float) -> float:
